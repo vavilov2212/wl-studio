@@ -4,7 +4,9 @@ import 'package:l/l.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:flutter/material.dart';
+import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_time_entry_repository.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_project_repository.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_task_repository.dart';
@@ -65,8 +67,16 @@ class MainApp extends StatelessWidget {
               repository: repository,
               clock: clock,
             );
-            final bloc = TimeTrackerBloc(service: service)
-              ..add(TimeTrackerLoaded());
+
+            IdleMonitor? idleMonitor;
+            try {
+              idleMonitor = getIt<IdleMonitor>();
+            } catch (_) {}
+
+            final bloc = TimeTrackerBloc(
+              service: service,
+              idleMonitor: idleMonitor,
+            )..add(TimeTrackerLoaded());
             return bloc;
           },
         ),

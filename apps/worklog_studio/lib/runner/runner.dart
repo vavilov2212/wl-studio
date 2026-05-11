@@ -20,6 +20,9 @@ import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
 
+import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
+import 'package:worklog_studio/core/services/idle_monitor/platform_idle_monitor.dart';
+
 Future<void> run(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -111,6 +114,9 @@ void _initRepositories() {
 
     getIt.registerSingleton(AppBarService());
     getIt.registerSingleton<DrawerService>(DrawerService());
+
+    // Register PlatformIdleMonitor
+    getIt.registerLazySingleton<IdleMonitor>(() => PlatformIdleMonitor());
   } on Object catch (e, stackTrace) {
     l.e(e, stackTrace);
     rethrow;

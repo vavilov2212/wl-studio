@@ -4,6 +4,8 @@ import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_event.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 
 part 'time_tracker_bloc.freezed.dart'; // <-- Генерируемый файл Freezed
 part 'time_tracker_event.dart'; // <-- Часть определения событий
@@ -11,10 +13,15 @@ part 'time_tracker_state.dart'; // <-- Часть определения сос�
 
 class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
   final TimeTrackerService _service;
+  final IdleMonitor? _idleMonitor;
+  StreamSubscription<IdleEvent>? _idleSubscription;
 
-  TimeTrackerBloc({required TimeTrackerService service})
-    : _service = service,
-      super(const TimeTrackerBlocState.idle()) {
+  TimeTrackerBloc({
+    required TimeTrackerService service,
+    IdleMonitor? idleMonitor,
+  }) : _service = service,
+       _idleMonitor = idleMonitor,
+       super(const TimeTrackerBlocState.idle()) {
     // <-- ИСПРАВЛЕНО: Начальное состояние
     on<TimeTrackerLoaded>(_onLoaded);
     on<TimeTrackerStarted>(_onStarted);
@@ -23,6 +30,20 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     on<TimeTrackerEntryDeleted>(_onEntryDeleted);
     on<TimeTrackerEntryCreated>(_onEntryCreated);
     on<TimeTrackerEntryUpdated>(_onEntryUpdated);
+
+    _idleSubscription = _idleMonitor?.onIdleEvent.listen((event) {
+      if (event is IdleThresholdReached) {
+        if (state.isRunning) {
+          add(TimeTrackerStopped());
+        }
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _idleSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onLoaded(
@@ -67,6 +88,9 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
       );
       final entries = await _service.getAll();
 
+      // Start idle monitoring (10 minutes)
+      _idleMonitor?.start(thresholdSeconds: 600);
+
       emit(
         TimeTrackerBlocState.running(entries: entries, activeEntry: active),
       ); // <-- ИСПРАВЛЕНО
@@ -91,6 +115,9 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     try {
       await _service.stop();
       final entries = await _service.getAll();
+
+      // Stop idle monitoring
+      _idleMonitor?.stop();
 
       emit(TimeTrackerBlocState.loaded(entries: entries)); // <-- ИСПРАВЛЕНО
     } on Object catch (e) {
