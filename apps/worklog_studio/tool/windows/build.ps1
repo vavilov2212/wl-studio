@@ -82,7 +82,7 @@ Write-Host "pubspec.yaml updated" -ForegroundColor Green
 # 4. Build
 # ─────────────────────────────────────────────
 Write-Host "Building Windows..." -ForegroundColor Yellow
-flutter build windows --release
+fvm flutter build windows --release
 
 # ─────────────────────────────────────────────
 # 5. Package ZIP
