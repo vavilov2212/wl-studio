@@ -1,4 +1,4 @@
-name: Windows Release
+name: Release
 
 # ─────────────────────────────────────────────────────────────
 # Triggers when apps/worklog_studio/pubspec.yaml version changes
@@ -70,9 +70,9 @@ jobs:
           git push origin "${{ steps.parse.outputs.tag }}"
 
   # ──────────────────────────────────────────────────────────
-  # JOB 2: Build Windows binary
+  # JOB 2a: Build Windows binary
   # ──────────────────────────────────────────────────────────
-  build:
+  build-windows:
     name: Build Windows
     needs: tag
     if: needs.tag.outputs.tag_exists == 'false'
@@ -81,13 +81,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Flutter (pinned to FVM version)
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.5'
           cache: true
 
-      - name: Print Dart & Flutter version
+      - name: Print versions
         run: |
           dart --version
           flutter --version
@@ -129,11 +129,68 @@ jobs:
           retention-days: 1
 
   # ──────────────────────────────────────────────────────────
-  # JOB 3: Publish GitHub Release
+  # JOB 2b: Build macOS binary
+  # ──────────────────────────────────────────────────────────
+  build-macos:
+    name: Build macOS
+    needs: tag
+    if: needs.tag.outputs.tag_exists == 'false'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+
+      - name: Print versions
+        run: |
+          dart --version
+          flutter --version
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Melos Bootstrap
+        run: melos bootstrap
+
+      - name: Build Runner — style system
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/worklog_studio_style_system/**"
+
+      - name: Build Runner — vector svg
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/vector_svg/**"
+
+      - name: Build Runner — app
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
+
+      - name: Build macOS release
+        working-directory: apps/worklog_studio
+        run: flutter build macos --release
+
+      - name: Package ZIP
+        run: |
+          VERSION="${{ needs.tag.outputs.version }}"
+          ZIP_NAME="worklog_studio_macos_$VERSION.zip"
+          zip -r "$ZIP_NAME" \
+            "apps/worklog_studio/build/macos/Build/Products/Release/worklog_studio.app"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 1
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 3: Publish GitHub Release (waits for both builds)
   # ──────────────────────────────────────────────────────────
   release:
     name: Publish GitHub Release
-    needs: [tag, build]
+    needs: [tag, build-windows, build-macos]
     if: needs.tag.outputs.tag_exists == 'false'
     runs-on: ubuntu-latest
     permissions:
@@ -144,10 +201,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download artifact
+      - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: windows-release
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release
 
       - name: Generate changelog
         run: |
@@ -167,6 +229,8 @@ jobs:
           tag_name:   ${{ needs.tag.outputs.tag }}
           name:       "Release ${{ needs.tag.outputs.version }}"
           body_path:  changelog.md
-          files:      "worklog_studio_windows_${{ needs.tag.outputs.version }}.zip"
+          files: |
+            worklog_studio_windows_${{ needs.tag.outputs.version }}.zip
+            worklog_studio_macos_${{ needs.tag.outputs.version }}.zip
           draft:      false
           prerelease: ${{ needs.tag.outputs.prerelease }}
