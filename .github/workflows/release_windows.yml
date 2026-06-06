@@ -97,8 +97,8 @@ jobs:
         run: melos bootstrap
 
       - name: Run Build Runner
-        run: melos exec --scope="worklog_studio" -- "dart build"
         working-directory: apps/worklog_studio
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/worklog_studio_style_system/**"
 
       - name: Build Windows release
         working-directory: apps/worklog_studio
