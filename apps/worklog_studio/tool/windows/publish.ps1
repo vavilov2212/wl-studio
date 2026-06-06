@@ -1,38 +1,50 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 Write-Host "🚀 Publishing (atomic push)..." -ForegroundColor Cyan
 
-$versionLine = Get-Content pubspec.yaml | Select-String "^version: "
-$currentVersion = ($versionLine -split ": ")[1]
-$name = ($currentVersion -split "\+")[0]
-$tag = "v$name"
+# ─────────────────────────────────────────────
+# 1. Parse version
+# ─────────────────────────────────────────────
+$versionLine   = Get-Content pubspec.yaml | Select-String "^version: "
+$currentVersion = ($versionLine -split ": ")[1].Trim()
+$name           = ($currentVersion -split "\+")[0]
+$tag            = "v$name"
+$branch         = (git rev-parse --abbrev-ref HEAD).Trim()
 
-$branch = (git rev-parse --abbrev-ref HEAD).Trim()
-
-Write-Host "🏷 Tag: $tag"
+Write-Host "🏷  Tag:    $tag"
 Write-Host "🌿 Branch: $branch"
 
-# Check for changes
-$status = git status --porcelain
-if ([string]::IsNullOrWhiteSpace($status)) {
-    Write-Host "❌ No changes to release" -ForegroundColor Red
+# ─────────────────────────────────────────────
+# 2. Guard: must be on dev or main
+# ─────────────────────────────────────────────
+if ($branch -notin @("dev", "main")) {
+    Write-Host "❌ Must be on 'dev' or 'main' branch (current: $branch)" -ForegroundColor Red
     exit 1
 }
 
-# Check if tag exists
+# ─────────────────────────────────────────────
+# 3. Guard: must have uncommitted changes
+# ─────────────────────────────────────────────
+$status = git status --porcelain
+if ([string]::IsNullOrWhiteSpace($status)) {
+    Write-Host "❌ No changes to publish" -ForegroundColor Red
+    exit 1
+}
+
+# ─────────────────────────────────────────────
+# 4. Guard: tag must not already exist
+# ─────────────────────────────────────────────
 git fetch --tags
 if (git tag -l $tag) {
     Write-Host "❌ Tag already exists: $tag" -ForegroundColor Red
     exit 1
 }
 
-# Commit and Tag
+# ─────────────────────────────────────────────
+# 5. Commit and push — CI handles the tag
+# ─────────────────────────────────────────────
 git add pubspec.yaml release/appcast_windows.xml
-git commit -m "release windows $tag"
-git tag $tag
+git commit -m "release: windows $tag"
+git push origin $branch
 
-# Push
-Write-Host "📤 Pushing to origin..." -ForegroundColor Yellow
-git push origin $branch $tag --atomic
-
-Write-Host "✅ Tag pushed successfully!" -ForegroundColor Green
+Write-Host "✅ Pushed to $branch — CI will create tag $tag and build the release" -ForegroundColor Green

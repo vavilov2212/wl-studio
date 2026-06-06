@@ -58,6 +58,8 @@
    ```
 3. Bootstrap project:
    ```bash
+   dart pub global activate melos
+   fvm flutter pub get
    fvm exec melos clean
    fvm exec melos bootstrap
    ```

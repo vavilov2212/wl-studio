@@ -1,0 +1,162 @@
+name: Windows Release
+
+# ─────────────────────────────────────────────────────────────
+# Triggers when apps/worklog_studio/pubspec.yaml version changes
+# on main (stable release) or dev (pre-release)
+# ─────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'apps/worklog_studio/pubspec.yaml'
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # JOB 1: Parse version, guard against duplicate tags, create tag
+  # ──────────────────────────────────────────────────────────
+  tag:
+    name: Create Version Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version:    ${{ steps.parse.outputs.version }}
+      tag:        ${{ steps.parse.outputs.tag }}
+      prerelease: ${{ steps.parse.outputs.prerelease }}
+      tag_exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Parse version from pubspec.yaml
+        id: parse
+        run: |
+          VERSION=$(grep '^version:' apps/worklog_studio/pubspec.yaml \
+            | sed 's/version: //' \
+            | cut -d'+' -f1 \
+            | tr -d '[:space:]')
+          TAG="v$VERSION"
+          if [[ "$VERSION" == *"dev"* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+          echo "version=$VERSION"       >> $GITHUB_OUTPUT
+          echo "tag=$TAG"               >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION | Tag: $TAG | Pre-release: $PRERELEASE"
+
+      - name: Check if tag already exists
+        id: check
+        run: |
+          git fetch --tags
+          if git rev-parse "${{ steps.parse.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Tag ${{ steps.parse.outputs.tag }} already exists — skipping"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag ${{ steps.parse.outputs.tag }} is new"
+          fi
+
+      - name: Create and push tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.parse.outputs.tag }}"
+          git push origin "${{ steps.parse.outputs.tag }}"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 2: Build Windows binary
+  # ──────────────────────────────────────────────────────────
+  build:
+    name: Build Windows
+    needs: tag
+    if: needs.tag.outputs.tag_exists == 'false'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (pinned to FVM version)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Melos Bootstrap
+        run: melos bootstrap
+
+      - name: Run Build Runner
+        run: melos exec --scope="worklog_studio" -- "dart run build_runner build --delete-conflicting-outputs"
+
+      - name: Build Windows release
+        working-directory: apps/worklog_studio
+        run: flutter build windows --release
+
+      - name: Package ZIP
+        shell: pwsh
+        run: |
+          $version  = "${{ needs.tag.outputs.version }}"
+          $zipName  = "worklog_studio_windows_$version.zip"
+          Compress-Archive `
+            -Path "apps/worklog_studio/build/windows/x64/runner/Release/*" `
+            -DestinationPath $zipName
+          echo "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 1
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 3: Publish GitHub Release
+  # ──────────────────────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs: [tag, build]
+    if: needs.tag.outputs.tag_exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (for changelog)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+
+      - name: Generate changelog
+        run: |
+          TAG="${{ needs.tag.outputs.tag }}"
+          git fetch --tags
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            git log --pretty=format:"- %s" > changelog.md
+          else
+            git log "${PREV_TAG}..${TAG}" --pretty=format:"- %s" > changelog.md
+          fi
+          echo "📜 Changelog written"
+          cat changelog.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name:  ${{ needs.tag.outputs.tag }}
+          name:      "Release ${{ needs.tag.outputs.version }}"
+          body_path: changelog.md
+          files:     "worklog_studio_windows_${{ needs.tag.outputs.version }}.zip"
+          draft:     false
+          prerelease: ${{ needs.tag.outputs.prerelease }}
