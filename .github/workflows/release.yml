@@ -2,7 +2,8 @@ name: Release
 
 # ─────────────────────────────────────────────────────────────
 # Triggers when apps/worklog_studio/pubspec.yaml version changes
-# on main (stable release) or dev (pre-release)
+# on main (stable release) or dev (pre-release).
+# Can also be triggered manually from the GitHub Actions UI.
 # ─────────────────────────────────────────────────────────────
 on:
   push:
@@ -11,6 +12,7 @@ on:
       - dev
     paths:
       - 'apps/worklog_studio/pubspec.yaml'
+  workflow_dispatch:
 
 jobs:
   # ──────────────────────────────────────────────────────────
