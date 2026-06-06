@@ -87,8 +87,10 @@ jobs:
           flutter-version: '3.38.5'
           cache: true
 
-      - name: Print Dart version
-        run: dart --version
+      - name: Print Dart & Flutter version
+        run: |
+          dart --version
+          flutter --version
 
       - name: Install Melos
         run: dart pub global activate melos
@@ -96,9 +98,14 @@ jobs:
       - name: Melos Bootstrap
         run: melos bootstrap
 
-      - name: Run Build Runner
-        working-directory: apps/worklog_studio
+      - name: Build Runner — style system
         run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/worklog_studio_style_system/**"
+
+      - name: Build Runner — vector svg
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/vector_svg/**"
+
+      - name: Build Runner — app
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
 
       - name: Build Windows release
         working-directory: apps/worklog_studio
@@ -107,8 +114,8 @@ jobs:
       - name: Package ZIP
         shell: pwsh
         run: |
-          $version  = "${{ needs.tag.outputs.version }}"
-          $zipName  = "worklog_studio_windows_$version.zip"
+          $version = "${{ needs.tag.outputs.version }}"
+          $zipName = "worklog_studio_windows_$version.zip"
           Compress-Archive `
             -Path "apps/worklog_studio/build/windows/x64/runner/Release/*" `
             -DestinationPath $zipName
@@ -157,9 +164,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name:  ${{ needs.tag.outputs.tag }}
-          name:      "Release ${{ needs.tag.outputs.version }}"
-          body_path: changelog.md
-          files:     "worklog_studio_windows_${{ needs.tag.outputs.version }}.zip"
-          draft:     false
+          tag_name:   ${{ needs.tag.outputs.tag }}
+          name:       "Release ${{ needs.tag.outputs.version }}"
+          body_path:  changelog.md
+          files:      "worklog_studio_windows_${{ needs.tag.outputs.version }}.zip"
+          draft:      false
           prerelease: ${{ needs.tag.outputs.prerelease }}
