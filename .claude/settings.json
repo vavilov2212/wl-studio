@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  // ── Model ────────────────────────────────────────────────────────────────
+  "model": "claude-sonnet-4-6",
+
+  // ── MCP Servers ──────────────────────────────────────────────────────────
+  // shell: gives Claude a PowerShell terminal for running fvm/flutter commands
+  // filesystem: gives Claude read/write access scoped to this repo only
+  "mcpServers": {
+    "shell": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": ["-y", "mcp-shell"]
+    },
+    "filesystem": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\vavilov2212\\work\\worklog_studio"
+      ]
+    }
+  },
+
+  // ── Permissions ───────────────────────────────────────────────────────────
+  // Allow the specific shell commands used in day-to-day Flutter / Melos work.
+  // Everything not listed here requires explicit approval per session.
+  "permissions": {
+    "allow": [
+      // dependency & tooling
+      "Bash(fvm flutter pub get*)",
+      "Bash(fvm flutter pub run build_runner*)",
+      "Bash(fvm exec melos bootstrap*)",
+      "Bash(fvm exec melos clean*)",
+      "Bash(fvm flutter test*)",
+      "Bash(fvm flutter build*)",
+      "Bash(fvm flutter run*)",
+      // git — read-only introspection only; commits require approval
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)"
+    ],
+    "deny": [
+      // never delete files or nuke the build without asking
+      "Bash(rm -rf*)",
+      "Bash(fvm exec melos clean --deep*)"
+    ]
+  },
+
+  // ── Ignored paths ─────────────────────────────────────────────────────────
+  // Mirrors the token-optimisation rules in CLAUDE.md §3.
+  // Claude Code will not read, index, or suggest edits to these paths.
+  "ignorePatterns": [
+    ".fvm/**",
+    ".git/**",
+    ".dart_tool/**",
+    "**/build/**",
+    "**/*.freezed.dart",
+    "**/*.g.dart",
+    "**/macos/**",
+    "**/ios/**",
+    "**/android/**",
+    "**/linux/**",
+    "**/web/**"
+  ],
+
+  // ── Hooks ─────────────────────────────────────────────────────────────────
+  // PostToolUse: after every file edit, remind Claude to check if codegen is needed.
+  // PreToolUse(Bash): gate any flutter build command behind the test suite.
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo [codegen-sentinel] If you edited a @freezed / @JsonSerializable file, remind the user to run: fvm flutter pub run build_runner build --delete-conflicting-outputs"
+          }
+        ]
+      }
+    ]
+  }
+}

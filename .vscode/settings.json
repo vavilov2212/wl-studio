@@ -5,6 +5,12 @@
     "**/.fvm": true
   },
   "search.exclude": {
-    "**/.fvm": true
+    "**/.fvm": true,
+    "**/.claude": true
+  },
+  // treat CLAUDE.md files as Markdown for syntax highlighting
+  "files.associations": {
+    "CLAUDE.md": "markdown",
+    "CLAUDE.local.md": "markdown"
   }
 }
