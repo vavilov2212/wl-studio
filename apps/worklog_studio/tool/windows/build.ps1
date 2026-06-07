@@ -79,7 +79,14 @@ $pubspec | Set-Content pubspec.yaml -Encoding UTF8
 Write-Host "pubspec.yaml updated" -ForegroundColor Green
 
 # ─────────────────────────────────────────────
-# 4. Build
+# 4. Run unit tests
+# ─────────────────────────────────────────────
+Write-Host "Running unit tests..." -ForegroundColor Yellow
+fvm flutter test test/core/ test/feature/ --reporter expanded
+Write-Host "All tests passed" -ForegroundColor Green
+
+# ─────────────────────────────────────────────
+# 5. Build
 # ─────────────────────────────────────────────
 Write-Host "Building Windows..." -ForegroundColor Yellow
 fvm flutter build windows --release

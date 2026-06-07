@@ -16,6 +16,44 @@ on:
 
 jobs:
   # ──────────────────────────────────────────────────────────
+  # JOB 0: Run unit tests — both build jobs depend on this.
+  # Tests run on ubuntu (pure-Dart, no platform code needed).
+  # A single failure here aborts the entire pipeline before
+  # any artifact is built or any tag is pushed.
+  # ──────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Melos Bootstrap
+        run: melos bootstrap
+
+      - name: Build Runner — style system
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/worklog_studio_style_system/**"
+
+      - name: Build Runner — vector svg
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/vector_svg/**"
+
+      - name: Build Runner — app
+        run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
+
+      - name: Run unit tests
+        working-directory: apps/worklog_studio
+        run: flutter test test/core/ test/feature/ --reporter expanded
+
+  # ──────────────────────────────────────────────────────────
   # JOB 1: Parse version, guard against duplicate tags, create tag
   # ──────────────────────────────────────────────────────────
   tag:
@@ -76,7 +114,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   build-windows:
     name: Build Windows
-    needs: tag
+    needs: [test, tag]
     if: needs.tag.outputs.tag_exists == 'false'
     runs-on: windows-latest
     steps:
@@ -140,7 +178,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   build-macos:
     name: Build macOS
-    needs: tag
+    needs: [test, tag]
     if: needs.tag.outputs.tag_exists == 'false'
     runs-on: macos-latest
     steps:
@@ -172,6 +210,9 @@ jobs:
 
       - name: Build Runner — app
         run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
+
+      - name: Update CocoaPods repo
+        run: pod repo update
 
       - name: Build macOS release
         working-directory: apps/worklog_studio

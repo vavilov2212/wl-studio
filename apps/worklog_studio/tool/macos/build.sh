@@ -100,7 +100,15 @@ echo "----------------------------------------"
 sed -i '' "s/version: .*/version: $NEW_VERSION/" pubspec.yaml
 
 # -----------------------------
-# 2. Build
+# 2. Run unit tests
+# -----------------------------
+
+echo "🧪 Running unit tests..."
+flutter test test/core/ test/feature/ --reporter expanded
+echo "✅ All tests passed"
+
+# -----------------------------
+# 3. Build
 # -----------------------------
 
 flutter build macos
