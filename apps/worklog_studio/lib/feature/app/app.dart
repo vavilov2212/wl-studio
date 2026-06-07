@@ -19,11 +19,13 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 
 import 'layout/app_bar/app_bar_navigator_observer.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+// ── Popover / mini-panel app (macOS tray engine only) ────────────────────────
 
 class MiniApp extends StatelessWidget {
   const MiniApp({super.key});
@@ -34,7 +36,7 @@ class MiniApp extends StatelessWidget {
       create: (context) {
         final cubit = MiniTrackerCubit();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          DesktopService().initFollower(cubit);
+          DesktopServiceRegistry.instance.initFollower(cubit);
         });
         return cubit;
       },
@@ -51,9 +53,10 @@ class MiniApp extends StatelessWidget {
   }
 }
 
+// ── Main application ──────────────────────────────────────────────────────────
+
 class MainApp extends StatelessWidget {
-  final String? initialRoute;
-  const MainApp({super.key, this.initialRoute});
+  const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -106,12 +109,14 @@ class MainApp extends StatelessWidget {
           },
         ),
       ],
-      child: _DesktopInitializationWrapper(
-        child: _AppMaterialApp(initialRoute: initialRoute),
+      child: const _DesktopInitializationWrapper(
+        child: _AppMaterialApp(),
       ),
     );
   }
 }
+
+// ── Desktop service initialisation ───────────────────────────────────────────
 
 class _DesktopInitializationWrapper extends StatefulWidget {
   final Widget child;
@@ -131,7 +136,8 @@ class _DesktopInitializationWrapperState
       final bloc = context.read<TimeTrackerBloc>();
       final resolver = context.read<EntityResolver>();
       final projectTaskState = context.read<ProjectTaskState>();
-      DesktopService().initLeader(bloc, resolver, projectTaskState);
+      // Platform-specific logic is fully encapsulated inside the service.
+      DesktopServiceRegistry.instance.initLeader(bloc, resolver, projectTaskState);
     });
   }
 
@@ -139,14 +145,14 @@ class _DesktopInitializationWrapperState
   Widget build(BuildContext context) => widget.child;
 }
 
+// ── Material app shell ────────────────────────────────────────────────────────
+
 class _AppMaterialApp extends StatelessWidget {
-  final String? initialRoute;
-  const _AppMaterialApp({this.initialRoute});
+  const _AppMaterialApp();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      initialRoute: initialRoute ?? '/',
       title: appEnvironment.config.flavor.appTitle,
       showPerformanceOverlay:
           _getDebugConfig(context)?.showPerformanceOverlay ?? false,

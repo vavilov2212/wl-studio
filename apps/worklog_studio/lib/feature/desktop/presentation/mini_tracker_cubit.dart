@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 
 class MiniTrackerState {
   final bool isRunning;
@@ -45,10 +45,7 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
 
   void updateFromSnapshot(TimerSnapshot snapshot) {
-    if (snapshot.timestamp < state.lastTimestamp) {
-      // Discard older snapshot
-      return;
-    }
+    if (snapshot.timestamp < state.lastTimestamp) return;
     emit(
       state.copyWith(
         isRunning: snapshot.isRunning,
@@ -65,10 +62,10 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     if (state.isRunning &&
         state.activeEntry?.projectId == projectId &&
         state.activeEntry?.taskId == taskId) {
-      return; // Already running this exact task
+      return;
     }
 
-    DesktopService().dispatchAction(
+    DesktopServiceRegistry.instance.dispatchAction(
       TimerAction(
         type: TimerActionType.start,
         projectId: projectId,
@@ -80,7 +77,8 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
 
   void stopTimer() {
     if (!state.isRunning) return;
-
-    DesktopService().dispatchAction(TimerAction(type: TimerActionType.stop));
+    DesktopServiceRegistry.instance.dispatchAction(
+      TimerAction(type: TimerActionType.stop),
+    );
   }
 }

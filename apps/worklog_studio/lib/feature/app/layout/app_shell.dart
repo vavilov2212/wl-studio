@@ -18,7 +18,7 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'dart:async';
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
@@ -37,7 +37,7 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _navSub = DesktopService().navigationStream.listen((route) {
+    _navSub = DesktopServiceRegistry.instance.navigationStream.listen((route) {
       if (route == 'history') {
         _onRouteSelected(AppRoute.history);
       } else if (route == 'tasks') {

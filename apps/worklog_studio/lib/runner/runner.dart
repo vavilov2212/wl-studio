@@ -6,6 +6,7 @@ import 'package:l/l.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/core/environment/dotenv.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/entity/session/data/repository/session_storage_repository.dart';
 import 'package:worklog_studio/entity/user/data/repository/user_repository.dart';
@@ -35,7 +36,8 @@ Future<void> run(List<String> args) async {
   }
 
   // 🔑 ВАЖНО: для desktop / VM
-  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+  if (!kIsWeb &&
+      (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -48,53 +50,34 @@ Future<void> run(List<String> args) async {
   if (kIsWeb) {
     usePathUrlStrategy();
   }
+
   await _initDependencies();
   _initRepositories();
 
+  // Initialise the desktop service singleton once — platform resolved inside
+  // the factory, no inline Platform.isXxx checks needed here.
+  DesktopServiceRegistry.init();
+
   try {
     if (!kIsWeb) {
-      await getIt<
-        UserRepository
-      >(); // Forces initial cascade if necessary, but importantly...
-      // We explicitly bootstrap the database here manually to ensure it's ready before UI
+      await getIt<UserRepository>();
       await DatabaseProvider.getDatabase();
     }
   } catch (e, st) {
     l.e('Failed to bootstrap DB on startup', st);
   }
 
-  String? initialRoute;
-  bool isPopover = false;
-  if (Platform.isMacOS) {
-    try {
-      const channel = MethodChannel('worklog_studio/ipc');
-      final engineInfo = await channel
-          .invokeMapMethod<String, dynamic>('getEngineInfo')
-          .timeout(
-            const Duration(seconds: 1),
-            onTimeout: () {
-              debugPrint('getEngineInfo timed out!');
-              return {'role': 'main'}; // default fallback
-            },
-          );
+  // Role detection is now owned by the platform service itself.
+  final role = await DesktopServiceRegistry.instance.resolveStartupRole();
+  debugPrint('Successfully resolved engine role: $role');
 
-      final role = engineInfo?['role'] as String? ?? 'main';
-      debugPrint('Successfully resolved engine role: $role');
+  final isPopover = role == 'tray';
+  debugPrint('runApp starting with role: $role');
 
-      if (role == 'tray') {
-        initialRoute = '/mini';
-        isPopover = true;
-      }
-    } catch (e) {
-      debugPrint('Failed to fetch engine info: $e');
-    }
-  }
-
-  debugPrint('runApp starting with initialRoute: $initialRoute');
   if (isPopover) {
     runApp(const MiniApp());
   } else {
-    runApp(MainApp(initialRoute: initialRoute));
+    runApp(const MainApp());
   }
 }
 

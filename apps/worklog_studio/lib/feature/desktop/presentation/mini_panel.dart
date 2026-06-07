@@ -9,7 +9,7 @@ import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:collection/collection.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 
 class MiniPanel extends StatefulWidget {
   const MiniPanel({super.key});
@@ -250,7 +250,7 @@ class _MiniPanelState extends State<MiniPanel> {
     BuildContext context,
   ) {
     onTap() {
-      DesktopService().openMainWindowFromTray(route: "projects");
+      DesktopServiceRegistry.instance.openMainWindowFromTray(route: 'projects');
     }
 
     final initials = BadgeUtils.getProjectInitials(project.name);
@@ -392,7 +392,7 @@ class _MiniPanelState extends State<MiniPanel> {
               theme,
               trailing: InkWell(
                 onTap: () {
-                  DesktopService().openMainWindowFromTray(route: "history");
+                  DesktopServiceRegistry.instance.openMainWindowFromTray(route: 'history');
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(
@@ -673,7 +673,7 @@ class _MiniPanelState extends State<MiniPanel> {
                               size: 16,
                             ),
                             onTap: () {
-                              DesktopService().openMainWindowFromTray();
+                              DesktopServiceRegistry.instance.openMainWindowFromTray();
                             },
                           ),
                         ],
