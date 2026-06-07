@@ -26,8 +26,24 @@ Always use `fvm` as a wrapper for commands. Never run global `flutter` or `dart`
 - **Clean Project:** `fvm exec melos clean`
 - **Get Dependencies:** `fvm flutter pub get` (Inside specific package/app directory)
 - **Run Code Generation:** `fvm flutter pub run build_runner build --delete-conflicting-outputs` (Inside specific package/app directory)
+- **Run Tests:** `fvm flutter test test/core/ test/feature/ --reporter expanded` (From `apps\worklog_studio\`)
 
-## 5. Active Project Skills Matrix
+## 5. Test-Driven Development (TDD) — Mandatory
+All new business logic and bug fixes **must** follow the Red → Green → Refactor cycle.
+
+**Rules:**
+- **Write the test first.** Before writing any implementation code for a new feature or fix, write a failing test that defines the expected behaviour. Commit or at minimum present the failing test before touching production code.
+- **Minimal implementation.** Write only enough production code to make the failing test pass. Do not add untested logic speculatively.
+- **Refactor under green.** Once the test is green, clean up the implementation. The test suite must remain green throughout refactoring.
+- **No production code without a test.** Every new public method, service, use-case, or domain rule must have a corresponding unit test in `apps\worklog_studio\test\`. UI-only changes are exempt, but any logic extracted from a widget must be tested.
+- **Test location conventions:**
+  - Pure domain / service logic → `test\core\`
+  - Bloc / state-machine behaviour → `test\feature\`
+  - Shared fakes and helpers → `test\helpers\`
+- **Test doubles:** Prefer hand-rolled fakes (see `test\helpers\test_fakes.dart`) for stateful collaborators. Use `mocktail` mocks only for pure event-sources or when the collaborator has no meaningful state.
+- **Tests must pass before build.** `fvm flutter test test/core/ test/feature/` is executed by `build.sh`, `build.ps1`, and the CI `test` job. A red test blocks the build.
+
+## 6. Active Project Skills Matrix
 You have 7 custom Project Skills configured. Analyze the user's prompt and internally align your behavior with the corresponding skill:
 1. `codebase-navigator-pro`: Use for code exploration, logic tracing, and onboarding. Enforces "Grep-First" strategy.
 2. `codegen-sentinel`: Use when editing models or classes with annotations. Enforces the `.freezed.dart` exclusion and reminds about build_runner.
