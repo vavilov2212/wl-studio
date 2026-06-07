@@ -8,6 +8,7 @@ import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.d
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
 
 class DesktopService {
   static final DesktopService _instance = DesktopService._internal();
@@ -38,6 +39,12 @@ class DesktopService {
     EntityResolver resolver,
     ProjectTaskState projectTaskState,
   ) async {
+    // ── Windows: delegate entirely to WindowsTrayService ──
+    if (Platform.isWindows) {
+      await WindowsTrayService().init(bloc, resolver, projectTaskState);
+      return;
+    }
+
     if (!Platform.isMacOS) return;
     if (_isInitialized) return;
 

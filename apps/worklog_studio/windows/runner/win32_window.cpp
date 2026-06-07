@@ -179,6 +179,13 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_CLOSE:
+      // Hide the window instead of destroying it so the app lives in the tray.
+      // window_manager's preventClose handles this from Dart, but we intercept
+      // here as a belt-and-suspenders guard for any edge-case bypass.
+      ShowWindow(hwnd, SW_HIDE);
+      return 0;
+
     case WM_DESTROY:
       window_handle_ = nullptr;
       Destroy();

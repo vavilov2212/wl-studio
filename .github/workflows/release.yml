@@ -109,6 +109,11 @@ jobs:
       - name: Build Runner — app
         run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
 
+      - name: Generate tray ICO assets
+        shell: pwsh
+        working-directory: apps/worklog_studio
+        run: pwsh tool/windows/generate_tray_icons.ps1
+
       - name: Build Windows release
         working-directory: apps/worklog_studio
         run: flutter build windows --release
