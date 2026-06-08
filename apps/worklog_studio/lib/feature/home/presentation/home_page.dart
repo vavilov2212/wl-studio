@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
@@ -23,26 +23,26 @@ class _HomePageState extends State<HomePage> {
     final theme = context.theme;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _DashboardHeader(),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: const _DailyFocusCard()),
-              SizedBox(width: theme.spacings.s24),
+              SizedBox(width: theme.spacings.xl),
               Expanded(child: const _WeeklyEarningsCard()),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(flex: 7, child: const _TopTasksSection()),
-              SizedBox(width: theme.spacings.s24),
+              SizedBox(width: theme.spacings.xl),
               Expanded(flex: 4, child: const _RecentActivitySection()),
             ],
           ),
@@ -67,7 +67,7 @@ class _DashboardHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Dashboard', style: theme.commonTextStyles.displayLarge),
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.xxs),
             Text(
               'Welcome back. Here\'s your workflow for today.',
               style: theme.commonTextStyles.body.copyWith(
@@ -122,7 +122,7 @@ class _DailyFocusCard extends StatelessWidget {
     final timeString = '${hours}h ${minutes}m';
 
     return Container(
-      padding: EdgeInsets.all(theme.spacings.s24),
+      padding: EdgeInsets.all(theme.spacings.xl),
       decoration: BoxDecoration(
         color: palette.background.surface,
         borderRadius: theme.radiuses.lg.circular,
@@ -141,7 +141,7 @@ class _DailyFocusCard extends StatelessWidget {
                 ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Row(
             children: [
               Column(
@@ -173,7 +173,7 @@ class _WeeklyEarningsCard extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Container(
-      padding: EdgeInsets.all(theme.spacings.s24),
+      padding: EdgeInsets.all(theme.spacings.xl),
       decoration: BoxDecoration(
         color: palette.background.surface,
         borderRadius: theme.radiuses.lg.circular,
@@ -199,7 +199,7 @@ class _WeeklyEarningsCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Text(
             'Financial tracking features will be available in a future update.',
             style: theme.commonTextStyles.body.copyWith(
@@ -235,7 +235,7 @@ class _TopTasksSection extends StatelessWidget {
         final displayTasks = sortedTasks.take(5).toList();
 
         return Container(
-          padding: EdgeInsets.all(theme.spacings.s24),
+          padding: EdgeInsets.all(theme.spacings.xl),
           decoration: BoxDecoration(
             color: palette.background.surfaceMuted,
             borderRadius: theme.radiuses.lg.circular,
@@ -255,7 +255,7 @@ class _TopTasksSection extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: theme.spacings.s24),
+              SizedBox(height: theme.spacings.xl),
               if (displayTasks.isEmpty)
                 Text(
                   'No tasks tracked yet.',
@@ -265,7 +265,7 @@ class _TopTasksSection extends StatelessWidget {
                 )
               else
                 Column(
-                  spacing: theme.spacings.s16,
+                  spacing: theme.spacings.lg,
                   children: displayTasks.map((resolvedTask) {
                     return TaskCard(
                       task: resolvedTask,
@@ -304,7 +304,7 @@ class _RecentActivitySection extends StatelessWidget {
         final recentEntries = sortedEntries.take(5).toList();
 
         return Container(
-          padding: EdgeInsets.all(theme.spacings.s24),
+          padding: EdgeInsets.all(theme.spacings.xl),
           decoration: BoxDecoration(
             color: palette.background.surface,
             borderRadius: theme.radiuses.lg.circular,
@@ -313,7 +313,7 @@ class _RecentActivitySection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Recent Activity', style: theme.commonTextStyles.h3),
-              SizedBox(height: theme.spacings.s24),
+              SizedBox(height: theme.spacings.xl),
               if (recentEntries.isEmpty)
                 Text(
                   'No recent activity.',
@@ -323,7 +323,7 @@ class _RecentActivitySection extends StatelessWidget {
                 )
               else
                 Column(
-                  spacing: theme.spacings.s12,
+                  spacing: theme.spacings.md,
                   children: recentEntries.map((resolvedEntry) {
                     return TimeEntryCard(
                       resolvedEntry: resolvedEntry,
@@ -332,7 +332,7 @@ class _RecentActivitySection extends StatelessWidget {
                     );
                   }).toList(),
                 ),
-              SizedBox(height: theme.spacings.s16),
+              SizedBox(height: theme.spacings.lg),
               SizedBox(
                 width: double.infinity,
                 child: PrimaryButton(

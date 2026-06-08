@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -102,7 +102,7 @@ class TaskList extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -116,7 +116,7 @@ class TaskList extends StatelessWidget {
                     'Current Tasks',
                     style: theme.commonTextStyles.displayLarge,
                   ),
-                  SizedBox(height: theme.spacings.s4),
+                  SizedBox(height: theme.spacings.xxs),
                   Text(
                     '${tasks.where((t) => t.status == TaskStatus.open).length} active tasks',
                     style: theme.commonTextStyles.body.copyWith(
@@ -126,7 +126,7 @@ class TaskList extends StatelessWidget {
                 ],
               ),
               Row(
-                spacing: theme.spacings.s12,
+                spacing: theme.spacings.md,
                 children: [
                   _TaskViewModeToggle(
                     viewMode: viewMode,
@@ -142,7 +142,7 @@ class TaskList extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
               child: viewMode == TaskViewMode.table
@@ -156,7 +156,7 @@ class TaskList extends StatelessWidget {
                       columns: _getTableColumns(theme),
                     )
                   : Column(
-                      spacing: theme.spacings.s12,
+                      spacing: theme.spacings.md,
                       children: tasks.map((task) {
                         final isSelected = selectedTask?.id == task.id;
                         return TaskCard(
@@ -193,7 +193,7 @@ class TaskList extends StatelessWidget {
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
               ),
-              SizedBox(width: theme.spacings.s12),
+              SizedBox(width: theme.spacings.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,7 +340,7 @@ class _TaskViewModeToggle extends StatelessWidget {
           color: palette.border.primary.withValues(alpha: 0.5),
         ),
       ),
-      padding: EdgeInsets.all(theme.spacings.s4),
+      padding: EdgeInsets.all(theme.spacings.xxs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -350,7 +350,7 @@ class _TaskViewModeToggle extends StatelessWidget {
             isSelected: viewMode == TaskViewMode.cards,
             onTap: () => onChanged(TaskViewMode.cards),
           ),
-          SizedBox(width: theme.spacings.s4),
+          SizedBox(width: theme.spacings.xxs),
           _buildToggleButton(
             context,
             icon: Icons.table_rows_rounded,
@@ -378,7 +378,7 @@ class _TaskViewModeToggle extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(theme.spacings.s8),
+          padding: EdgeInsets.all(theme.spacings.sm),
           decoration: BoxDecoration(
             border: isSelected
                 ? Border.all(

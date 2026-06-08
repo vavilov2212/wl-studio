@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerController;
+﻿import 'package:flutter/material.dart' hide DrawerController;
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 /*
@@ -92,7 +92,7 @@ class _DrawerState extends State<Drawer> {
           child: Row(
             children: [
               _ResizeHandle(
-                width: context.theme.spacings.s24,
+                width: context.theme.spacings.xl,
                 onHorizontalDrag: (dx) {
                   setState(() {
                     _widthFactor -= dx / screenWidth;

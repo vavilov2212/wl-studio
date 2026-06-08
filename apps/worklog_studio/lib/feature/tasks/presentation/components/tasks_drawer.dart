@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerHeader;
+﻿import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -153,9 +153,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         ? Padding(
                             key: const ValueKey('delete_confirmation'),
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.s32,
-                              theme.spacings.s16,
-                              theme.spacings.s32,
+                              theme.spacings.x2l,
+                              theme.spacings.lg,
+                              theme.spacings.x2l,
                               0,
                             ),
                             child: InfoBar(
@@ -165,8 +165,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 'This action cannot be undone',
                               ),
                               actions: Wrap(
-                                spacing: theme.spacings.s8,
-                                runSpacing: theme.spacings.s8,
+                                spacing: theme.spacings.sm,
+                                runSpacing: theme.spacings.sm,
                                 alignment: WrapAlignment.end,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
@@ -237,7 +237,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                     ),
                     content: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s32,
+                        horizontal: theme.spacings.x2l,
                         vertical: 0,
                       ),
                       child: Column(
@@ -258,7 +258,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.s32),
+                          SizedBox(height: theme.spacings.x2l),
 
                           // Details Grid
                           Row(
@@ -374,7 +374,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                   },
                                 ),
                               ),
-                              SizedBox(width: theme.spacings.s16),
+                              SizedBox(width: theme.spacings.lg),
                               Expanded(
                                 child: _DetailItem(
                                   label: 'PRIORITY',
@@ -385,7 +385,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                         size: 16,
                                         color: palette.text.secondary,
                                       ),
-                                      SizedBox(width: theme.spacings.s8),
+                                      SizedBox(width: theme.spacings.sm),
                                       Text(
                                         'Medium',
                                         style: theme.commonTextStyles.body
@@ -399,7 +399,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               ),
                             ],
                           ),
-                          SizedBox(height: theme.spacings.s24),
+                          SizedBox(height: theme.spacings.xl),
                           if (!_isNew) ...[
                             Row(
                               children: [
@@ -418,7 +418,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                             color: palette.text.secondary,
                                           ),
                                         ),
-                                        SizedBox(width: theme.spacings.s8),
+                                        SizedBox(width: theme.spacings.sm),
                                         Text(
                                           'Unassigned',
                                           style:
@@ -439,9 +439,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: theme.spacings.s40),
+                            SizedBox(height: theme.spacings.x3l),
                             Divider(color: palette.border.primary),
-                            SizedBox(height: theme.spacings.s32),
+                            SizedBox(height: theme.spacings.x2l),
 
                             // Activity Log
                             Text(
@@ -449,7 +449,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               style: theme.commonTextStyles.caption3Bold
                                   .copyWith(letterSpacing: 1.0),
                             ),
-                            SizedBox(height: theme.spacings.s24),
+                            SizedBox(height: theme.spacings.xl),
 
                             Text(
                               'No activity yet.',
@@ -459,7 +459,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                             ),
                           ],
                           SizedBox(
-                            height: theme.spacings.s24,
+                            height: theme.spacings.xl,
                           ), // Bottom padding for scroll
                         ],
                       ),
@@ -529,7 +529,7 @@ class _DetailItem extends StatelessWidget {
             letterSpacing: 1.0,
           ),
         ),
-        SizedBox(height: theme.spacings.s8),
+        SizedBox(height: theme.spacings.sm),
         child,
       ],
     );

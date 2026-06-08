@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 
@@ -20,7 +20,7 @@ class EntityMetaInfoRow extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: theme.spacings.s16),
+      padding: EdgeInsets.only(bottom: theme.spacings.lg),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -28,7 +28,7 @@ class EntityMetaInfoRow extends StatelessWidget {
             status: status,
             label: statusLabel,
           ),
-          SizedBox(width: theme.spacings.s12),
+          SizedBox(width: theme.spacings.md),
           Text(
             'Created ${DateFormatter.formatDateTime(createdAt)}',
             style: theme.commonTextStyles.body2.copyWith(

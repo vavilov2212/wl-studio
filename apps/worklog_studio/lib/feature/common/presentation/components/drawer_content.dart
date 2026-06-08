@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class DrawerContent extends StatelessWidget {
@@ -23,18 +23,18 @@ class DrawerContent extends StatelessWidget {
         if (meta != null) ...[
           Padding(
             padding: EdgeInsets.fromLTRB(
-              theme.spacings.s24,
-              theme.spacings.s12,
-              theme.spacings.s24,
-              theme.spacings.s0,
+              theme.spacings.xl,
+              theme.spacings.md,
+              theme.spacings.xl,
+              theme.spacings.none,
             ),
             child: meta!,
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
         ],
         Expanded(child: content),
         if (footer != null) ...[
-          Padding(padding: EdgeInsets.all(theme.spacings.s24), child: footer!),
+          Padding(padding: EdgeInsets.all(theme.spacings.xl), child: footer!),
         ],
       ],
     );

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -102,7 +102,7 @@ class ProjectList extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -116,7 +116,7 @@ class ProjectList extends StatelessWidget {
                     'Active Projects',
                     style: theme.commonTextStyles.displayLarge,
                   ),
-                  SizedBox(height: theme.spacings.s4),
+                  SizedBox(height: theme.spacings.xxs),
                   Text(
                     '${projects.length} currently in progress',
                     style: theme.commonTextStyles.body.copyWith(
@@ -126,7 +126,7 @@ class ProjectList extends StatelessWidget {
                 ],
               ),
               Row(
-                spacing: theme.spacings.s12,
+                spacing: theme.spacings.md,
                 children: [
                   _ProjectViewModeToggle(
                     viewMode: viewMode,
@@ -148,7 +148,7 @@ class ProjectList extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
               child: viewMode == ProjectViewMode.table
@@ -162,7 +162,7 @@ class ProjectList extends StatelessWidget {
                       columns: _getTableColumns(theme),
                     )
                   : Column(
-                      spacing: theme.spacings.s16,
+                      spacing: theme.spacings.lg,
                       children: projects.map((project) {
                         final isSelected = selectedProject?.id == project.id;
                         return ProjectCard(
@@ -198,7 +198,7 @@ class ProjectList extends StatelessWidget {
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
               ),
-              SizedBox(width: theme.spacings.s12),
+              SizedBox(width: theme.spacings.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,7 +348,7 @@ class _ProjectViewModeToggle extends StatelessWidget {
           color: palette.border.primary.withValues(alpha: 0.5),
         ),
       ),
-      padding: EdgeInsets.all(theme.spacings.s4),
+      padding: EdgeInsets.all(theme.spacings.xxs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -358,7 +358,7 @@ class _ProjectViewModeToggle extends StatelessWidget {
             isSelected: viewMode == ProjectViewMode.cards,
             onTap: () => onChanged(ProjectViewMode.cards),
           ),
-          SizedBox(width: theme.spacings.s4),
+          SizedBox(width: theme.spacings.xxs),
           _buildToggleButton(
             context,
             icon: Icons.table_rows_rounded,
@@ -386,7 +386,7 @@ class _ProjectViewModeToggle extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(theme.spacings.s8),
+          padding: EdgeInsets.all(theme.spacings.sm),
           decoration: BoxDecoration(
             border: isSelected
                 ? Border.all(

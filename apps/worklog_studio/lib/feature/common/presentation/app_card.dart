@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class AppCard extends StatefulWidget {
@@ -63,7 +63,7 @@ class _AppCardState extends State<AppCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.all(theme.spacings.s16),
+          padding: EdgeInsets.all(theme.spacings.lg),
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: theme.radiuses.lg.circular,
@@ -80,14 +80,14 @@ class _AppCardState extends State<AppCard> {
                 Container(
                   width: 4,
                   height: 40,
-                  margin: EdgeInsets.only(right: theme.spacings.s16),
+                  margin: EdgeInsets.only(right: theme.spacings.lg),
                   decoration: BoxDecoration(
                     color: widget.accentColor,
                     borderRadius: theme.radiuses.pill.circular,
                   ),
                 )
               else
-                SizedBox(width: theme.spacings.s16 + 4),
+                SizedBox(width: theme.spacings.lg + 4),
 
               // Main Content
               Expanded(
@@ -97,7 +97,7 @@ class _AppCardState extends State<AppCard> {
                   children: [
                     widget.title,
                     if (widget.subtitle != null) ...[
-                      SizedBox(height: theme.spacings.s4),
+                      SizedBox(height: theme.spacings.xxs),
                       widget.subtitle!,
                     ],
                   ],
@@ -106,7 +106,7 @@ class _AppCardState extends State<AppCard> {
 
               // Right Meta
               if (widget.trailing != null) ...[
-                SizedBox(width: theme.spacings.s16),
+                SizedBox(width: theme.spacings.lg),
                 widget.trailing!,
               ],
             ],

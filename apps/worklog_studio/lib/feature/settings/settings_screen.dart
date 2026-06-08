@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
 import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
 
@@ -10,12 +10,12 @@ class SettingsScreen extends StatelessWidget {
     final theme = context.theme;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Settings', style: theme.commonTextStyles.displayLarge),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Row(
             children: [
               OutlinedButton.icon(

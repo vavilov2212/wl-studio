@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class WsTableColumn<T> {
@@ -94,8 +94,8 @@ class WsTable<T> extends StatelessWidget {
         border: Border(bottom: BorderSide(color: borderColor)),
       ),
       padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s16,
-        vertical: theme.spacings.s8,
+        horizontal: theme.spacings.lg,
+        vertical: theme.spacings.sm,
       ),
       child: Row(
         children: columns.asMap().entries.map((entry) {
@@ -103,7 +103,7 @@ class WsTable<T> extends StatelessWidget {
           return Expanded(
             flex: col.flex,
             child: Padding(
-              padding: EdgeInsets.only(right: theme.spacings.s24),
+              padding: EdgeInsets.only(right: theme.spacings.xl),
               child: Align(
                 alignment: col.alignment,
                 child: Text(
@@ -176,8 +176,8 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
           splashColor: Colors.transparent,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: theme.spacings.s16,
-              vertical: theme.spacings.s16,
+              horizontal: theme.spacings.lg,
+              vertical: theme.spacings.lg,
             ),
             child: Row(
               children: widget.columns.asMap().entries.map((entry) {
@@ -185,7 +185,7 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
                 return Expanded(
                   flex: col.flex,
                   child: Padding(
-                    padding: EdgeInsets.only(right: theme.spacings.s24),
+                    padding: EdgeInsets.only(right: theme.spacings.xl),
                     child: Align(
                       alignment: col.alignment,
                       child: col.builder(context, widget.item, _isHovered),

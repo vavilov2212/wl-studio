@@ -1,4 +1,4 @@
-import 'package:collection/collection.dart';
+﻿import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -187,8 +187,8 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           return Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(
-              horizontal: theme.spacings.s32,
-              vertical: theme.spacings.s16,
+              horizontal: theme.spacings.x2l,
+              vertical: theme.spacings.lg,
             ),
             decoration: const BoxDecoration(color: Colors.transparent),
             child: LayoutBuilder(
@@ -228,14 +228,14 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Expanded(child: projectField),
-                            SizedBox(width: theme.spacings.s16),
+                            SizedBox(width: theme.spacings.lg),
                             Expanded(child: taskField),
                           ],
                         ),
                       ),
-                      SizedBox(width: theme.spacings.s24),
+                      SizedBox(width: theme.spacings.xl),
                       Expanded(flex: 4, child: commentField),
-                      SizedBox(width: theme.spacings.s24),
+                      SizedBox(width: theme.spacings.xl),
                       ...timerAndAction,
                     ],
                   );
@@ -248,16 +248,16 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(child: projectField),
-                          SizedBox(width: theme.spacings.s16),
+                          SizedBox(width: theme.spacings.lg),
                           Expanded(child: taskField),
                         ],
                       ),
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(child: commentField),
-                          SizedBox(width: theme.spacings.s24),
+                          SizedBox(width: theme.spacings.xl),
                           ...timerAndAction,
                         ],
                       ),
@@ -269,11 +269,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       projectField,
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       taskField,
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       commentField,
-                      SizedBox(height: theme.spacings.s24),
+                      SizedBox(height: theme.spacings.xl),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -306,7 +306,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
-      SizedBox(width: theme.spacings.s24),
+      SizedBox(width: theme.spacings.xl),
       isRunning
           ? PrimaryButton(
               size: ButtonSize.sm,
@@ -639,7 +639,7 @@ class SidebarNavigation extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: EdgeInsets.all(theme.spacings.s24),
+            padding: EdgeInsets.all(theme.spacings.xl),
             child: Row(
               children: [
                 Container(
@@ -657,7 +657,7 @@ class SidebarNavigation extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -677,10 +677,10 @@ class SidebarNavigation extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: theme.spacings.s16),
+          SizedBox(height: theme.spacings.lg),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s12),
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.md),
               child: Column(
                 children: [
                   SidebarItem(
@@ -713,7 +713,7 @@ class SidebarNavigation extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(theme.spacings.s12),
+            padding: EdgeInsets.all(theme.spacings.md),
             child: Column(
               children: [
                 SidebarItem(label: 'Help', onTap: () {}),

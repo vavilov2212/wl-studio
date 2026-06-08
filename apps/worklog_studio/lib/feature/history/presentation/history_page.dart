@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
@@ -139,7 +139,7 @@ class TimeEntryList extends StatelessWidget {
       ..sort((a, b) => b.compareTo(a));
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -149,7 +149,7 @@ class TimeEntryList extends StatelessWidget {
               Text('Time History', style: theme.commonTextStyles.displayLarge),
               Row(
                 mainAxisSize: MainAxisSize.min,
-                spacing: theme.spacings.s16,
+                spacing: theme.spacings.lg,
                 children: [
                   _ViewModeToggle(
                     viewMode: viewMode,
@@ -164,7 +164,7 @@ class TimeEntryList extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -182,7 +182,7 @@ class TimeEntryList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: EdgeInsets.all(theme.spacings.s16),
+                          padding: EdgeInsets.all(theme.spacings.lg),
                           child: Container(
                             // decoration: BoxDecoration(color: Colors.green),
                             child: Row(
@@ -201,7 +201,7 @@ class TimeEntryList extends StatelessWidget {
                                         ),
                                   ),
                                 ),
-                                SizedBox(width: theme.spacings.s8),
+                                SizedBox(width: theme.spacings.sm),
                                 Icon(
                                   Icons.history_outlined,
                                   color: palette.text.secondary2.withValues(
@@ -209,7 +209,7 @@ class TimeEntryList extends StatelessWidget {
                                   ),
                                   size: 16,
                                 ),
-                                SizedBox(width: theme.spacings.s4),
+                                SizedBox(width: theme.spacings.xxs),
                                 Container(
                                   // decoration: BoxDecoration(color: Colors.red),
                                   child: Text(
@@ -228,7 +228,7 @@ class TimeEntryList extends StatelessWidget {
                         ),
                         if (viewMode == HistoryViewMode.cards)
                           Column(
-                            spacing: theme.spacings.s12,
+                            spacing: theme.spacings.md,
                             children: dailyEntries.map((resolvedEntry) {
                               final entry = resolvedEntry.entry;
                               final isSelected = selectedEntry?.id == entry.id;
@@ -252,17 +252,17 @@ class TimeEntryList extends StatelessWidget {
                                 item.entry.id == selected?.entry.id,
                             columns: _getTableColumns(theme),
                           ),
-                        SizedBox(height: theme.spacings.s24),
+                        SizedBox(height: theme.spacings.xl),
                       ],
                     );
                   }),
                   // Footer
                   if (entries.isNotEmpty)
                     Container(
-                      margin: EdgeInsets.only(top: theme.spacings.s16),
+                      margin: EdgeInsets.only(top: theme.spacings.lg),
                       padding: EdgeInsets.only(
-                        top: theme.spacings.s24,
-                        bottom: theme.spacings.s16,
+                        top: theme.spacings.xl,
+                        bottom: theme.spacings.lg,
                       ),
                       decoration: BoxDecoration(
                         border: Border(
@@ -315,7 +315,7 @@ class TimeEntryList extends StatelessWidget {
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
               ),
-              SizedBox(width: theme.spacings.s12),
+              SizedBox(width: theme.spacings.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,7 +530,7 @@ class _ViewModeToggle extends StatelessWidget {
         color: palette.background.surfaceMuted,
         borderRadius: theme.radiuses.md.circular,
       ),
-      padding: EdgeInsets.all(theme.spacings.s4),
+      padding: EdgeInsets.all(theme.spacings.xxs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -567,7 +567,7 @@ class _ViewModeToggle extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(theme.spacings.s8),
+          padding: EdgeInsets.all(theme.spacings.sm),
           decoration: BoxDecoration(
             border: isSelected
                 ? Border.all(

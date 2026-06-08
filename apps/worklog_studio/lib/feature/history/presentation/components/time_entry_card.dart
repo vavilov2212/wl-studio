@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
@@ -54,7 +54,7 @@ class TimeEntryCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +111,7 @@ class TimeEntryCard extends StatelessWidget {
                               fontSize: 16,
                             ),
                           ),
-                    SizedBox(height: theme.spacings.s4),
+                    SizedBox(height: theme.spacings.xxs),
                     Text(
                       DateFormatUtils.formatTimeRangeWithDate(
                         resolvedEntry.startAt,

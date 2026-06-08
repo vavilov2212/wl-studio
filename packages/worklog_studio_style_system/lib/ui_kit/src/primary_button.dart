@@ -1,4 +1,4 @@
-import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+﻿import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_svg/vector_svg.dart';
 
@@ -47,16 +47,16 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   EdgeInsetsGeometry get innerPadding {
     return switch (widget.size) {
       ButtonSize.sm => EdgeInsets.symmetric(
-        vertical: context.theme.spacings.s8,
-        horizontal: context.theme.spacings.s12,
+        vertical: context.theme.spacings.sm,
+        horizontal: context.theme.spacings.md,
       ),
       ButtonSize.md => EdgeInsets.symmetric(
-        vertical: context.theme.spacings.s8,
-        horizontal: context.theme.spacings.s16,
+        vertical: context.theme.spacings.sm,
+        horizontal: context.theme.spacings.lg,
       ),
       ButtonSize.lg => EdgeInsets.symmetric(
-        vertical: context.theme.spacings.s8,
-        horizontal: context.theme.spacings.s32,
+        vertical: context.theme.spacings.sm,
+        horizontal: context.theme.spacings.x2l,
       ),
     };
   }
@@ -230,7 +230,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                         else if (widget.leftIcon != null)
                           buildIcon(widget.leftIcon)!,
                         if (widget.title != null) ...[
-                          SizedBox(width: context.theme.spacings.s8),
+                          SizedBox(width: context.theme.spacings.sm),
                           Flexible(
                             child: Text(
                               widget.title!,

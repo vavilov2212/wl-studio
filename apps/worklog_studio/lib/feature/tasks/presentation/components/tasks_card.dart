@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -68,7 +68,7 @@ class TaskCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,8 +99,8 @@ class TaskCard extends StatelessWidget {
                             children: [
                               Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: theme.spacings.s8,
-                                  vertical: theme.spacings.s2,
+                                  horizontal: theme.spacings.sm,
+                                  vertical: theme.spacings.xs,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isActive
@@ -129,7 +129,7 @@ class TaskCard extends StatelessWidget {
                                       ),
                                 ),
                               ),
-                              SizedBox(width: theme.spacings.s8),
+                              SizedBox(width: theme.spacings.sm),
                               Expanded(
                                 child: Text(
                                   task.projectName,

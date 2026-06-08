@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:vector_svg/vector_svg.dart';
@@ -25,10 +25,10 @@ class SelectTrigger extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Container(
-      height: theme.spacings.s48,
+      height: theme.spacings.x4l,
       padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s12,
-        vertical: theme.spacings.s12,
+        horizontal: theme.spacings.md,
+        vertical: theme.spacings.md,
       ),
       decoration: BoxDecoration(
         border: Border.all(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'inline_field_controller.dart';
 
@@ -111,7 +111,7 @@ class _InlineFieldState extends State<InlineField> {
 
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s0),
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.none),
               child: Text(
                 widget.label,
                 style: theme.commonTextStyles.captionSemiBold.copyWith(
@@ -121,7 +121,7 @@ class _InlineFieldState extends State<InlineField> {
                 ),
               ),
             ),
-            SizedBox(height: theme.spacings.s8),
+            SizedBox(height: theme.spacings.sm),
             if (widget.isTextArea && _currentIsEditing)
               widget.editWidget
             else
@@ -138,8 +138,8 @@ class _InlineFieldState extends State<InlineField> {
                     child: Container(
                       width: double.infinity,
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s12,
-                        vertical: theme.spacings.s12,
+                        horizontal: theme.spacings.md,
+                        vertical: theme.spacings.md,
                       ),
                       decoration: BoxDecoration(
                         color: _isHovered && widget.isEditable
@@ -150,7 +150,7 @@ class _InlineFieldState extends State<InlineField> {
                         border: Border.all(color: Colors.transparent),
                       ),
                       child: Row(
-                        spacing: theme.spacings.s8,
+                        spacing: theme.spacings.sm,
                         children: [
                           if (widget.leading != null &&
                               _displayValue.isNotEmpty)

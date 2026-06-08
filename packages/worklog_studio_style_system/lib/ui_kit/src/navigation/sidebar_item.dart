@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:vector_svg/vector_svg.dart';
 
@@ -51,8 +51,8 @@ class _SidebarItemState extends State<SidebarItem> {
         child: AnimatedContainer(
           duration: kThemeAnimationDuration,
           padding: EdgeInsets.symmetric(
-            horizontal: theme.spacings.s16,
-            vertical: theme.spacings.s12,
+            horizontal: theme.spacings.lg,
+            vertical: theme.spacings.md,
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -74,7 +74,7 @@ class _SidebarItemState extends State<SidebarItem> {
                   height: 20,
                   colorFilter: iconColor.filter,
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
               ],
               Expanded(
                 child: Text(

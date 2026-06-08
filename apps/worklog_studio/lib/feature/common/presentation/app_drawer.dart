@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -53,10 +53,10 @@ class _AppDrawerState extends State<AppDrawer> {
             widget.actions != null)) {
       headerWidget = Padding(
         padding: EdgeInsets.fromLTRB(
-          theme.spacings.s24,
-          theme.spacings.s24,
-          theme.spacings.s24,
-          theme.spacings.s16,
+          theme.spacings.xl,
+          theme.spacings.xl,
+          theme.spacings.xl,
+          theme.spacings.lg,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -150,13 +150,13 @@ class _AppDrawerState extends State<AppDrawer> {
                         Expanded(
                           child: SingleChildScrollView(
                             padding: EdgeInsets.only(
-                              left: theme.spacings.s24,
-                              right: theme.spacings.s32,
+                              left: theme.spacings.xl,
+                              right: theme.spacings.x2l,
                               top: headerWidget == null
-                                  ? theme.spacings.s32
+                                  ? theme.spacings.x2l
                                   : 0,
                               bottom: widget.footer == null
-                                  ? theme.spacings.s32
+                                  ? theme.spacings.x2l
                                   : 0,
                             ),
                             child: widget.body,
@@ -165,10 +165,10 @@ class _AppDrawerState extends State<AppDrawer> {
                         if (widget.footer != null)
                           Padding(
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.s24,
-                              theme.spacings.s16,
-                              theme.spacings.s32,
-                              theme.spacings.s32,
+                              theme.spacings.xl,
+                              theme.spacings.lg,
+                              theme.spacings.x2l,
+                              theme.spacings.x2l,
                             ),
                             child: widget.footer!,
                           ),

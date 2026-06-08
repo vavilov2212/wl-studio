@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 enum InfoBarVariant { info, success, warning, danger }
@@ -55,7 +55,7 @@ class InfoBar extends StatelessWidget {
         : baseColor.withValues(alpha: 0.1);
 
     return Container(
-      padding: EdgeInsets.all(theme.spacings.s12),
+      padding: EdgeInsets.all(theme.spacings.md),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: theme.radiuses.md.circular,
@@ -69,7 +69,7 @@ class InfoBar extends StatelessWidget {
               data: IconThemeData(color: baseColor, size: 20),
               child: leading!,
             ),
-            SizedBox(width: theme.spacings.s12),
+            SizedBox(width: theme.spacings.md),
           ],
           Expanded(
             child: Column(
@@ -83,7 +83,7 @@ class InfoBar extends StatelessWidget {
                   child: title,
                 ),
                 if (description != null) ...[
-                  SizedBox(height: theme.spacings.s4),
+                  SizedBox(height: theme.spacings.xxs),
                   DefaultTextStyle(
                     style: theme.commonTextStyles.caption.copyWith(
                       color: palette.text.secondary,
@@ -95,7 +95,7 @@ class InfoBar extends StatelessWidget {
             ),
           ),
           if (actions != null) ...[
-            SizedBox(width: theme.spacings.s12),
+            SizedBox(width: theme.spacings.md),
             Flexible(child: actions!),
           ],
         ],

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 enum BadgeStatus { ready, inProgress, needsReview, done, urgent, logged }
@@ -46,8 +46,8 @@ class StatusBadge extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s8,
-        vertical: theme.spacings.s4,
+        horizontal: theme.spacings.sm,
+        vertical: theme.spacings.xxs,
       ),
       decoration: BoxDecoration(
         color: backgroundColor,

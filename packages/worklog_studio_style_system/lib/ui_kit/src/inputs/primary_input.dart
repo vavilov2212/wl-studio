@@ -1,4 +1,4 @@
-import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+﻿import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -111,7 +111,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: context.theme.spacings.s8,
+      spacing: context.theme.spacings.sm,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.label != null)
@@ -130,9 +130,9 @@ class _PrimaryInputState extends State<PrimaryInput> {
               onTap: widget.onTap,
               child: AnimatedContainer(
                 duration: kThemeAnimationDuration,
-                height: context.theme.spacings.s48,
+                height: context.theme.spacings.x4l,
                 padding: EdgeInsets.symmetric(
-                  horizontal: context.theme.spacings.s12,
+                  horizontal: context.theme.spacings.md,
                 ),
                 decoration: BoxDecoration(
                   color: backgroundColor,
@@ -140,14 +140,14 @@ class _PrimaryInputState extends State<PrimaryInput> {
                   border: border,
                 ),
                 child: Row(
-                  spacing: context.theme.spacings.s12,
+                  spacing: context.theme.spacings.md,
                   children: [
                     if (widget.prefixWidget != null)
                       Padding(
                         padding: EdgeInsets.symmetric(
                           vertical:
                               widget.prefixIconPadding ??
-                              context.theme.spacings.s12,
+                              context.theme.spacings.md,
                         ),
                         child: widget.prefixWidget,
                       ),
@@ -189,7 +189,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
                         padding: EdgeInsets.symmetric(
                           vertical:
                               widget.suffixIconPadding ??
-                              context.theme.spacings.s12,
+                              context.theme.spacings.md,
                         ),
                         child: widget.suffixWidget,
                       ),

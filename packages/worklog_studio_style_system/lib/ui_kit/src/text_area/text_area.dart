@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/theme/radiuses.dart';
 import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
@@ -82,7 +82,7 @@ class _TextAreaState extends State<TextArea> {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: theme.spacings.s8,
+      spacing: theme.spacings.sm,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.label != null)
@@ -100,7 +100,7 @@ class _TextAreaState extends State<TextArea> {
             onTap: () => _focusNode.requestFocus(),
             child: Container(
               constraints: BoxConstraints(
-                minHeight: theme.spacings.s48,
+                minHeight: theme.spacings.x4l,
                 maxHeight: 500,
               ),
               height: _manualHeight,
@@ -112,7 +112,7 @@ class _TextAreaState extends State<TextArea> {
               child: Stack(
                 children: [
                   Padding(
-                    padding: EdgeInsets.all(theme.spacings.s16),
+                    padding: EdgeInsets.all(theme.spacings.lg),
                     child: TextField(
                       autofocus: widget.autofocus,
                       controller: controller,
@@ -169,9 +169,9 @@ class _TextAreaState extends State<TextArea> {
                           final currentHeight =
                               _manualHeight ??
                               context.size?.height ??
-                              theme.spacings.s48;
+                              theme.spacings.x4l;
                           _manualHeight = (currentHeight + details.delta.dy)
-                              .clamp(theme.spacings.s48, 500.0);
+                              .clamp(theme.spacings.x4l, 500.0);
                         });
                       },
                       onVerticalDragEnd: (_) {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class SelectCreateAction extends StatelessWidget {
@@ -20,8 +20,8 @@ class SelectCreateAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.s12,
-          vertical: theme.spacings.s12,
+          horizontal: theme.spacings.md,
+          vertical: theme.spacings.md,
         ),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: palette.border.primary)),
@@ -29,7 +29,7 @@ class SelectCreateAction extends StatelessWidget {
         child: Row(
           children: [
             Icon(Icons.add, size: 16, color: palette.accent.primary),
-            SizedBox(width: theme.spacings.s8),
+            SizedBox(width: theme.spacings.sm),
             Expanded(
               child: Text(
                 label,

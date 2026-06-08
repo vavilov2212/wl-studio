@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerHeader;
+﻿import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
@@ -147,9 +147,9 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                         ? Padding(
                             key: const ValueKey('delete_confirmation'),
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.s32,
-                              theme.spacings.s16,
-                              theme.spacings.s32,
+                              theme.spacings.x2l,
+                              theme.spacings.lg,
+                              theme.spacings.x2l,
                               0,
                             ),
                             child: InfoBar(
@@ -159,8 +159,8 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                 'This action cannot be undone',
                               ),
                               actions: Wrap(
-                                spacing: theme.spacings.s8,
-                                runSpacing: theme.spacings.s8,
+                                spacing: theme.spacings.sm,
+                                runSpacing: theme.spacings.sm,
                                 alignment: WrapAlignment.end,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
@@ -230,7 +230,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                     ),
                     content: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s32,
+                        horizontal: theme.spacings.x2l,
                         vertical: 0,
                       ),
                       child: Column(
@@ -251,7 +251,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.s32),
+                          SizedBox(height: theme.spacings.x2l),
                           if (!_isNew) ...[
                             Row(
                               children: [
@@ -266,7 +266,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                     icon: Icons.trending_up,
                                   ),
                                 ),
-                                SizedBox(width: theme.spacings.s16),
+                                SizedBox(width: theme.spacings.lg),
                                 Expanded(
                                   child: _MetricCard(
                                     title: 'BILLABLE AMOUNT',
@@ -280,7 +280,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: theme.spacings.s16),
+                            SizedBox(height: theme.spacings.lg),
                             _MetricCard(
                               title: 'BUDGET LEFT',
                               value:
@@ -290,7 +290,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               icon: Icons.warning_amber_rounded,
                               fullWidth: true,
                             ),
-                            SizedBox(height: theme.spacings.s40),
+                            SizedBox(height: theme.spacings.x3l),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -305,11 +305,11 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: theme.spacings.s24),
+                            SizedBox(height: theme.spacings.xl),
                             if (projectTasks.isEmpty)
                               Padding(
                                 padding: EdgeInsets.symmetric(
-                                  vertical: theme.spacings.s24,
+                                  vertical: theme.spacings.xl,
                                 ),
                                 child: Center(
                                   child: Text(
@@ -322,10 +322,10 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               )
                             else
                               Column(
-                                spacing: theme.spacings.s16,
+                                spacing: theme.spacings.lg,
                                 children: projectTasks.map((task) {
                                   return Container(
-                                    padding: EdgeInsets.all(theme.spacings.s16),
+                                    padding: EdgeInsets.all(theme.spacings.lg),
                                     decoration: BoxDecoration(
                                       color: palette.background.surfaceMuted,
                                       borderRadius: theme.radiuses.md.circular,
@@ -334,7 +334,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                       children: [
                                         Container(
                                           padding: EdgeInsets.all(
-                                            theme.spacings.s8,
+                                            theme.spacings.sm,
                                           ),
                                           decoration: BoxDecoration(
                                             color: palette.background.surface,
@@ -347,7 +347,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                             size: 20,
                                           ),
                                         ),
-                                        SizedBox(width: theme.spacings.s16),
+                                        SizedBox(width: theme.spacings.lg),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -360,7 +360,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                                                     .bodyBold,
                                               ),
                                               SizedBox(
-                                                height: theme.spacings.s4,
+                                                height: theme.spacings.xxs,
                                               ),
                                               Text(
                                                 getStatusText(
@@ -390,7 +390,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               ),
                           ],
                           SizedBox(
-                            height: theme.spacings.s24,
+                            height: theme.spacings.xl,
                           ), // Bottom padding for scroll
                         ],
                       ),
@@ -407,7 +407,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                           ),
                         ),
                         if (!_isNew) ...[
-                          SizedBox(height: theme.spacings.s16),
+                          SizedBox(height: theme.spacings.lg),
                           SizedBox(
                             width: double.infinity,
                             child: PrimaryButton(
@@ -474,7 +474,7 @@ class _MetricCard extends StatelessWidget {
 
     return Container(
       width: fullWidth ? double.infinity : null,
-      padding: EdgeInsets.all(theme.spacings.s24),
+      padding: EdgeInsets.all(theme.spacings.xl),
       decoration: BoxDecoration(
         color: palette.background.surfaceMuted,
         borderRadius: theme.radiuses.lg.circular,
@@ -489,14 +489,14 @@ class _MetricCard extends StatelessWidget {
               letterSpacing: 0.5,
             ),
           ),
-          SizedBox(height: theme.spacings.s12),
+          SizedBox(height: theme.spacings.md),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(value, style: theme.commonTextStyles.h1),
               if (unit != null) ...[
-                SizedBox(width: theme.spacings.s4),
+                SizedBox(width: theme.spacings.xxs),
                 Text(
                   unit!,
                   style: theme.commonTextStyles.h3.copyWith(
@@ -506,11 +506,11 @@ class _MetricCard extends StatelessWidget {
               ],
             ],
           ),
-          SizedBox(height: theme.spacings.s16),
+          SizedBox(height: theme.spacings.lg),
           Row(
             children: [
               Icon(icon, color: subtitleColor, size: 14),
-              SizedBox(width: theme.spacings.s8),
+              SizedBox(width: theme.spacings.sm),
               Expanded(
                 child: Text(
                   subtitle,

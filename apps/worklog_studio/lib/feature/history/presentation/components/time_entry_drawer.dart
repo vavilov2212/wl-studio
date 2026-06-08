@@ -1,4 +1,4 @@
-import 'package:collection/collection.dart';
+﻿import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -213,9 +213,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       ? Padding(
                           key: const ValueKey('delete_confirmation'),
                           padding: EdgeInsets.fromLTRB(
-                            theme.spacings.s32,
-                            theme.spacings.s16,
-                            theme.spacings.s32,
+                            theme.spacings.x2l,
+                            theme.spacings.lg,
+                            theme.spacings.x2l,
                             0,
                           ),
                           child: InfoBar(
@@ -225,8 +225,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               'This action cannot be undone',
                             ),
                             actions: Wrap(
-                              spacing: theme.spacings.s8,
-                              runSpacing: theme.spacings.s8,
+                              spacing: theme.spacings.sm,
+                              runSpacing: theme.spacings.sm,
                               alignment: WrapAlignment.end,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
@@ -381,7 +381,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             );
                           },
                         ),
-                        SizedBox(height: theme.spacings.s16),
+                        SizedBox(height: theme.spacings.lg),
                         // Task Select
                         Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
@@ -499,7 +499,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                     ),
                     content: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s32,
+                        horizontal: theme.spacings.x2l,
                         vertical: 0,
                       ),
                       child: Column(
@@ -522,7 +522,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   },
                                 ),
                               ),
-                              SizedBox(width: theme.spacings.s16),
+                              SizedBox(width: theme.spacings.lg),
                               Expanded(
                                 child: DateTimeInlineField(
                                   label: 'END',
@@ -538,13 +538,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               ),
                             ],
                           ),
-                          SizedBox(height: theme.spacings.s32),
+                          SizedBox(height: theme.spacings.x2l),
                           // Metrics Grid
                           Row(
                             children: [
                               Expanded(
                                 child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.s16),
+                                  padding: EdgeInsets.all(theme.spacings.lg),
                                   decoration: BoxDecoration(
                                     color: palette.background.surfaceMuted,
                                     borderRadius: theme.radiuses.md.circular,
@@ -563,7 +563,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                               letterSpacing: 1.0,
                                             ),
                                       ),
-                                      SizedBox(height: theme.spacings.s8),
+                                      SizedBox(height: theme.spacings.sm),
                                       isActive
                                           ? LiveDurationText(
                                               durationBuilder: (now) => now
@@ -580,10 +580,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   ),
                                 ),
                               ),
-                              SizedBox(width: theme.spacings.s16),
+                              SizedBox(width: theme.spacings.lg),
                               Expanded(
                                 child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.s16),
+                                  padding: EdgeInsets.all(theme.spacings.lg),
                                   decoration: BoxDecoration(
                                     color: palette.background.surfaceMuted,
                                     borderRadius: theme.radiuses.md.circular,
@@ -602,7 +602,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                               letterSpacing: 1.0,
                                             ),
                                       ),
-                                      SizedBox(height: theme.spacings.s8),
+                                      SizedBox(height: theme.spacings.sm),
                                       Text(
                                         '\$0.00',
                                         style: theme.commonTextStyles.h2,
@@ -613,7 +613,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               ),
                             ],
                           ),
-                          SizedBox(height: theme.spacings.s32),
+                          SizedBox(height: theme.spacings.x2l),
 
                           // Comments
                           InlineField(
@@ -630,7 +630,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.s32),
+                          SizedBox(height: theme.spacings.x2l),
 
                           // Tags
                           Text(
@@ -640,14 +640,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               letterSpacing: 1.0,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.s12),
+                          SizedBox(height: theme.spacings.md),
                           Wrap(
-                            spacing: theme.spacings.s8,
-                            runSpacing: theme.spacings.s8,
+                            spacing: theme.spacings.sm,
+                            runSpacing: theme.spacings.sm,
                             children: <Widget>[],
                           ),
                           SizedBox(
-                            height: theme.spacings.s24,
+                            height: theme.spacings.xl,
                           ), // Bottom padding for scroll
                         ],
                       ),

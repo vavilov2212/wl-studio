@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 import 'select_option.dart';
@@ -96,7 +96,7 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
     if (hasPinnedItems && filteredWithoutSelected.isNotEmpty) {
       listItems.add(
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
+          padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
           child: Divider(height: 1, color: palette.border.primary),
         ),
       );
@@ -107,7 +107,7 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
       // Only show empty state if there are no pinned items and no results
       listItems.add(
         Padding(
-          padding: EdgeInsets.all(theme.spacings.s16),
+          padding: EdgeInsets.all(theme.spacings.lg),
           child: widget.emptyBuilder != null
               ? widget.emptyBuilder!(context, widget.searchQuery)
               : Text(
@@ -158,8 +158,8 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
       onTap: () => widget.onSelect(option.value),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.s12,
-          vertical: theme.spacings.s12,
+          horizontal: theme.spacings.md,
+          vertical: theme.spacings.md,
         ),
         color: isSelected
             ? palette.accent.primary.withValues(alpha: 0.08)
@@ -168,7 +168,7 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
           children: [
             if (option.leading != null) ...[
               option.leading!,
-              SizedBox(width: theme.spacings.s8),
+              SizedBox(width: theme.spacings.sm),
             ],
             Expanded(
               child: Text(

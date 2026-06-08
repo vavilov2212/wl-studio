@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class BaseCard extends StatelessWidget {
@@ -24,7 +24,7 @@ class BaseCard extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
     return Container(
-      padding: padding ?? EdgeInsets.all(theme.spacings.s16),
+      padding: padding ?? EdgeInsets.all(theme.spacings.lg),
       decoration: BoxDecoration(
         color: backgroundColor ?? palette.background.surface,
         border: Border.all(
