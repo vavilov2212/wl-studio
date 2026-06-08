@@ -57,6 +57,14 @@ class _SidebarItemState extends State<SidebarItem> {
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: theme.radiuses.md.circular,
+            border: widget.isActive
+                ? Border(
+                    left: BorderSide(
+                      color: palette.accent.primary,
+                      width: 3,
+                    ),
+                  )
+                : null,
           ),
           child: Row(
             children: [
@@ -76,15 +84,6 @@ class _SidebarItemState extends State<SidebarItem> {
                   ),
                 ),
               ),
-              if (widget.isActive)
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: palette.accent.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
             ],
           ),
         ),

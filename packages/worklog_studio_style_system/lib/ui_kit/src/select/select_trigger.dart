@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:vector_svg/vector_svg.dart';
 
 class SelectTrigger extends StatelessWidget {
   final String? label;
@@ -71,7 +73,14 @@ class SelectTrigger extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
           ),
-          Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
+          Transform.rotate(
+            angle: math.pi / 2,
+            child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
+              width: 18,
+              height: 18,
+              colorFilter: palette.text.muted.filter,
+            ),
+          ),
         ],
       ),
     );

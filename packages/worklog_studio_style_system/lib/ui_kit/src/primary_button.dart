@@ -119,22 +119,14 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   }
 
   Gradient? get backgroundGradient {
-    if (isDisabled) return null;
+    if (isDisabled || isActive) return null;
     if (widget.type == ButtonType.primary) {
       return LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          isActive
-              ? context.theme.colorsPalette.accent.primaryMuted
-              : context.theme.colorsPalette.accent.primary,
-          isActive
-              ? context.theme.colorsPalette.accent.primaryMuted.withValues(
-                  alpha: 0.8,
-                )
-              : context.theme.colorsPalette.accent.primary.withValues(
-                  alpha: 0.8,
-                ),
+          context.theme.colorsPalette.accent.primary,
+          context.theme.colorsPalette.accent.primary.withValues(alpha: 0.8),
         ],
       );
     }
@@ -148,7 +140,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
         switch (widget.type) {
           ButtonType.primary =>
             isActive
-                ? context.theme.colorsPalette.accent.primaryMuted
+                ? context.theme.colorsPalette.accent.primary.withValues(alpha: 0.75)
                 : context.theme.colorsPalette.accent.primary,
           ButtonType.secondary =>
             isActive

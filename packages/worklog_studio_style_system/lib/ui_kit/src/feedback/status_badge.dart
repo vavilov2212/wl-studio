@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
-enum BadgeStatus { ready, inProgress, needsReview, done, urgent }
+enum BadgeStatus { ready, inProgress, needsReview, done, urgent, logged }
 
 class StatusBadge extends StatelessWidget {
   final BadgeStatus status;
@@ -37,6 +37,10 @@ class StatusBadge extends StatelessWidget {
       case BadgeStatus.urgent:
         backgroundColor = palette.accent.danger.withValues(alpha: 0.12);
         textColor = palette.accent.danger;
+        break;
+      case BadgeStatus.logged:
+        backgroundColor = palette.background.surfaceMuted;
+        textColor = palette.text.secondary;
         break;
     }
 
