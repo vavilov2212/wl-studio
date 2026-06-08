@@ -59,6 +59,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
   TextEditingController get controller => widget.controller;
   ColorsPalette get palette => context.theme.colorsPalette;
   bool hasFocus = false;
+  bool isHovered = false;
 
   Color get backgroundColor {
     if (widget.variant == InputVariant.ghost) return Colors.transparent;
@@ -74,8 +75,11 @@ class _PrimaryInputState extends State<PrimaryInput> {
   BoxBorder? get border {
     if (widget.variant == InputVariant.ghost) return null;
     return switch (widget.state) {
-      InputState.enabled =>
-        hasFocus ? Border.all(color: palette.border.focus) : null,
+      InputState.enabled => hasFocus
+          ? Border.all(color: palette.border.focus)
+          : isHovered
+              ? Border.all(color: palette.border.hover)
+              : null,
       InputState.warning => Border.all(color: palette.accent.warning),
       InputState.error => Border.all(color: palette.accent.danger),
       InputState.disabled => null,
@@ -117,76 +121,80 @@ class _PrimaryInputState extends State<PrimaryInput> {
               color: labelColor,
             ),
           ),
-        Focus(
-          onFocusChange: (focus) => setState(() => hasFocus = focus),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: kThemeAnimationDuration,
-              height: context.theme.spacings.s48,
-              padding: EdgeInsets.symmetric(
-                horizontal: context.theme.spacings.s12,
-              ),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: context.theme.radiuses.md.circular,
-                border: border,
-              ),
-              child: Row(
-                spacing: context.theme.spacings.s12,
-                children: [
-                  if (widget.prefixWidget != null)
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical:
-                            widget.prefixIconPadding ??
-                            context.theme.spacings.s12,
-                      ),
-                      child: widget.prefixWidget,
-                    ),
-                  Expanded(
-                    child: TextField(
-                      focusNode: widget.focusNode,
-                      autofocus: widget.autofocus,
-                      controller: controller,
-                      enabled:
-                          widget.enabled && widget.state != InputState.disabled,
-                      maxLength: widget.maxLength,
-                      inputFormatters: widget.inputFormatters,
-                      keyboardType: widget.keyboardType,
-                      cursorColor: palette.border.focus,
-                      decoration: InputDecoration(
-                        isDense: false,
-                        border: InputBorder.none,
-                        hintText: widget.hintText,
-                        hintStyle: context.theme.commonTextStyles.body.copyWith(
-                          color: palette.text.muted,
+        MouseRegion(
+          onEnter: (_) => setState(() => isHovered = true),
+          onExit: (_) => setState(() => isHovered = false),
+          child: Focus(
+            onFocusChange: (focus) => setState(() => hasFocus = focus),
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: AnimatedContainer(
+                duration: kThemeAnimationDuration,
+                height: context.theme.spacings.s48,
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.theme.spacings.s12,
+                ),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: context.theme.radiuses.md.circular,
+                  border: border,
+                ),
+                child: Row(
+                  spacing: context.theme.spacings.s12,
+                  children: [
+                    if (widget.prefixWidget != null)
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical:
+                              widget.prefixIconPadding ??
+                              context.theme.spacings.s12,
                         ),
-                        counterText: widget.showCounter ? null : '',
+                        child: widget.prefixWidget,
                       ),
-                      style: context.theme.commonTextStyles.body.copyWith(
-                        color: textColor,
+                    Expanded(
+                      child: TextField(
+                        focusNode: widget.focusNode,
+                        autofocus: widget.autofocus,
+                        controller: controller,
+                        enabled:
+                            widget.enabled && widget.state != InputState.disabled,
+                        maxLength: widget.maxLength,
+                        inputFormatters: widget.inputFormatters,
+                        keyboardType: widget.keyboardType,
+                        cursorColor: palette.border.focus,
+                        decoration: InputDecoration(
+                          isDense: false,
+                          border: InputBorder.none,
+                          hintText: widget.hintText,
+                          hintStyle: context.theme.commonTextStyles.body.copyWith(
+                            color: palette.text.muted,
+                          ),
+                          counterText: widget.showCounter ? null : '',
+                        ),
+                        style: context.theme.commonTextStyles.body.copyWith(
+                          color: textColor,
+                        ),
+                        strutStyle: const StrutStyle(
+                          forceStrutHeight: true,
+                          height: 1.2,
+                        ),
+                        onChanged: (value) {
+                          widget.onChanged?.call(value);
+                        },
+                        onSubmitted: widget.onSubmitted,
                       ),
-                      strutStyle: const StrutStyle(
-                        forceStrutHeight: true,
-                        height: 1.2,
-                      ),
-                      onChanged: (value) {
-                        widget.onChanged?.call(value);
-                      },
-                      onSubmitted: widget.onSubmitted,
                     ),
-                  ),
-                  if (widget.suffixWidget != null)
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical:
-                            widget.suffixIconPadding ??
-                            context.theme.spacings.s12,
+                    if (widget.suffixWidget != null)
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical:
+                              widget.suffixIconPadding ??
+                              context.theme.spacings.s12,
+                        ),
+                        child: widget.suffixWidget,
                       ),
-                      child: widget.suffixWidget,
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

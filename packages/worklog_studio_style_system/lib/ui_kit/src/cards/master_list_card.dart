@@ -47,7 +47,7 @@ class MasterListCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.commonTextStyles.title.copyWith(
+                    style: theme.commonTextStyles.body2Bold.copyWith(
                       color: palette.text.primary,
                     ),
                   ),
