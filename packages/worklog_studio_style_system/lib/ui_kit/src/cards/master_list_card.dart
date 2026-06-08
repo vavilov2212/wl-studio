@@ -33,7 +33,7 @@ class MasterListCard extends StatelessWidget {
               ? Border(
                   left: BorderSide(
                     color: accentColor!,
-                    width: 4.0,
+                    width: theme.spacings.s4,
                   ),
                 )
               : null,

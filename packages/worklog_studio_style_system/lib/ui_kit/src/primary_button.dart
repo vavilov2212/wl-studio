@@ -230,7 +230,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                         else if (widget.leftIcon != null)
                           buildIcon(widget.leftIcon)!,
                         if (widget.title != null) ...[
-                          SizedBox(width: 8),
+                          SizedBox(width: context.theme.spacings.s8),
                           Flexible(
                             child: Text(
                               widget.title!,
