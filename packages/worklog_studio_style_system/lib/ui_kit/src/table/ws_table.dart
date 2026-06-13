@@ -95,7 +95,7 @@ class WsTable<T> extends StatelessWidget {
       ),
       padding: EdgeInsets.symmetric(
         horizontal: theme.spacings.lg,
-        vertical: theme.spacings.sm,
+        vertical: theme.spacings.xs,
       ),
       child: Row(
         children: columns.asMap().entries.map((entry) {
@@ -108,6 +108,9 @@ class WsTable<T> extends StatelessWidget {
                 alignment: col.alignment,
                 child: Text(
                   col.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                   style: theme.commonTextStyles.labelSmall.copyWith(
                     color: palette.text.muted,
                   ),

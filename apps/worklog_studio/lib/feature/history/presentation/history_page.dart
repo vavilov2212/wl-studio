@@ -464,8 +464,9 @@ class TimeEntryList extends StatelessWidget {
           final hasComment = item.entry.comment?.isNotEmpty == true;
           return Text(
             hasComment ? item.entry.comment! : 'No comment',
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: theme.commonTextStyles.caption.copyWith(
               color: hasComment
                   ? palette.text.secondary

@@ -588,6 +588,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     children: [
                                       Text(
                                         'Cost est.',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
                                         style: theme.commonTextStyles.labelSmall.copyWith(
                                           color: palette.text.muted,
                                         ),
