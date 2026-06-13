@@ -22,6 +22,7 @@ import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
 
 import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
+import 'package:worklog_studio/core/services/idle_monitor/no_op_idle_monitor.dart';
 import 'package:worklog_studio/core/services/idle_monitor/platform_idle_monitor.dart';
 
 Future<void> run(List<String> args) async {
@@ -98,8 +99,13 @@ void _initRepositories() {
     getIt.registerSingleton(AppBarService());
     getIt.registerSingleton<DrawerService>(DrawerService());
 
-    // Register PlatformIdleMonitor
-    getIt.registerLazySingleton<IdleMonitor>(() => PlatformIdleMonitor());
+    // Register IdleMonitor — only macOS has a native channel implementation.
+    // Windows/Linux/web get a silent no-op so start/stop calls are safe.
+    getIt.registerLazySingleton<IdleMonitor>(
+      () => (!kIsWeb && Platform.isMacOS)
+          ? PlatformIdleMonitor()
+          : const NoOpIdleMonitor(),
+    );
   } on Object catch (e, stackTrace) {
     l.e(e, stackTrace);
     rethrow;

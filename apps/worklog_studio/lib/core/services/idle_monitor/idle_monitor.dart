@@ -10,3 +10,4 @@ abstract class IdleMonitor {
   /// Stream of idle events
   Stream<IdleEvent> get onIdleEvent;
 }
+
