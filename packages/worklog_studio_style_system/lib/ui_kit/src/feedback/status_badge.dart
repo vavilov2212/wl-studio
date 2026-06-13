@@ -48,23 +48,26 @@ class StatusBadge extends StatelessWidget {
         break;
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.sm,
-        vertical: theme.spacings.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: theme.radiuses.pill.circular,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.clip,
-        style: theme.commonTextStyles.caption2Bold.copyWith(
-          color: textColor,
-          letterSpacing: 0.5,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacings.sm,
+          vertical: theme.spacings.xxs,
+        ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: theme.radiuses.pill.circular,
+        ),
+        child: Text(
+          label.toUpperCase(),
+          maxLines: 1,
+          softWrap: false,
+          style: theme.commonTextStyles.caption2Bold.copyWith(
+            color: textColor,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
     );

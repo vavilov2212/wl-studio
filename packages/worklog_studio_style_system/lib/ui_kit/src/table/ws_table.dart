@@ -95,7 +95,7 @@ class WsTable<T> extends StatelessWidget {
       ),
       padding: EdgeInsets.symmetric(
         horizontal: theme.spacings.lg,
-        vertical: theme.spacings.xs,
+        vertical: theme.spacings.xxs,
       ),
       child: Row(
         children: columns.asMap().entries.map((entry) {
