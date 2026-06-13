@@ -136,6 +136,9 @@ final iconColor = widget.isActive
               Expanded(
                 child: Text(
                   widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                   style: theme.commonTextStyles.bodyBold.copyWith(
                     color: textColor,
                   ),

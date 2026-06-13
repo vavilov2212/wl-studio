@@ -117,6 +117,9 @@ class _PrimaryInputState extends State<PrimaryInput> {
         if (widget.label != null)
           Text(
             widget.label!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: context.theme.commonTextStyles.caption.copyWith(
               color: labelColor,
             ),

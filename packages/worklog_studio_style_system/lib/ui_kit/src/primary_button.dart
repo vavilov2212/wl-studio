@@ -234,6 +234,9 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                           Flexible(
                             child: Text(
                               widget.title!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
                               style: textStyle.copyWith(color: foregroundColor),
                             ),
                           ),
