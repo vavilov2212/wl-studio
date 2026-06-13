@@ -10,8 +10,8 @@ const lightColorsPalette = ColorsPalette(
   ),
   border: BorderColors(
     primary: Color(0xFFE2E0DB),
-    hover: Color(0xFFC8C5BE),
-    focus: Color(0xFF0F172A),
+    hover: Color(0xFFBBCADE),
+    focus: Color(0xFF2563EB),
   ),
   text: TextColors(
     primary: Color(0xFF1C1E21),
@@ -20,12 +20,12 @@ const lightColorsPalette = ColorsPalette(
     muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: Color(0xFF0F172A),
-    primaryMuted: Color(0xFFF0EFF0),
+    primary: Color(0xFF1D4ED8),
+    primaryMuted: Color(0xFFEFF4FF),
     danger: Color(0xFFDC2626),
     success: Color(0xFF16A34A),
     warning: Color(0xFFF59E0B),
-    nav: Color(0xFF111110),
+    nav: Color(0xFF1E3A5F),
   ),
 );
 
@@ -38,8 +38,8 @@ const darkColorsPalette = ColorsPalette(
   ),
   border: BorderColors(
     primary: Color(0xFFE2E0DB),
-    hover: Color(0xFFC8C5BE),
-    focus: Color(0xFF0F172A),
+    hover: Color(0xFFBBCADE),
+    focus: Color(0xFF2563EB),
   ),
   text: TextColors(
     primary: Color(0xFF1C1E21),
@@ -48,11 +48,11 @@ const darkColorsPalette = ColorsPalette(
     muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: Color(0xFF0F172A),
-    primaryMuted: Color(0xFFF0EFF0),
+    primary: Color(0xFF1D4ED8),
+    primaryMuted: Color(0xFFEFF4FF),
     danger: Color(0xFFDC2626),
     success: Color(0xFF16A34A),
     warning: Color(0xFFF59E0B),
-    nav: Color(0xFF111110),
+    nav: Color(0xFF1E3A5F),
   ),
 );
