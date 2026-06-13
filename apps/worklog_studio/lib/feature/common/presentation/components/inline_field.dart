@@ -114,10 +114,10 @@ class _InlineFieldState extends State<InlineField> {
               padding: EdgeInsets.symmetric(horizontal: theme.spacings.none),
               child: Text(
                 widget.label,
-                style: theme.commonTextStyles.captionSemiBold.copyWith(
+                style: theme.commonTextStyles.labelSmall.copyWith(
                   color: _isHovered || _currentIsEditing
-                      ? palette.text.primary
-                      : palette.text.secondary2,
+                      ? palette.text.secondary
+                      : palette.text.muted,
                 ),
               ),
             ),

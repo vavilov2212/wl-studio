@@ -107,11 +107,9 @@ class WsTable<T> extends StatelessWidget {
               child: Align(
                 alignment: col.alignment,
                 child: Text(
-                  col.title.toUpperCase(),
-                  style: theme.commonTextStyles.caption.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: palette.text.secondary,
-                    letterSpacing: 0.5,
+                  col.title,
+                  style: theme.commonTextStyles.labelSmall.copyWith(
+                    color: palette.text.muted,
                   ),
                 ),
               ),
@@ -185,7 +183,7 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
                 return Expanded(
                   flex: col.flex,
                   child: Padding(
-                    padding: EdgeInsets.only(right: theme.spacings.xl),
+                    padding: EdgeInsets.only(right: theme.spacings.md),
                     child: Align(
                       alignment: col.alignment,
                       child: col.builder(context, widget.item, _isHovered),

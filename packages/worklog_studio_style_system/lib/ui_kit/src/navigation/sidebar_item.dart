@@ -90,19 +90,19 @@ colorsPalette,
 ) {
 final palette = theme.colorsPalette;
 
-    final backgroundColor = widget.isActive
-        ? palette.background.surface
-        : isHovered
-        ? palette.background.surfaceMuted.withValues(alpha: 0.5)
-        : palette.base.transparent;
+final backgroundColor = widget.isActive
+? palette.accent.primary
+: isHovered
+? Colors.white.withValues(alpha: 0.07)
+: palette.base.transparent;
 
-    final textColor = widget.isActive
-        ? palette.text.primary
-        : palette.text.secondary;
+final textColor = widget.isActive
+? Colors.white
+: Colors.white.withValues(alpha: 0.55);
 
-    final iconColor = widget.isActive
-        ? palette.accent.primary
-        : palette.text.muted;
+final iconColor = widget.isActive
+? Colors.white
+: Colors.white.withValues(alpha: 0.45);
 
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
@@ -119,14 +119,6 @@ final palette = theme.colorsPalette;
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: theme.radiuses.md.circular,
-            border: widget.isActive
-                ? Border(
-                    left: BorderSide(
-                      color: palette.accent.primary,
-                      width: 3,
-                    ),
-                  )
-                : null,
           ),
           child: Row(
             children: [

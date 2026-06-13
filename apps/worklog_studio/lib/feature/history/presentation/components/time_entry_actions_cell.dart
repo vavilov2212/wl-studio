@@ -26,8 +26,7 @@ class TimeEntryActionsCell extends StatelessWidget {
     if (isRunningThis) {
       return PrimaryButton(
         initialAnimationDuration: Duration(milliseconds: 20),
-
-        type: isHovered ? ButtonType.danger : ButtonType.ghost,
+        type: isHovered ? ButtonType.danger : ButtonType.primary,
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.squareFilled24Svg,
         onTap: () {
@@ -37,8 +36,7 @@ class TimeEntryActionsCell extends StatelessWidget {
     } else {
       return PrimaryButton(
         initialAnimationDuration: Duration(milliseconds: 20),
-
-        type: isHovered ? ButtonType.primary : ButtonType.ghost,
+        type: ButtonType.ghost,
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
         onTap: () {

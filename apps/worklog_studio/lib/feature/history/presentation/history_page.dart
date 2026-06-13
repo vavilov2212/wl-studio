@@ -146,7 +146,7 @@ class TimeEntryList extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Time History', style: theme.commonTextStyles.h3),
+              Text('Time history', style: theme.commonTextStyles.h3),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: theme.spacings.lg,
@@ -372,7 +372,11 @@ class TimeEntryList extends StatelessWidget {
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           final id = item.task?.id ?? item.project?.id ?? item.id;
+          final isUnassigned = item.task == null && item.project == null;
           final colors = BadgeUtils.getBadgeColor(id);
+          final stripeColor = isUnassigned
+              ? palette.text.muted
+              : colors.$1;
 
           return Row(
             children: [
@@ -381,7 +385,7 @@ class TimeEntryList extends StatelessWidget {
                 width: 3,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: colors.$1.withValues(alpha: 0.9),
+                  color: stripeColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -427,13 +431,13 @@ class TimeEntryList extends StatelessWidget {
               isActive
                   ? LiveDurationText(
                       durationBuilder: (now) => item.duration(now),
-                      style: theme.commonTextStyles.bodyBold.copyWith(
+                      style: theme.commonTextStyles.labelMedium.copyWith(
                         color: palette.accent.primary,
                       ),
                     )
                   : Text(
                       _formatExactDuration(item.duration(DateTime.now())),
-                      style: theme.commonTextStyles.bodyBold.copyWith(
+                      style: theme.commonTextStyles.labelMedium.copyWith(
                         color: palette.text.primary,
                       ),
                     ),
@@ -443,7 +447,7 @@ class TimeEntryList extends StatelessWidget {
                   item.endAt,
                 ),
                 style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.text.secondary,
+                  color: palette.text.muted,
                 ),
               ),
             ],

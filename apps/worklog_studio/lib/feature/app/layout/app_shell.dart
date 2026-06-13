@@ -381,7 +381,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     }
 
     return InlineField(
-      label: 'PROJECT',
+      label: 'Project',
       value: selectedProject?.name ?? '',
       placeholder: 'Select Project',
       leading: leadingWidget,
@@ -501,7 +501,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     }
 
     return InlineField(
-      label: 'TASK',
+      label: 'Task',
       value: selectedTask?.title ?? '',
       placeholder: 'Select Task',
       leading: leadingWidget,
@@ -589,7 +589,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
 
     return InlineField(
-      label: 'COMMENT',
+      label: 'Comment',
       value: _commentController.text,
       placeholder: 'Add a comment...',
       controller: _commentFieldController,
