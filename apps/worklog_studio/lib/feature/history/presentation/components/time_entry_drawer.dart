@@ -302,7 +302,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             }
 
                             return InlineField(
-                              label: 'PROJECT',
+                              label: 'Project',
                               value: selectedProject?.name ?? '',
                               placeholder: 'Select Project',
                               leading: leadingProjectWidget,
@@ -410,7 +410,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             }
 
                             return InlineField(
-                              label: 'TASK',
+                              label: 'Task',
                               value: selectedTask?.title ?? '',
                               placeholder: 'Select Task',
                               leading: leadingTaskWidget,
@@ -497,20 +497,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         ),
                       ],
                     ),
-                    content: SingleChildScrollView(
+                    content: Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: theme.spacings.x2l,
-                        vertical: 0,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          SizedBox(height: theme.spacings.x2l),
                           // Timeline
                           Row(
                             children: [
                               Expanded(
                                 child: DateTimeInlineField(
-                                  label: 'START',
+                                  label: 'Start',
                                   value: _draft.startAt,
                                   controller: _startTimeFieldController,
                                   onChanged: (newStartAt) {
@@ -525,7 +525,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               SizedBox(width: theme.spacings.lg),
                               Expanded(
                                 child: DateTimeInlineField(
-                                  label: 'END',
+                                  label: 'End',
                                   value: _draft.endAt ?? DateTime.now(),
                                   isEditable: !isActive,
                                   controller: _endTimeFieldController,
@@ -554,14 +554,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'DURATION',
-                                        style: theme
-                                            .commonTextStyles
-                                            .caption3Bold
-                                            .copyWith(
-                                              color: palette.text.muted,
-                                              letterSpacing: 1.0,
-                                            ),
+                                        'Duration',
+                                        style: theme.commonTextStyles.labelSmall.copyWith(
+                                          color: palette.text.muted,
+                                        ),
                                       ),
                                       SizedBox(height: theme.spacings.sm),
                                       isActive
@@ -593,14 +589,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'COST EST.',
-                                        style: theme
-                                            .commonTextStyles
-                                            .caption3Bold
-                                            .copyWith(
-                                              color: palette.text.muted,
-                                              letterSpacing: 1.0,
-                                            ),
+                                        'Cost est.',
+                                        style: theme.commonTextStyles.labelSmall.copyWith(
+                                          color: palette.text.muted,
+                                        ),
                                       ),
                                       SizedBox(height: theme.spacings.sm),
                                       Text(
@@ -617,7 +609,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
 
                           // Comments
                           InlineField(
-                            label: 'COMMENTS',
+                            label: 'Comments',
                             value: _commentController.text,
                             placeholder: 'Add a comment...',
                             controller: _commentFieldController,
@@ -634,10 +626,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
 
                           // Tags
                           Text(
-                            'AI SUGGESTED TAGS',
-                            style: theme.commonTextStyles.caption3Bold.copyWith(
+                            'AI suggested tags',
+                            style: theme.commonTextStyles.labelSmall.copyWith(
                               color: palette.text.muted,
-                              letterSpacing: 1.0,
                             ),
                           ),
                           SizedBox(height: theme.spacings.md),
@@ -648,11 +639,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           ),
                           SizedBox(
                             height: theme.spacings.xl,
-                          ), // Bottom padding for scroll
+                          ),
                         ],
                       ),
-                    ),
-                    footer: _isNew
+                    ), _isNew
                         ? SizedBox(
                             width: double.infinity,
                             child: PrimaryButton(
