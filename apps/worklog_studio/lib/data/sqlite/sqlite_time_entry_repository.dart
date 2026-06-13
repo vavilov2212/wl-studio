@@ -17,7 +17,8 @@ class SqliteTimeEntryRepository extends SqliteRepositoryBase<TimeEntry>
   // ── TimeEntry-specific queries ─────────────────────────────────────────────
 
   @override
-  Future<List<TimeEntry>> getAll() => super.getAll(orderBy: 'start_at DESC');
+  Future<List<TimeEntry>> getAll({String orderBy = 'start_at DESC'}) =>
+      super.getAll(orderBy: orderBy);
 
   @override
   Future<TimeEntry?> getActive() async {

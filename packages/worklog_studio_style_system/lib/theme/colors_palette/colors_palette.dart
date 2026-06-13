@@ -4,14 +4,14 @@ import 'dart:ui';
 const lightColorsPalette = ColorsPalette(
   base: BsColors(transparent: Color(0x00FFFFFF)),
   background: BackgroundColors(
-    canvas: Color(0xFFF8F9FB),
+    canvas: Color(0xFFF5F4F1),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F4F7),
+    surfaceMuted: Color(0xFFEEECEA),
   ),
   border: BorderColors(
-    primary: Color(0xFFD1D5DB),
-    hover: Color(0xFF9CA3AF),
-    focus: Color(0xFF3B82F6),
+    primary: Color(0xFFE2E0DB),
+    hover: Color(0xFFC8C5BE),
+    focus: Color(0xFF0F172A),
   ),
   text: TextColors(
     primary: Color(0xFF1C1E21),
@@ -20,25 +20,26 @@ const lightColorsPalette = ColorsPalette(
     muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: Color(0xFF0053DB),
-    primaryMuted: Color(0xFFE5EDFB),
+    primary: Color(0xFF0F172A),
+    primaryMuted: Color(0xFFF0EFF0),
     danger: Color(0xFFDC2626),
     success: Color(0xFF16A34A),
     warning: Color(0xFFF59E0B),
+    nav: Color(0xFF111110),
   ),
 );
 
 const darkColorsPalette = ColorsPalette(
   base: BsColors(transparent: Color(0x00FFFFFF)),
   background: BackgroundColors(
-    canvas: Color(0xFFF8F9FB),
+    canvas: Color(0xFFF5F4F1),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F4F7),
+    surfaceMuted: Color(0xFFEEECEA),
   ),
   border: BorderColors(
-    primary: Color(0xFFD1D5DB),
-    hover: Color(0xFF9CA3AF),
-    focus: Color(0xFF3B82F6),
+    primary: Color(0xFFE2E0DB),
+    hover: Color(0xFFC8C5BE),
+    focus: Color(0xFF0F172A),
   ),
   text: TextColors(
     primary: Color(0xFF1C1E21),
@@ -47,10 +48,11 @@ const darkColorsPalette = ColorsPalette(
     muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: Color(0xFF0053DB),
-    primaryMuted: Color(0xFFE5EDFB),
+    primary: Color(0xFF0F172A),
+    primaryMuted: Color(0xFFF0EFF0),
     danger: Color(0xFFDC2626),
     success: Color(0xFF16A34A),
     warning: Color(0xFFF59E0B),
+    nav: Color(0xFF111110),
   ),
 );

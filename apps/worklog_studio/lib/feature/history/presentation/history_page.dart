@@ -146,7 +146,7 @@ class TimeEntryList extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Time History', style: theme.commonTextStyles.displayLarge),
+              Text('Time History', style: theme.commonTextStyles.h3),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: theme.spacings.lg,
@@ -163,6 +163,67 @@ class TimeEntryList extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+          SizedBox(height: theme.spacings.lg),
+          // KPI strip
+          Builder(
+            builder: (context) {
+              final allEntries = context.select(
+                (TimeTrackerBloc bloc) => bloc.state.allEntries,
+              );
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final todayEntries = entries.where((e) {
+                final d = DateTime(
+                  e.startAt.year,
+                  e.startAt.month,
+                  e.startAt.day,
+                );
+                return d == today;
+              });
+              final todayDur = todayEntries.fold<Duration>(
+                Duration.zero,
+                (p, e) => p + e.entry.duration(now),
+              );
+              final weekStart = today.subtract(
+                Duration(days: today.weekday - 1),
+              );
+              final weekEntries = entries.where((e) {
+                return !e.startAt.isBefore(weekStart);
+              });
+              final weekDur = weekEntries.fold<Duration>(
+                Duration.zero,
+                (p, e) => p + e.entry.duration(now),
+              );
+              final unassigned = entries
+                  .where((e) => e.task == null)
+                  .length;
+
+              String fmtDur(Duration d) =>
+                  '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+
+              return Row(
+                children: [
+                  _KpiChip(label: 'Today', value: fmtDur(todayDur)),
+                  SizedBox(width: theme.spacings.sm),
+                  _KpiChip(label: 'This week', value: fmtDur(weekDur)),
+                  SizedBox(width: theme.spacings.sm),
+                  _KpiChip(
+                    label: 'Efficiency',
+                    value: '94%',
+                    valueColor: palette.accent.success,
+                  ),
+                  SizedBox(width: theme.spacings.sm),
+                  _KpiChip(
+                    label: 'Unassigned',
+                    value: '$unassigned',
+                    valueColor: unassigned > 0
+                        ? palette.accent.warning
+                        : palette.text.secondary,
+                  ),
+                ],
+              );
+            },
           ),
           SizedBox(height: theme.spacings.x2l),
           Expanded(
@@ -182,48 +243,57 @@ class TimeEntryList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: EdgeInsets.all(theme.spacings.lg),
-                          child: Container(
-                            // decoration: BoxDecoration(color: Colors.green),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  // decoration: BoxDecoration(
-                                  //   color: Colors.amber,
-                                  // ),
-                                  child: Text(
-                                    _formatDateHeader(date),
-                                    style: theme.commonTextStyles.captionBold
-                                        .copyWith(
-                                          letterSpacing: 1.0,
-                                          color: palette.text.secondary,
-                                        ),
-                                  ),
+                          padding: EdgeInsets.only(
+                            left: theme.spacings.xxs,
+                            bottom: theme.spacings.sm,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: theme.spacings.md,
+                                  vertical: theme.spacings.xxs,
                                 ),
-                                SizedBox(width: theme.spacings.sm),
-                                Icon(
-                                  Icons.history_outlined,
-                                  color: palette.text.secondary2.withValues(
-                                    alpha: 0.8,
+                                decoration: BoxDecoration(
+                                  color: palette.background.surface,
+                                  border: Border.all(
+                                    color: palette.border.primary,
                                   ),
-                                  size: 16,
+                                  borderRadius:
+                                      theme.radiuses.pill.circular,
                                 ),
-                                SizedBox(width: theme.spacings.xxs),
-                                Container(
-                                  // decoration: BoxDecoration(color: Colors.red),
-                                  child: Text(
-                                    _formatDuration(totalDuration),
-                                    style: theme.commonTextStyles.body2
-                                        .copyWith(
-                                          letterSpacing: 1.0,
-                                          color: palette.text.secondary2
-                                              .withValues(alpha: 0.8),
-                                        ),
-                                  ),
+                                child: Text(
+                                  _formatDateHeader(date),
+                                  style: theme.commonTextStyles.labelSmall
+                                      .copyWith(
+                                        color: palette.text.primary,
+                                      ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(width: theme.spacings.sm),
+                              Icon(
+                                Icons.history_outlined,
+                                color: palette.text.muted,
+                                size: 14,
+                              ),
+                              SizedBox(width: theme.spacings.xxs),
+                              Text(
+                                _formatDuration(totalDuration),
+                                style: theme.commonTextStyles.labelSmall
+                                    .copyWith(
+                                      color: palette.text.muted,
+                                    ),
+                              ),
+                              SizedBox(width: theme.spacings.sm),
+                              Expanded(
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: palette.border.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (viewMode == HistoryViewMode.cards)
@@ -301,19 +371,19 @@ class TimeEntryList extends StatelessWidget {
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          final initials = BadgeUtils.getTaskInitials(
-            item.taskTitle,
-            item.projectName,
-          );
           final id = item.task?.id ?? item.project?.id ?? item.id;
           final colors = BadgeUtils.getBadgeColor(id);
 
           return Row(
             children: [
-              WsInitialBadge(
-                initials: initials,
-                backgroundColor: colors.$1,
-                textColor: colors.$2,
+              // Color stripe instead of badge
+              Container(
+                width: 3,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colors.$1.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               SizedBox(width: theme.spacings.md),
               Expanded(
@@ -323,14 +393,14 @@ class TimeEntryList extends StatelessWidget {
                   children: [
                     Text(
                       item.taskTitle,
-                      style: theme.commonTextStyles.bodyBold.copyWith(
+                      style: theme.commonTextStyles.labelMedium.copyWith(
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
                       item.projectName,
                       style: theme.commonTextStyles.caption.copyWith(
-                        color: palette.text.secondary,
+                        color: palette.text.muted,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -416,11 +486,29 @@ class TimeEntryList extends StatelessWidget {
         flex: 1,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          return Text(
-            '94%',
-            style: theme.commonTextStyles.body.copyWith(
-              color: palette.accent.success,
-            ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '94%',
+                style: theme.commonTextStyles.labelMedium.copyWith(
+                  color: palette.accent.success,
+                ),
+              ),
+              SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: 0.94,
+                  minHeight: 3,
+                  backgroundColor: palette.background.surfaceMuted,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    palette.accent.success,
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -436,14 +524,14 @@ class TimeEntryList extends StatelessWidget {
             return const Align(
               alignment: Alignment.centerLeft,
               child: StatusBadge(
-                status: BadgeStatus.inProgress,
+                status: BadgeStatus.active,
                 label: 'Running',
               ),
             );
           }
           return const Align(
             alignment: Alignment.centerLeft,
-            child: StatusBadge(status: BadgeStatus.ready, label: 'Logged'),
+            child: StatusBadge(status: BadgeStatus.logged, label: 'Logged'),
           );
         },
       ),
@@ -484,25 +572,15 @@ class TimeEntryList extends StatelessWidget {
     final targetDate = DateTime(date.year, date.month, date.day);
 
     final months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     final dateString = '${months[date.month - 1]} ${date.day}';
 
     if (targetDate == today) {
-      return 'TODAY, $dateString';
+      return 'Today · $dateString';
     } else if (targetDate == yesterday) {
-      return 'YESTERDAY, $dateString';
+      return 'Yesterday · $dateString';
     }
     return dateString;
   }
@@ -511,6 +589,55 @@ class TimeEntryList extends StatelessWidget {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     return '${hours}h ${minutes}m';
+  }
+}
+
+class _KpiChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _KpiChip({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.spacings.md,
+        vertical: theme.spacings.sm,
+      ),
+      decoration: BoxDecoration(
+        color: palette.background.surface,
+        border: Border.all(color: palette.border.primary),
+        borderRadius: theme.radiuses.md.circular,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.commonTextStyles.labelSmall.copyWith(
+              color: palette.text.muted,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.commonTextStyles.captionBold.copyWith(
+              color: valueColor ?? palette.text.primary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

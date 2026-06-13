@@ -61,12 +61,7 @@ class _AppDrawerState extends State<AppDrawer> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (widget.onClose != null)
-              IconButton(
-                icon: Icon(Icons.close, color: palette.text.secondary),
-                onPressed: widget.onClose,
-              )
-            else if (widget.title != null)
+            if (widget.title != null)
               Expanded(
                 child: Text(
                   widget.title!,
@@ -79,6 +74,16 @@ class _AppDrawerState extends State<AppDrawer> {
               const SizedBox.shrink(),
             if (widget.actions != null)
               Row(mainAxisSize: MainAxisSize.min, children: widget.actions!),
+            if (widget.onClose != null)
+              IconButton(
+                icon: Icon(Icons.close, color: palette.text.secondary, size: 18),
+                onPressed: widget.onClose,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 28,
+                  minHeight: 28,
+                ),
+              ),
           ],
         ),
       );
@@ -163,7 +168,14 @@ class _AppDrawerState extends State<AppDrawer> {
                           ),
                         ),
                         if (widget.footer != null)
-                          Padding(
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: palette.border.primary,
+                                ),
+                              ),
+                            ),
                             padding: EdgeInsets.fromLTRB(
                               theme.spacings.xl,
                               theme.spacings.lg,

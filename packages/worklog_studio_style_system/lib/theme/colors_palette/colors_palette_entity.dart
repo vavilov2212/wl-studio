@@ -65,6 +65,7 @@ class AccentColors {
   final Color danger;
   final Color success;
   final Color warning;
+  final Color nav;
 
   const AccentColors({
     required this.primary,
@@ -72,5 +73,6 @@ class AccentColors {
     required this.danger,
     required this.success,
     required this.warning,
+    required this.nav,
   });
 }

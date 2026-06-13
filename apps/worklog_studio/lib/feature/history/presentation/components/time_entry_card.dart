@@ -6,7 +6,6 @@ import 'package:worklog_studio/feature/common/presentation/interactive_card.dart
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
-import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 
@@ -38,19 +37,18 @@ class TimeEntryCard extends StatelessWidget {
               children: [
                 Builder(
                   builder: (context) {
-                    final initials = BadgeUtils.getTaskInitials(
-                      resolvedEntry.taskTitle,
-                      resolvedEntry.projectName,
-                    );
                     final id =
                         resolvedEntry.task?.id ??
                         resolvedEntry.project?.id ??
                         resolvedEntry.id;
                     final colors = BadgeUtils.getBadgeColor(id);
-                    return WsInitialBadge(
-                      initials: initials,
-                      backgroundColor: colors.$1,
-                      textColor: colors.$2,
+                    return Container(
+                      width: 3,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colors.$1.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     );
                   },
                 ),
@@ -62,14 +60,14 @@ class TimeEntryCard extends StatelessWidget {
                     children: [
                       Text(
                         resolvedEntry.taskTitle,
-                        style: theme.commonTextStyles.bodyBold.copyWith(
+                        style: theme.commonTextStyles.labelMedium.copyWith(
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(
                         resolvedEntry.projectName,
                         style: theme.commonTextStyles.caption.copyWith(
-                          color: palette.text.secondary,
+                          color: palette.text.muted,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -97,18 +95,18 @@ class TimeEntryCard extends StatelessWidget {
                         ? LiveDurationText(
                             durationBuilder: (now) =>
                                 resolvedEntry.duration(now),
-                            style: theme.commonTextStyles.bodyBold.copyWith(
+                            style: theme.commonTextStyles.labelMedium.copyWith(
                               color: palette.accent.primary,
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           )
                         : Text(
                             _formatDuration(
                               resolvedEntry.duration(DateTime.now()),
                             ),
-                            style: theme.commonTextStyles.bodyBold.copyWith(
+                            style: theme.commonTextStyles.labelMedium.copyWith(
                               color: palette.text.primary,
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                     SizedBox(height: theme.spacings.xxs),
@@ -118,7 +116,7 @@ class TimeEntryCard extends StatelessWidget {
                         resolvedEntry.endAt,
                       ),
                       style: theme.commonTextStyles.caption.copyWith(
-                        color: palette.text.secondary,
+                        color: palette.text.muted,
                       ),
                     ),
                   ],
@@ -139,9 +137,26 @@ class TimeEntryCard extends StatelessWidget {
                 color:
                     (resolvedEntry.entry.comment?.isEmpty == null ||
                         resolvedEntry.entry.comment?.isEmpty == true)
-                    ? palette.text.secondary.withValues(alpha: 0.5)
+                    ? palette.text.muted
                     : palette.text.secondary,
               ),
+            ),
+          ),
+          CardColumn(
+            flex: 1,
+            alignment: Alignment.centerRight,
+            child: Builder(
+              builder: (context) {
+                final isActive = context.select<TimeTrackerBloc, bool>(
+                  (bloc) =>
+                      bloc.state.activeEntryOrNull?.id ==
+                      resolvedEntry.entry.id,
+                );
+                return StatusBadge(
+                  status: isActive ? BadgeStatus.active : BadgeStatus.logged,
+                  label: isActive ? 'Running' : 'Logged',
+                );
+              },
             ),
           ),
         ],

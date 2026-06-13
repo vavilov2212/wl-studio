@@ -128,6 +128,21 @@ class CommonTextStyles {
     fontFamily: 'Inter',
   );
 
+  final labelMedium = const TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    fontFamily: 'Inter',
+  );
+
+  final labelSmall = const TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    letterSpacing: 0.3,
+    fontFamily: 'Inter',
+  );
+
   final buttonL = const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
