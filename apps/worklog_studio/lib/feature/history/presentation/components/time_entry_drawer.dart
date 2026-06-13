@@ -550,8 +550,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     borderRadius: theme.radiuses.md.circular,
                                   ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Duration',
@@ -562,15 +561,15 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       SizedBox(height: theme.spacings.sm),
                                       isActive
                                           ? LiveDurationText(
-                                              durationBuilder: (now) => now
-                                                  .difference(_draft.startAt),
-                                              style: theme.commonTextStyles.h2,
+                                              durationBuilder: (now) =>
+                                                  now.difference(_draft.startAt),
+                                              style: theme.commonTextStyles.subtitle,
                                             )
                                           : Text(
                                               _formatDuration(
                                                 _draft.duration(DateTime.now()),
                                               ),
-                                              style: theme.commonTextStyles.h2,
+                                              style: theme.commonTextStyles.subtitle,
                                             ),
                                     ],
                                   ),
@@ -585,8 +584,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     borderRadius: theme.radiuses.md.circular,
                                   ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Cost est.',
@@ -596,8 +594,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       ),
                                       SizedBox(height: theme.spacings.sm),
                                       Text(
-                                        '\$0.00',
-                                        style: theme.commonTextStyles.h2,
+                                        r'$0.00',
+                                        style: theme.commonTextStyles.subtitle,
                                       ),
                                     ],
                                   ),
@@ -606,7 +604,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             ],
                           ),
                           SizedBox(height: theme.spacings.x2l),
-
                           // Comments
                           InlineField(
                             label: 'Comments',
@@ -623,7 +620,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             ),
                           ),
                           SizedBox(height: theme.spacings.x2l),
-
                           // Tags
                           Text(
                             'AI suggested tags',
@@ -632,17 +628,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             ),
                           ),
                           SizedBox(height: theme.spacings.md),
-                          Wrap(
-                            spacing: theme.spacings.sm,
-                            runSpacing: theme.spacings.sm,
-                            children: <Widget>[],
-                          ),
-                          SizedBox(
-                            height: theme.spacings.xl,
-                          ),
+                          const Wrap(children: <Widget>[]),
+                          SizedBox(height: theme.spacings.xl),
                         ],
                       ),
-                    ), _isNew
+                    ),
+                    footer: _isNew
                         ? SizedBox(
                             width: double.infinity,
                             child: PrimaryButton(

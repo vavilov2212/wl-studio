@@ -368,19 +368,16 @@ class TimeEntryList extends StatelessWidget {
     return [
       WsTableColumn(
         title: 'Task & Project',
-        flex: 3,
+        flex: 4,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           final id = item.task?.id ?? item.project?.id ?? item.id;
           final isUnassigned = item.task == null && item.project == null;
           final colors = BadgeUtils.getBadgeColor(id);
-          final stripeColor = isUnassigned
-              ? palette.text.muted
-              : colors.$1;
+          final stripeColor = isUnassigned ? palette.text.muted : colors.$1;
 
           return Row(
             children: [
-              // Color stripe instead of badge
               Container(
                 width: 3,
                 height: 36,
@@ -397,15 +394,16 @@ class TimeEntryList extends StatelessWidget {
                   children: [
                     Text(
                       item.taskTitle,
-                      style: theme.commonTextStyles.labelMedium.copyWith(
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.commonTextStyles.labelMedium,
                     ),
                     Text(
                       item.projectName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.commonTextStyles.caption.copyWith(
                         color: palette.text.muted,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -417,7 +415,7 @@ class TimeEntryList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Duration',
-        flex: 2,
+        flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           final isActive = context.select<TimeTrackerBloc, bool>(
@@ -442,10 +440,14 @@ class TimeEntryList extends StatelessWidget {
                       ),
                     ),
               Text(
-                DateFormatUtils.formatTimeRangeWithDate(
-                  item.startAt,
-                  item.endAt,
-                ),
+                isActive
+                    ? '${_formatTime(item.startAt)} → now'
+                    : DateFormatUtils.formatTimeRangeWithDate(
+                        item.startAt,
+                        item.endAt,
+                      ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.commonTextStyles.caption.copyWith(
                   color: palette.text.muted,
                 ),
@@ -454,40 +456,28 @@ class TimeEntryList extends StatelessWidget {
           );
         },
       ),
-
       WsTableColumn(
         title: 'Comment',
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          if (item.entry.comment?.isNotEmpty == true) {
-            return Text(
-              item.entry.comment?.isEmpty == true
-                  ? 'No comment'
-                  : item.entry.comment!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.commonTextStyles.body2.copyWith(
-                color: item.entry.comment?.isEmpty == true
-                    ? palette.text.secondary.withValues(alpha: 0.5)
-                    : palette.text.secondary,
-              ),
-            );
-          } else {
-            return Text(
-              'No comment',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.commonTextStyles.body2.copyWith(
-                color: palette.text.secondary.withValues(alpha: 0.5),
-              ),
-            );
-          }
+          final hasComment = item.entry.comment?.isNotEmpty == true;
+          return Text(
+            hasComment ? item.entry.comment! : 'No comment',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.commonTextStyles.caption.copyWith(
+              color: hasComment
+                  ? palette.text.secondary
+                  : palette.text.muted,
+              fontStyle: hasComment ? null : FontStyle.italic,
+            ),
+          );
         },
       ),
       WsTableColumn(
         title: 'Efficiency',
-        flex: 1,
+        flex: 2,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Column(
@@ -500,7 +490,7 @@ class TimeEntryList extends StatelessWidget {
                   color: palette.accent.success,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
@@ -518,29 +508,22 @@ class TimeEntryList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Status',
-        flex: 1,
+        flex: 2,
         builder: (context, item, isHovered) {
           final isActive = context.select<TimeTrackerBloc, bool>(
             (bloc) => bloc.state.activeEntryOrNull?.id == item.entry.id,
           );
-
-          if (isActive) {
-            return const Align(
-              alignment: Alignment.centerLeft,
-              child: StatusBadge(
-                status: BadgeStatus.active,
-                label: 'Running',
-              ),
-            );
-          }
-          return const Align(
+          return Align(
             alignment: Alignment.centerLeft,
-            child: StatusBadge(status: BadgeStatus.logged, label: 'Logged'),
+            child: StatusBadge(
+              status: isActive ? BadgeStatus.active : BadgeStatus.logged,
+              label: isActive ? 'Running' : 'Logged',
+            ),
           );
         },
       ),
       WsTableColumn(
-        title: 'Actions',
+        title: '',
         alignment: Alignment.centerRight,
         flex: 1,
         builder: (context, item, isHovered) {
