@@ -458,7 +458,7 @@ class TimeEntryList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Comment',
-        flex: 3,
+        flex: 2,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           final hasComment = item.entry.comment?.isNotEmpty == true;
@@ -526,7 +526,7 @@ class TimeEntryList extends StatelessWidget {
       WsTableColumn(
         title: '',
         alignment: Alignment.centerRight,
-        flex: 1,
+        fixedWidth: 48,
         builder: (context, item, isHovered) {
           return TimeEntryActionsCell(
             resolvedEntry: item,

@@ -48,28 +48,48 @@ class StatusBadge extends StatelessWidget {
         break;
     }
 
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.sm,
-          vertical: theme.spacings.xxs,
-        ),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: theme.radiuses.pill.circular,
-        ),
-        child: Text(
-          label.toUpperCase(),
-          maxLines: 1,
-          softWrap: false,
-          style: theme.commonTextStyles.caption2Bold.copyWith(
-            color: textColor,
-            letterSpacing: 0.5,
-          ),
+    // Threshold below which the full pill won't fit — show icon dot instead
+    const double _kCompactThreshold = 72.0;
+
+    final pill = Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.spacings.sm,
+        vertical: theme.spacings.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: theme.radiuses.pill.circular,
+      ),
+      child: Text(
+        label.toUpperCase(),
+        maxLines: 1,
+        softWrap: false,
+        style: theme.commonTextStyles.caption2Bold.copyWith(
+          color: textColor,
+          letterSpacing: 0.5,
         ),
       ),
+    );
+
+    final dot = Tooltip(
+      message: label,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: textColor,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _kCompactThreshold) {
+          return Align(alignment: Alignment.centerLeft, child: dot);
+        }
+        return pill;
+      },
     );
   }
 }

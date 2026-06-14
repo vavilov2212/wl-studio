@@ -5,12 +5,14 @@ class WsTableColumn<T> {
   final String title;
   final Widget Function(BuildContext context, T item, bool isHovered) builder;
   final int flex;
+  final double? fixedWidth;
   final Alignment alignment;
 
   const WsTableColumn({
     required this.title,
     required this.builder,
     this.flex = 1,
+    this.fixedWidth,
     this.alignment = Alignment.centerLeft,
   });
 }
@@ -100,24 +102,25 @@ class WsTable<T> extends StatelessWidget {
       child: Row(
         children: columns.asMap().entries.map((entry) {
           final col = entry.value;
-          return Expanded(
-            flex: col.flex,
-            child: Padding(
-              padding: EdgeInsets.only(right: theme.spacings.xl),
-              child: Align(
-                alignment: col.alignment,
-                child: Text(
-                  col.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: theme.commonTextStyles.labelSmall.copyWith(
-                    color: palette.text.muted,
-                  ),
+          final cell = Padding(
+            padding: EdgeInsets.only(right: theme.spacings.md),
+            child: Align(
+              alignment: col.alignment,
+              child: Text(
+                col.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: theme.commonTextStyles.labelSmall.copyWith(
+                  color: palette.text.muted,
                 ),
               ),
             ),
           );
+          if (col.fixedWidth != null) {
+            return SizedBox(width: col.fixedWidth, child: cell);
+          }
+          return Expanded(flex: col.flex, child: cell);
         }).toList(),
       ),
     );
@@ -181,18 +184,19 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
               vertical: theme.spacings.lg,
             ),
             child: Row(
-              children: widget.columns.asMap().entries.map((entry) {
-                final col = entry.value;
-                return Expanded(
-                  flex: col.flex,
-                  child: Padding(
-                    padding: EdgeInsets.only(right: theme.spacings.md),
-                    child: Align(
-                      alignment: col.alignment,
-                      child: col.builder(context, widget.item, _isHovered),
-                    ),
-                  ),
-                );
+            children: widget.columns.asMap().entries.map((entry) {
+            final col = entry.value;
+            final cell = Padding(
+            padding: EdgeInsets.only(right: theme.spacings.md),
+            child: Align(
+            alignment: col.alignment,
+            child: col.builder(context, widget.item, _isHovered),
+            ),
+            );
+            if (col.fixedWidth != null) {
+            return SizedBox(width: col.fixedWidth, child: cell);
+            }
+              return Expanded(flex: col.flex, child: cell);
               }).toList(),
             ),
           ),
