@@ -102,8 +102,11 @@ class WsTable<T> extends StatelessWidget {
       child: Row(
         children: columns.asMap().entries.map((entry) {
           final col = entry.value;
+          final isLast = entry.key == columns.length - 1;
           final cell = Padding(
-            padding: EdgeInsets.only(right: theme.spacings.md),
+            padding: EdgeInsets.only(
+              right: isLast ? 0 : theme.spacings.md,
+            ),
             child: Align(
               alignment: col.alignment,
               child: Text(
@@ -186,8 +189,11 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
             child: Row(
             children: widget.columns.asMap().entries.map((entry) {
             final col = entry.value;
+            final isLast = entry.key == widget.columns.length - 1;
             final cell = Padding(
-            padding: EdgeInsets.only(right: theme.spacings.md),
+            padding: EdgeInsets.only(
+              right: isLast ? 0 : theme.spacings.md,
+            ),
             child: Align(
             alignment: col.alignment,
             child: col.builder(context, widget.item, _isHovered),

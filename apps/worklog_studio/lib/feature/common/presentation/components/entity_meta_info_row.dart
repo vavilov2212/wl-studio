@@ -6,12 +6,14 @@ class EntityMetaInfoRow extends StatelessWidget {
   final BadgeStatus status;
   final String statusLabel;
   final DateTime createdAt;
+  final BadgeSize badgeSize;
 
   const EntityMetaInfoRow({
     super.key,
     required this.status,
     required this.statusLabel,
     required this.createdAt,
+    this.badgeSize = BadgeSize.md,
   });
 
   @override
@@ -27,6 +29,7 @@ class EntityMetaInfoRow extends StatelessWidget {
           StatusBadge(
             status: status,
             label: statusLabel,
+            size: badgeSize,
           ),
           SizedBox(width: theme.spacings.md),
           Text(

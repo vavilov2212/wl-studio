@@ -159,6 +159,7 @@ class TimeEntryList extends StatelessWidget {
                     onTap: onCreateEntry,
                     title: 'New Entry',
                     leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                    size: ButtonSize.sm,
                   ),
                 ],
               ),

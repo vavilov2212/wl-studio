@@ -226,6 +226,7 @@ class _SelectState<T> extends State<Select<T>> {
           controller: widget.searchable ? _searchController : null,
           focusNode: widget.searchable ? _focusNode : null,
           isOpen: isOpen,
+          size: widget.size,
         );
       },
       contentBuilder: (context, close) {

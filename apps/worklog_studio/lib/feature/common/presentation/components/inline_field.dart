@@ -13,6 +13,7 @@ class InlineField extends StatefulWidget {
   final Widget? leading;
   final Widget? trailing;
   final bool isEditable;
+  final bool compact;
 
   const InlineField({
     super.key,
@@ -26,6 +27,7 @@ class InlineField extends StatefulWidget {
     this.leading,
     this.trailing,
     this.isEditable = true,
+    this.compact = false,
   });
 
   @override
@@ -137,9 +139,12 @@ class _InlineFieldState extends State<InlineField> {
                     maintainState: true,
                     child: Container(
                       width: double.infinity,
+                      height: widget.compact ? theme.spacings.x3l : null,
                       padding: EdgeInsets.symmetric(
                         horizontal: theme.spacings.md,
-                        vertical: theme.spacings.md,
+                        vertical: widget.compact
+                            ? theme.spacings.none
+                            : theme.spacings.md,
                       ),
                       decoration: BoxDecoration(
                         color: _isHovered && widget.isEditable
@@ -152,15 +157,16 @@ class _InlineFieldState extends State<InlineField> {
                       child: Row(
                         spacing: theme.spacings.sm,
                         children: [
-                          if (widget.leading != null &&
-                              _displayValue.isNotEmpty)
-                            widget.leading!,
+                          if (widget.leading != null) widget.leading!,
                           Expanded(
                             child: Text(
                               _displayValue.isEmpty
                                   ? widget.placeholder
                                   : _displayValue,
-                              style: theme.commonTextStyles.body.copyWith(
+                              style: (widget.compact
+                                      ? theme.commonTextStyles.body2
+                                      : theme.commonTextStyles.body)
+                                  .copyWith(
                                 color: _displayValue.isEmpty
                                     ? palette.text.muted
                                     : (widget.isEditable

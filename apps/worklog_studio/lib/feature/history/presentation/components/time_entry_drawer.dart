@@ -1,6 +1,10 @@
-﻿import 'package:collection/collection.dart';
+﻿import 'dart:math' as math;
+
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
+import 'package:vector_svg/vector_svg.dart';
+import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
@@ -275,8 +279,16 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 ? 'RUNNING'
                                 : getStatusText(_draft.entry.status),
                             createdAt: _draft.entry.startAt,
+                            badgeSize: BadgeSize.sm,
                           ),
                         ],
+                        Text(
+                          'ASSIGNMENT',
+                          style: theme.commonTextStyles.labelSmall.copyWith(
+                            color: palette.text.muted,
+                          ),
+                        ),
+                        SizedBox(height: theme.spacings.sm),
 
                         // Project Select
                         Consumer<ProjectTaskState>(
@@ -285,7 +297,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((p) => p.id == _draft.projectId)
                                 .firstOrNull;
 
-                            Widget? leadingProjectWidget;
+                            Widget leadingProjectWidget;
                             if (selectedProject != null) {
                               final initials = BadgeUtils.getProjectInitials(
                                 selectedProject.name,
@@ -299,6 +311,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 textColor: colors.$2,
                                 size: WsInitialBadgeSize.small,
                               );
+                            } else {
+                              leadingProjectWidget = Icon(
+                                Icons.folder_outlined,
+                                size: 18,
+                                color: palette.text.muted,
+                              );
                             }
 
                             return InlineField(
@@ -306,10 +324,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               value: selectedProject?.name ?? '',
                               placeholder: 'Select Project',
                               leading: leadingProjectWidget,
+                              trailing: _selectChevron(palette),
+                              compact: true,
                               controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
                                 searchable: true,
+                                size: SelectSize.sm,
                                 tapRegionGroupId:
                                     _projectFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -389,7 +410,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((t) => t.id == _draft.taskId)
                                 .firstOrNull;
 
-                            Widget? leadingTaskWidget;
+                            Widget leadingTaskWidget;
                             if (selectedTask != null) {
                               final project = state.projects.firstWhereOrNull(
                                 (p) => p.id == selectedTask.projectId,
@@ -407,6 +428,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 textColor: colors.$2,
                                 size: WsInitialBadgeSize.small,
                               );
+                            } else {
+                              leadingTaskWidget = Icon(
+                                Icons.checklist,
+                                size: 18,
+                                color: palette.text.muted,
+                              );
                             }
 
                             return InlineField(
@@ -414,10 +441,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               value: selectedTask?.title ?? '',
                               placeholder: 'Select Task',
                               leading: leadingTaskWidget,
+                              trailing: _selectChevron(palette),
+                              compact: true,
                               controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
                                 searchable: true,
+                                size: SelectSize.sm,
                                 tapRegionGroupId:
                                     _taskFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -495,6 +525,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             );
                           },
                         ),
+                        SizedBox(height: theme.spacings.lg),
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: palette.border.primary,
+                        ),
                       ],
                     ),
                     content: Padding(
@@ -505,108 +541,116 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(height: theme.spacings.x2l),
-                          // Timeline
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DateTimeInlineField(
-                                  label: 'Start',
-                                  value: _draft.startAt,
-                                  controller: _startTimeFieldController,
-                                  onChanged: (newStartAt) {
-                                    _updateDraft(
-                                      _draft.entry.copyWith(
-                                        startAt: newStartAt,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.lg),
-                              Expanded(
-                                child: DateTimeInlineField(
-                                  label: 'End',
-                                  value: _draft.endAt ?? DateTime.now(),
-                                  isEditable: !isActive,
-                                  controller: _endTimeFieldController,
-                                  onChanged: (newEndAt) {
-                                    _updateDraft(
-                                      _draft.entry.copyWith(endAt: newEndAt),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'TIME & COST',
+                            style: theme.commonTextStyles.labelSmall.copyWith(
+                              color: palette.text.muted,
+                            ),
                           ),
-                          SizedBox(height: theme.spacings.x2l),
-                          // Metrics Grid
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.lg),
-                                  decoration: BoxDecoration(
-                                    color: palette.background.surfaceMuted,
-                                    borderRadius: theme.radiuses.md.circular,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Duration',
-                                        style: theme.commonTextStyles.labelSmall.copyWith(
-                                          color: palette.text.muted,
-                                        ),
-                                      ),
-                                      SizedBox(height: theme.spacings.sm),
-                                      isActive
-                                          ? LiveDurationText(
-                                              durationBuilder: (now) =>
-                                                  now.difference(_draft.startAt),
-                                              style: theme.commonTextStyles.subtitle,
-                                            )
-                                          : Text(
-                                              _formatDuration(
-                                                _draft.duration(DateTime.now()),
-                                              ),
-                                              style: theme.commonTextStyles.subtitle,
+                          SizedBox(height: theme.spacings.sm),
+                          BaseCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Timeline
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DateTimeInlineField(
+                                        label: 'Start',
+                                        value: _draft.startAt,
+                                        compact: true,
+                                        controller: _startTimeFieldController,
+                                        onChanged: (newStartAt) {
+                                          _updateDraft(
+                                            _draft.entry.copyWith(
+                                              startAt: newStartAt,
                                             ),
-                                    ],
-                                  ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(width: theme.spacings.lg),
+                                    Expanded(
+                                      child: DateTimeInlineField(
+                                        label: 'End',
+                                        value: _draft.endAt ?? DateTime.now(),
+                                        isEditable: !isActive,
+                                        compact: true,
+                                        controller: _endTimeFieldController,
+                                        onChanged: (newEndAt) {
+                                          _updateDraft(
+                                            _draft.entry.copyWith(
+                                              endAt: newEndAt,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              SizedBox(width: theme.spacings.lg),
-                              Expanded(
-                                child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.lg),
-                                  decoration: BoxDecoration(
-                                    color: palette.background.surfaceMuted,
-                                    borderRadius: theme.radiuses.md.circular,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Cost est.',
-                                        maxLines: 1,
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.commonTextStyles.labelSmall.copyWith(
-                                          color: palette.text.muted,
+                                SizedBox(height: theme.spacings.x2l),
+                                // Metrics Grid
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: MetricCard(
+                                        label: 'Duration',
+                                        icon: Icons.timer_outlined,
+                                        accent: isActive,
+                                        value: isActive
+                                            ? LiveDurationText(
+                                                durationBuilder: (now) => now
+                                                    .difference(
+                                                      _draft.startAt,
+                                                    ),
+                                                style: theme
+                                                    .commonTextStyles
+                                                    .subtitle,
+                                              )
+                                            : Text(
+                                                _formatDuration(
+                                                  _draft.duration(
+                                                    DateTime.now(),
+                                                  ),
+                                                ),
+                                                style: theme
+                                                    .commonTextStyles
+                                                    .subtitle,
+                                              ),
+                                      ),
+                                    ),
+                                    SizedBox(width: theme.spacings.lg),
+                                    Expanded(
+                                      child: MetricCard(
+                                        label: 'Cost est.',
+                                        icon: Icons.payments_outlined,
+                                        value: Text(
+                                          r'$0.00',
+                                          style:
+                                              theme.commonTextStyles.subtitle,
                                         ),
                                       ),
-                                      SizedBox(height: theme.spacings.sm),
-                                      Text(
-                                        r'$0.00',
-                                        style: theme.commonTextStyles.subtitle,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           SizedBox(height: theme.spacings.x2l),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: palette.border.primary,
+                          ),
+                          SizedBox(height: theme.spacings.lg),
+                          Text(
+                            'NOTES',
+                            style: theme.commonTextStyles.labelSmall.copyWith(
+                              color: palette.text.muted,
+                            ),
+                          ),
+                          SizedBox(height: theme.spacings.sm),
                           // Comments
                           InlineField(
                             label: 'Comments',
@@ -622,16 +666,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.x2l),
-                          // Tags
-                          Text(
-                            'AI suggested tags',
-                            style: theme.commonTextStyles.labelSmall.copyWith(
-                              color: palette.text.muted,
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.md),
-                          const Wrap(children: <Widget>[]),
                           SizedBox(height: theme.spacings.xl),
                         ],
                       ),
@@ -645,11 +679,36 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               size: ButtonSize.lg,
                             ),
                           )
+                        : isActive
+                        ? SizedBox(
+                            width: double.infinity,
+                            child: PrimaryButton(
+                              onTap: () => context
+                                  .read<TimeTrackerBloc>()
+                                  .add(const TimeTrackerStopped()),
+                              title: 'Stop Timer',
+                              leftIcon:
+                                  WorklogStudioAssets.vectors.squareFilled24Svg,
+                              type: ButtonType.danger,
+                              size: ButtonSize.lg,
+                            ),
+                          )
                         : null,
                   ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _selectChevron(ColorsPalette palette) {
+    return Transform.rotate(
+      angle: math.pi / 2,
+      child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
+        width: 18,
+        height: 18,
+        colorFilter: palette.text.muted.filter,
+      ),
     );
   }
 

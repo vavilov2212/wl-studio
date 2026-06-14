@@ -42,7 +42,10 @@ class _DrawerHeaderState extends State<DrawerHeader> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(Icons.close, color: palette.text.secondary),
+            icon: Icon(Icons.close, color: palette.text.secondary, size: 18),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             onPressed: widget.onClose,
           ),
           Row(
@@ -55,7 +58,17 @@ class _DrawerHeaderState extends State<DrawerHeader> {
                 followerAnchor: Alignment.topRight,
                 width: 180,
                 trigger: IconButton(
-                  icon: Icon(Icons.more_horiz, color: palette.text.secondary),
+                  icon: Icon(
+                    Icons.more_horiz,
+                    color: palette.text.secondary,
+                    size: 18,
+                  ),
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                   onPressed: _popoverController.toggle,
                 ),
                 contentBuilder: (context) {

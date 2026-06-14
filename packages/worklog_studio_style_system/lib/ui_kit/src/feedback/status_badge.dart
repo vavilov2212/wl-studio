@@ -3,11 +3,19 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 enum BadgeStatus { ready, inProgress, needsReview, done, urgent, logged, active }
 
+enum BadgeSize { sm, md }
+
 class StatusBadge extends StatelessWidget {
   final BadgeStatus status;
   final String label;
+  final BadgeSize size;
 
-  const StatusBadge({required this.status, required this.label, super.key});
+  const StatusBadge({
+    required this.status,
+    required this.label,
+    this.size = BadgeSize.md,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,13 +57,19 @@ class StatusBadge extends StatelessWidget {
     }
 
     // Threshold below which the full pill won't fit — show icon dot instead
-    const double _kCompactThreshold = 72.0;
+    final compactThreshold = size == BadgeSize.sm ? 56.0 : 72.0;
 
     final pill = Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.sm,
-        vertical: theme.spacings.xxs,
-      ),
+      padding: switch (size) {
+        BadgeSize.sm => EdgeInsets.symmetric(
+            horizontal: theme.spacings.xxs,
+            vertical: theme.spacings.xs,
+          ),
+        BadgeSize.md => EdgeInsets.symmetric(
+            horizontal: theme.spacings.sm,
+            vertical: theme.spacings.xxs,
+          ),
+      },
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: theme.radiuses.pill.circular,
@@ -85,7 +99,7 @@ class StatusBadge extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < _kCompactThreshold) {
+        if (constraints.maxWidth < compactThreshold) {
           return Align(alignment: Alignment.centerLeft, child: dot);
         }
         return pill;

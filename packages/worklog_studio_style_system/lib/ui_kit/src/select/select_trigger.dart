@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:vector_svg/vector_svg.dart';
+import 'select_types.dart';
 
 class SelectTrigger extends StatelessWidget {
   final String? label;
@@ -9,6 +10,7 @@ class SelectTrigger extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final bool isOpen;
+  final SelectSize size;
 
   const SelectTrigger({
     super.key,
@@ -17,6 +19,7 @@ class SelectTrigger extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.isOpen = false,
+    this.size = SelectSize.md,
   });
 
   @override
@@ -24,11 +27,22 @@ class SelectTrigger extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
+    final height = switch (size) {
+      SelectSize.sm => theme.spacings.x3l,
+      SelectSize.md => theme.spacings.x4l,
+      SelectSize.lg => theme.spacings.x4l + theme.spacings.sm,
+    };
+    final verticalPadding = switch (size) {
+      SelectSize.sm => theme.spacings.sm,
+      SelectSize.md => theme.spacings.md,
+      SelectSize.lg => theme.spacings.lg,
+    };
+
     return Container(
-      height: theme.spacings.x4l,
+      height: height,
       padding: EdgeInsets.symmetric(
         horizontal: theme.spacings.md,
-        vertical: theme.spacings.md,
+        vertical: verticalPadding,
       ),
       decoration: BoxDecoration(
         border: Border.all(

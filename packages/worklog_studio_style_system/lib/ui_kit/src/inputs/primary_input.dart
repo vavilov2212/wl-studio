@@ -26,6 +26,7 @@ class PrimaryInput extends StatefulWidget {
   // Controls whether the maxLength counter (e.g. "0/7") is shown
   final bool showCounter;
   final InputVariant variant;
+  final InputSize size;
 
   const PrimaryInput({
     required this.label,
@@ -48,6 +49,7 @@ class PrimaryInput extends StatefulWidget {
     this.maxLength,
     this.inputFormatters,
     this.showCounter = false,
+    this.size = InputSize.md,
     super.key,
   });
 
@@ -133,7 +135,10 @@ class _PrimaryInputState extends State<PrimaryInput> {
               onTap: widget.onTap,
               child: AnimatedContainer(
                 duration: kThemeAnimationDuration,
-                height: context.theme.spacings.x4l,
+                height: switch (widget.size) {
+                  InputSize.sm => context.theme.spacings.x3l,
+                  InputSize.md => context.theme.spacings.x4l,
+                },
                 padding: EdgeInsets.symmetric(
                   horizontal: context.theme.spacings.md,
                 ),
@@ -166,17 +171,24 @@ class _PrimaryInputState extends State<PrimaryInput> {
                         keyboardType: widget.keyboardType,
                         cursorColor: palette.border.focus,
                         decoration: InputDecoration(
-                          isDense: false,
+                          isDense: widget.size == InputSize.sm,
+                          contentPadding: widget.size == InputSize.sm
+                              ? EdgeInsets.zero
+                              : null,
                           border: InputBorder.none,
                           hintText: widget.hintText,
-                          hintStyle: context.theme.commonTextStyles.body.copyWith(
-                            color: palette.text.muted,
-                          ),
+                          hintStyle:
+                              (widget.size == InputSize.sm
+                                      ? context.theme.commonTextStyles.body2
+                                      : context.theme.commonTextStyles.body)
+                                  .copyWith(color: palette.text.muted),
                           counterText: widget.showCounter ? null : '',
                         ),
-                        style: context.theme.commonTextStyles.body.copyWith(
-                          color: textColor,
-                        ),
+                        style:
+                            (widget.size == InputSize.sm
+                                    ? context.theme.commonTextStyles.body2
+                                    : context.theme.commonTextStyles.body)
+                                .copyWith(color: textColor),
                         strutStyle: const StrutStyle(
                           forceStrutHeight: true,
                           height: 1.2,
@@ -217,3 +229,5 @@ class _PrimaryInputState extends State<PrimaryInput> {
 enum InputState { enabled, warning, error, disabled }
 
 enum InputVariant { outline, ghost }
+
+enum InputSize { sm, md }

@@ -10,6 +10,7 @@ export 'src/select/index.dart';
 export 'src/combobox/combobox.dart';
 export 'src/cards/master_list_card.dart';
 export 'src/cards/base_card.dart';
+export 'src/cards/metric_card.dart';
 export 'src/feedback/status_badge.dart';
 export 'src/info_bar/info_bar.dart';
 export 'src/navigation/sidebar_item.dart';
