@@ -13,5 +13,7 @@ export 'src/cards/base_card.dart';
 export 'src/cards/metric_card.dart';
 export 'src/feedback/status_badge.dart';
 export 'src/info_bar/info_bar.dart';
+export 'src/dividers/labeled_divider.dart';
 export 'src/navigation/sidebar_item.dart';
+export 'src/segmented_toggle/segmented_toggle.dart';
 export 'src/table/ws_table.dart';

@@ -282,13 +282,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             badgeSize: BadgeSize.sm,
                           ),
                         ],
-                        Text(
-                          'ASSIGNMENT',
-                          style: theme.commonTextStyles.labelSmall.copyWith(
-                            color: palette.text.muted,
-                          ),
-                        ),
-                        SizedBox(height: theme.spacings.sm),
+                        LabeledDivider(label: 'Assignment'),
+                        SizedBox(height: theme.spacings.lg),
 
                         // Project Select
                         Consumer<ProjectTaskState>(
@@ -525,12 +520,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             );
                           },
                         ),
-                        SizedBox(height: theme.spacings.lg),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: palette.border.primary,
-                        ),
                       ],
                     ),
                     content: Padding(
@@ -541,13 +530,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(height: theme.spacings.x2l),
-                          Text(
-                            'TIME & COST',
-                            style: theme.commonTextStyles.labelSmall.copyWith(
-                              color: palette.text.muted,
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.sm),
+                          LabeledDivider(label: 'Time & Cost'),
+                          SizedBox(height: theme.spacings.lg),
                           BaseCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,19 +622,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             ),
                           ),
                           SizedBox(height: theme.spacings.x2l),
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: palette.border.primary,
-                          ),
+                          LabeledDivider(label: 'Notes'),
                           SizedBox(height: theme.spacings.lg),
-                          Text(
-                            'NOTES',
-                            style: theme.commonTextStyles.labelSmall.copyWith(
-                              color: palette.text.muted,
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.sm),
                           // Comments
                           InlineField(
                             label: 'Comments',

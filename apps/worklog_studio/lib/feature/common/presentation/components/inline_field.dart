@@ -119,7 +119,7 @@ class _InlineFieldState extends State<InlineField> {
                 style: theme.commonTextStyles.labelSmall.copyWith(
                   color: _isHovered || _currentIsEditing
                       ? palette.text.secondary
-                      : palette.text.muted,
+                      : palette.text.secondary2,
                 ),
               ),
             ),

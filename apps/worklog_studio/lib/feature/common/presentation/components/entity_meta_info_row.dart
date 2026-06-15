@@ -22,7 +22,7 @@ class EntityMetaInfoRow extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: theme.spacings.lg),
+      padding: EdgeInsets.only(bottom: theme.spacings.x2l),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -34,8 +34,8 @@ class EntityMetaInfoRow extends StatelessWidget {
           SizedBox(width: theme.spacings.md),
           Text(
             'Created ${DateFormatter.formatDateTime(createdAt)}',
-            style: theme.commonTextStyles.body2.copyWith(
-              color: palette.text.secondary,
+            style: theme.commonTextStyles.caption.copyWith(
+              color: palette.text.secondary2,
             ),
           ),
         ],

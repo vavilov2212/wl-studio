@@ -128,9 +128,19 @@ class ProjectList extends StatelessWidget {
               Row(
                 spacing: theme.spacings.md,
                 children: [
-                  _ProjectViewModeToggle(
-                    viewMode: viewMode,
+                  SegmentedToggle<ProjectViewMode>(
+                    value: viewMode,
                     onChanged: onViewModeChanged,
+                    options: const [
+                      SegmentedToggleOption(
+                        value: ProjectViewMode.cards,
+                        icon: Icons.grid_view_rounded,
+                      ),
+                      SegmentedToggleOption(
+                        value: ProjectViewMode.table,
+                        icon: Icons.table_rows_rounded,
+                      ),
+                    ],
                   ),
                   Container(
                     width: 40,
@@ -326,83 +336,3 @@ class ProjectList extends StatelessWidget {
   }
 }
 
-class _ProjectViewModeToggle extends StatelessWidget {
-  final ProjectViewMode viewMode;
-  final ValueChanged<ProjectViewMode> onChanged;
-
-  const _ProjectViewModeToggle({
-    required this.viewMode,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.sm.circular,
-        border: Border.all(
-          color: palette.border.primary.withValues(alpha: 0.5),
-        ),
-      ),
-      padding: EdgeInsets.all(theme.spacings.xxs),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleButton(
-            context,
-            icon: Icons.grid_view_rounded,
-            isSelected: viewMode == ProjectViewMode.cards,
-            onTap: () => onChanged(ProjectViewMode.cards),
-          ),
-          SizedBox(width: theme.spacings.xxs),
-          _buildToggleButton(
-            context,
-            icon: Icons.table_rows_rounded,
-            isSelected: viewMode == ProjectViewMode.table,
-            onTap: () => onChanged(ProjectViewMode.table),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton(
-    BuildContext context, {
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Material(
-      color: isSelected ? palette.background.surface : Colors.transparent,
-      borderRadius: theme.radiuses.sm.circular,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(theme.spacings.sm),
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(
-                    color: palette.border.primary.withValues(alpha: 0.5),
-                  )
-                : Border.all(color: Colors.transparent),
-            borderRadius: theme.radiuses.sm.circular,
-            boxShadow: isSelected ? [theme.shadows.sm] : null,
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: isSelected ? palette.text.primary : palette.text.secondary,
-          ),
-        ),
-      ),
-    );
-  }
-}

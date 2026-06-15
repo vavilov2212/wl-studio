@@ -128,9 +128,19 @@ class TaskList extends StatelessWidget {
               Row(
                 spacing: theme.spacings.md,
                 children: [
-                  _TaskViewModeToggle(
-                    viewMode: viewMode,
+                  SegmentedToggle<TaskViewMode>(
+                    value: viewMode,
                     onChanged: onViewModeChanged,
+                    options: const [
+                      SegmentedToggleOption(
+                        value: TaskViewMode.cards,
+                        icon: Icons.grid_view_rounded,
+                      ),
+                      SegmentedToggleOption(
+                        value: TaskViewMode.table,
+                        icon: Icons.table_rows_rounded,
+                      ),
+                    ],
                   ),
                   PrimaryButton(
                     title: 'New Task',
@@ -321,80 +331,3 @@ class TaskList extends StatelessWidget {
   }
 }
 
-class _TaskViewModeToggle extends StatelessWidget {
-  final TaskViewMode viewMode;
-  final ValueChanged<TaskViewMode> onChanged;
-
-  const _TaskViewModeToggle({required this.viewMode, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.sm.circular,
-        border: Border.all(
-          color: palette.border.primary.withValues(alpha: 0.5),
-        ),
-      ),
-      padding: EdgeInsets.all(theme.spacings.xxs),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleButton(
-            context,
-            icon: Icons.grid_view_rounded,
-            isSelected: viewMode == TaskViewMode.cards,
-            onTap: () => onChanged(TaskViewMode.cards),
-          ),
-          SizedBox(width: theme.spacings.xxs),
-          _buildToggleButton(
-            context,
-            icon: Icons.table_rows_rounded,
-            isSelected: viewMode == TaskViewMode.table,
-            onTap: () => onChanged(TaskViewMode.table),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton(
-    BuildContext context, {
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Material(
-      color: isSelected ? palette.background.surface : Colors.transparent,
-      borderRadius: theme.radiuses.sm.circular,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(theme.spacings.sm),
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(
-                    color: palette.border.primary.withValues(alpha: 0.5),
-                  )
-                : Border.all(color: Colors.transparent),
-            borderRadius: theme.radiuses.sm.circular,
-            boxShadow: isSelected ? [theme.shadows.sm] : null,
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: isSelected ? palette.text.primary : palette.text.secondary,
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -20,7 +20,7 @@ class MetricCard extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
-    final labelColor = accent ? palette.accent.primary : palette.text.muted;
+    final labelColor = accent ? palette.accent.primary : palette.text.secondary2;
 
     return Container(
       padding: EdgeInsets.all(theme.spacings.lg),

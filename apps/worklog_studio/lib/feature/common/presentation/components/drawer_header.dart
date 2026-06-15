@@ -36,7 +36,7 @@ class _DrawerHeaderState extends State<DrawerHeader> {
         theme.spacings.xl,
         theme.spacings.xl,
         theme.spacings.xl,
-        theme.spacings.lg,
+        theme.spacings.xxs,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

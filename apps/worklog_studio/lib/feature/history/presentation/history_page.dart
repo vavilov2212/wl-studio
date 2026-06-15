@@ -151,9 +151,19 @@ class TimeEntryList extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: theme.spacings.lg,
                 children: [
-                  _ViewModeToggle(
-                    viewMode: viewMode,
+                  SegmentedToggle<HistoryViewMode>(
+                    value: viewMode,
                     onChanged: onViewModeChanged,
+                    options: const [
+                      SegmentedToggleOption(
+                        value: HistoryViewMode.cards,
+                        icon: Icons.view_agenda_rounded,
+                      ),
+                      SegmentedToggleOption(
+                        value: HistoryViewMode.table,
+                        icon: Icons.table_rows_rounded,
+                      ),
+                    ],
                   ),
                   PrimaryButton(
                     onTap: onCreateEntry,
@@ -630,76 +640,3 @@ class _KpiChip extends StatelessWidget {
   }
 }
 
-class _ViewModeToggle extends StatelessWidget {
-  final HistoryViewMode viewMode;
-  final ValueChanged<HistoryViewMode> onChanged;
-
-  const _ViewModeToggle({required this.viewMode, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.background.surfaceMuted,
-        borderRadius: theme.radiuses.md.circular,
-      ),
-      padding: EdgeInsets.all(theme.spacings.xxs),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleButton(
-            context,
-            icon: Icons.view_agenda_rounded,
-            isSelected: viewMode == HistoryViewMode.cards,
-            onTap: () => onChanged(HistoryViewMode.cards),
-          ),
-          _buildToggleButton(
-            context,
-            icon: Icons.table_rows_rounded,
-            isSelected: viewMode == HistoryViewMode.table,
-            onTap: () => onChanged(HistoryViewMode.table),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton(
-    BuildContext context, {
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Material(
-      color: isSelected ? palette.background.surface : Colors.transparent,
-      borderRadius: theme.radiuses.sm.circular,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(theme.spacings.sm),
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(
-                    color: palette.border.primary.withValues(alpha: 0.5),
-                  )
-                : Border.all(color: Colors.transparent),
-            borderRadius: theme.radiuses.sm.circular,
-            boxShadow: isSelected ? [theme.shadows.sm] : null,
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: isSelected ? palette.text.primary : palette.text.secondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
