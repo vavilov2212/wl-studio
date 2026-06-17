@@ -99,7 +99,6 @@ class ProjectList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final palette = theme.colorsPalette;
 
     return Padding(
       padding: EdgeInsets.all(theme.spacings.x2l),
@@ -109,22 +108,7 @@ class ProjectList extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Active Projects',
-                    style: theme.commonTextStyles.displayLarge,
-                  ),
-                  SizedBox(height: theme.spacings.xxs),
-                  Text(
-                    '${projects.length} currently in progress',
-                    style: theme.commonTextStyles.body.copyWith(
-                      color: palette.text.secondary,
-                    ),
-                  ),
-                ],
-              ),
+              Text('Active Projects', style: theme.commonTextStyles.h3),
               Row(
                 spacing: theme.spacings.md,
                 children: [
@@ -142,17 +126,11 @@ class ProjectList extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: palette.accent.primary,
-                      borderRadius: theme.radiuses.sm.circular,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.add, color: palette.background.surface),
-                      onPressed: onCreateProject,
-                    ),
+                  PrimaryButton(
+                    title: 'New Project',
+                    leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                    size: ButtonSize.sm,
+                    onTap: onCreateProject,
                   ),
                 ],
               ),
@@ -207,6 +185,7 @@ class ProjectList extends StatelessWidget {
                 initials: initials,
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
+                size: WsInitialBadgeSize.small,
               ),
               SizedBox(width: theme.spacings.md),
               Expanded(
@@ -216,16 +195,17 @@ class ProjectList extends StatelessWidget {
                   children: [
                     Text(
                       item.name,
-                      style: theme.commonTextStyles.bodyBold.copyWith(
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.commonTextStyles.labelMedium,
                     ),
                     if (item.project.clientName.isNotEmpty)
                       Text(
                         item.project.clientName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.commonTextStyles.caption.copyWith(
                           color: palette.text.secondary,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
@@ -244,7 +224,7 @@ class ProjectList extends StatelessWidget {
             item.project.description.isEmpty
                 ? 'No description'
                 : item.project.description,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.commonTextStyles.body2.copyWith(
               color: item.project.description.isEmpty
@@ -265,7 +245,7 @@ class ProjectList extends StatelessWidget {
           if (isActive) {
             return LiveDurationText(
               durationBuilder: (now) => item.duration(now),
-              style: theme.commonTextStyles.bodyBold.copyWith(
+              style: theme.commonTextStyles.labelMedium.copyWith(
                 color: theme.colorsPalette.accent.primary,
               ),
             );
@@ -274,7 +254,7 @@ class ProjectList extends StatelessWidget {
           final duration = item.duration(DateTime.now());
           return Text(
             _formatExactDuration(duration),
-            style: theme.commonTextStyles.bodyBold,
+            style: theme.commonTextStyles.labelMedium,
           );
         },
       ),

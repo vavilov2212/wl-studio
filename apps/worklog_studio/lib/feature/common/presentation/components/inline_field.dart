@@ -13,7 +13,7 @@ class InlineField extends StatefulWidget {
   final Widget? leading;
   final Widget? trailing;
   final bool isEditable;
-  final bool compact;
+  final ControlSize size;
 
   const InlineField({
     super.key,
@@ -27,7 +27,7 @@ class InlineField extends StatefulWidget {
     this.leading,
     this.trailing,
     this.isEditable = true,
-    this.compact = false,
+    this.size = ControlSize.sm,
   });
 
   @override
@@ -96,6 +96,7 @@ class _InlineFieldState extends State<InlineField> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final tokens = theme.controlSize(widget.size);
 
     Widget content = MouseRegion(
       onEnter: (_) {
@@ -139,12 +140,10 @@ class _InlineFieldState extends State<InlineField> {
                     maintainState: true,
                     child: Container(
                       width: double.infinity,
-                      height: widget.compact ? theme.spacings.x3l : null,
+                      height: widget.size == ControlSize.sm ? tokens.height : null,
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.md,
-                        vertical: widget.compact
-                            ? theme.spacings.none
-                            : theme.spacings.md,
+                        horizontal: tokens.horizontalPadding,
+                        vertical: tokens.verticalPadding,
                       ),
                       decoration: BoxDecoration(
                         color: _isHovered && widget.isEditable
@@ -163,9 +162,7 @@ class _InlineFieldState extends State<InlineField> {
                               _displayValue.isEmpty
                                   ? widget.placeholder
                                   : _displayValue,
-                              style: (widget.compact
-                                      ? theme.commonTextStyles.body2
-                                      : theme.commonTextStyles.body)
+                              style: tokens.textStyle
                                   .copyWith(
                                 color: _displayValue.isEmpty
                                     ? palette.text.muted

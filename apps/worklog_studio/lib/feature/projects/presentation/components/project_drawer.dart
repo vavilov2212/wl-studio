@@ -214,7 +214,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                         ],
                         // Name Input
                         InlineField(
-                          label: 'PROJECT NAME',
+                          label: 'Project name',
                           value: _nameController.text,
                           placeholder: 'Enter project name...',
                           controller: _nameFieldController,
@@ -236,9 +236,11 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Description
+                          SizedBox(height: theme.spacings.x2l),
+                          LabeledDivider(label: 'Notes'),
+                          SizedBox(height: theme.spacings.lg),
                           InlineField(
-                            label: 'DESCRIPTION',
+                            label: 'Description',
                             value: _descriptionController.text,
                             placeholder: 'Add a description...',
                             controller: _descriptionFieldController,
@@ -251,8 +253,10 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.x2l),
                           if (!_isNew) ...[
+                            SizedBox(height: theme.spacings.x2l),
+                            LabeledDivider(label: 'Overview'),
+                            SizedBox(height: theme.spacings.lg),
                             Row(
                               children: [
                                 Expanded(

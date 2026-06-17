@@ -99,7 +99,6 @@ class TaskList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final palette = theme.colorsPalette;
 
     return Padding(
       padding: EdgeInsets.all(theme.spacings.x2l),
@@ -109,22 +108,7 @@ class TaskList extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Current Tasks',
-                    style: theme.commonTextStyles.displayLarge,
-                  ),
-                  SizedBox(height: theme.spacings.xxs),
-                  Text(
-                    '${tasks.where((t) => t.status == TaskStatus.open).length} active tasks',
-                    style: theme.commonTextStyles.body.copyWith(
-                      color: palette.text.secondary,
-                    ),
-                  ),
-                ],
-              ),
+              Text('Current Tasks', style: theme.commonTextStyles.h3),
               Row(
                 spacing: theme.spacings.md,
                 children: [
@@ -145,7 +129,7 @@ class TaskList extends StatelessWidget {
                   PrimaryButton(
                     title: 'New Task',
                     leftIcon: WorklogStudioAssets.vectors.plus24Svg,
-                    size: ButtonSize.md,
+                    size: ButtonSize.sm,
                     onTap: onCreateTask,
                   ),
                 ],
@@ -202,6 +186,7 @@ class TaskList extends StatelessWidget {
                 initials: initials,
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
+                size: WsInitialBadgeSize.small,
               ),
               SizedBox(width: theme.spacings.md),
               Expanded(
@@ -211,16 +196,17 @@ class TaskList extends StatelessWidget {
                   children: [
                     Text(
                       item.title,
-                      style: theme.commonTextStyles.bodyBold.copyWith(
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.commonTextStyles.labelMedium,
                     ),
                     if (item.projectName.isNotEmpty)
                       Text(
                         item.projectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.commonTextStyles.caption.copyWith(
                           color: palette.text.secondary,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
@@ -239,7 +225,7 @@ class TaskList extends StatelessWidget {
             item.task.description.isEmpty
                 ? 'No description'
                 : item.task.description,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.commonTextStyles.body2.copyWith(
               color: item.task.description.isEmpty
@@ -260,7 +246,7 @@ class TaskList extends StatelessWidget {
           if (isActive) {
             return LiveDurationText(
               durationBuilder: (now) => item.duration(now),
-              style: theme.commonTextStyles.bodyBold.copyWith(
+              style: theme.commonTextStyles.labelMedium.copyWith(
                 color: theme.colorsPalette.accent.primary,
               ),
             );
@@ -269,7 +255,7 @@ class TaskList extends StatelessWidget {
           final duration = item.duration(DateTime.now());
           return Text(
             _formatExactDuration(duration),
-            style: theme.commonTextStyles.bodyBold,
+            style: theme.commonTextStyles.labelMedium,
           );
         },
       ),

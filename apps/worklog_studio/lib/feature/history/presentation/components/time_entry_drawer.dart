@@ -320,12 +320,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               placeholder: 'Select Project',
                               leading: leadingProjectWidget,
                               trailing: _selectChevron(palette),
-                              compact: true,
                               controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
                                 searchable: true,
-                                size: SelectSize.sm,
                                 tapRegionGroupId:
                                     _projectFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -355,7 +353,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     return const SizedBox.shrink();
 
                                   return SelectCreateAction(
-                                    label: query.isEmpty
+                                        label: query.isEmpty
                                         ? 'Create new project'
                                         : 'Create project "$query"',
                                     onTap: () async {
@@ -437,12 +435,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               placeholder: 'Select Task',
                               leading: leadingTaskWidget,
                               trailing: _selectChevron(palette),
-                              compact: true,
                               controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
                                 searchable: true,
-                                size: SelectSize.sm,
                                 tapRegionGroupId:
                                     _taskFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -470,7 +466,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     return const SizedBox.shrink();
 
                                   return SelectCreateAction(
-                                    label: query.isEmpty
+                                        label: query.isEmpty
                                         ? 'Create new task'
                                         : 'Create task "$query"',
                                     onTap: () async {
@@ -543,8 +539,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       child: DateTimeInlineField(
                                         label: 'Start',
                                         value: _draft.startAt,
-                                        compact: true,
-                                        controller: _startTimeFieldController,
+                                                  controller: _startTimeFieldController,
                                         onChanged: (newStartAt) {
                                           _updateDraft(
                                             _draft.entry.copyWith(
@@ -560,8 +555,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                         label: 'End',
                                         value: _draft.endAt ?? DateTime.now(),
                                         isEditable: !isActive,
-                                        compact: true,
-                                        controller: _endTimeFieldController,
+                                                  controller: _endTimeFieldController,
                                         onChanged: (newEndAt) {
                                           _updateDraft(
                                             _draft.entry.copyWith(

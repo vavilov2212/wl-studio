@@ -1,7 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
-import 'package:worklog_studio_style_system/theme/radiuses.dart';
-import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class TextArea extends StatefulWidget {
   final TextEditingController controller;
@@ -14,6 +12,7 @@ class TextArea extends StatefulWidget {
   final int maxLength;
   final int? maxLines;
   final bool showCounter;
+  final ControlSize size;
   final ValueChanged<String>? onChanged;
 
   const TextArea({
@@ -23,10 +22,11 @@ class TextArea extends StatefulWidget {
     this.enabled = true,
     this.autofocus = false,
     this.hasError = false,
-    this.showCounter = true,
+    this.showCounter = false,
     this.keyboardType = TextInputType.text,
     this.maxLines = 5,
     this.maxLength = 3000,
+    this.size = ControlSize.sm,
     this.onChanged,
     super.key,
   });
@@ -37,7 +37,7 @@ class TextArea extends StatefulWidget {
 
 class _TextAreaState extends State<TextArea> {
   TextEditingController get controller => widget.controller;
-  ColorsPalette get palette => context.theme.colorsPalette;
+  get palette => context.theme.colorsPalette;
   bool _hasFocus = false;
   double? _manualHeight;
   bool _isResizing = false;
@@ -79,6 +79,7 @@ class _TextAreaState extends State<TextArea> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final tokens = theme.controlSize(widget.size);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -100,19 +101,19 @@ class _TextAreaState extends State<TextArea> {
             onTap: () => _focusNode.requestFocus(),
             child: Container(
               constraints: BoxConstraints(
-                minHeight: theme.spacings.x4l,
+                minHeight: tokens.height,
                 maxHeight: 500,
               ),
               height: _manualHeight,
               decoration: BoxDecoration(
                 color: palette.background.surface,
-                borderRadius: theme.radiuses.sm.circular,
+                borderRadius: theme.radiuses.md.circular,
                 border: Border.all(color: _borderColor),
               ),
               child: Stack(
                 children: [
                   Padding(
-                    padding: EdgeInsets.all(theme.spacings.lg),
+                    padding: tokens.allPadding,
                     child: TextField(
                       autofocus: widget.autofocus,
                       controller: controller,
@@ -124,12 +125,12 @@ class _TextAreaState extends State<TextArea> {
                         isDense: true,
                         border: InputBorder.none,
                         hintText: widget.hintText,
-                        hintStyle: theme.commonTextStyles.body.copyWith(
+                        hintStyle: tokens.textStyle.copyWith(
                           color: palette.text.muted,
                         ),
                         contentPadding: EdgeInsets.zero,
                       ),
-                      maxLines: null, // Auto-expand
+                      maxLines: null,
                       maxLength: widget.maxLength,
                       buildCounter:
                           (
@@ -138,9 +139,7 @@ class _TextAreaState extends State<TextArea> {
                             required isFocused,
                             required maxLength,
                           }) => const SizedBox.shrink(),
-                      style: theme.commonTextStyles.body.copyWith(
-                        color: _textColor,
-                      ),
+                      style: tokens.textStyle.copyWith(color: _textColor),
                       onChanged: (val) {
                         if (widget.onChanged != null) {
                           widget.onChanged!(val);
@@ -148,7 +147,6 @@ class _TextAreaState extends State<TextArea> {
                       },
                     ),
                   ),
-                  // Resize Handle (Bottom Edge)
                   Positioned(
                     left: 0,
                     right: 0,
@@ -157,7 +155,6 @@ class _TextAreaState extends State<TextArea> {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTapDown: (_) {
-                        // Request focus immediately on tap down to prevent blur
                         _focusNode.requestFocus();
                       },
                       onVerticalDragStart: (_) {
@@ -169,9 +166,9 @@ class _TextAreaState extends State<TextArea> {
                           final currentHeight =
                               _manualHeight ??
                               context.size?.height ??
-                              theme.spacings.x4l;
+                              tokens.height;
                           _manualHeight = (currentHeight + details.delta.dy)
-                              .clamp(theme.spacings.x4l, 500.0);
+                              .clamp(tokens.height, 500.0);
                         });
                       },
                       onVerticalDragEnd: (_) {

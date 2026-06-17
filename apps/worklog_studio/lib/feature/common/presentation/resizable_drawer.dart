@@ -85,49 +85,58 @@ class _ResizableDrawerState extends State<ResizableDrawer> {
         ),
       ),
       child: ClipRect(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            // Resize Handle
-            MouseRegion(
-              cursor: SystemMouseCursors.resizeLeftRight,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanStart: (_) => setState(() => _isDragging = true),
-                onPanUpdate: (details) {
-                  setState(() {
-                    _currentWidth -= details.delta.dx;
-                    if (_currentWidth < widget.minWidth) {
-                      _currentWidth = widget.minWidth;
-                    } else if (_currentWidth > widget.maxWidth) {
-                      _currentWidth = widget.maxWidth;
-                    }
-                  });
-                },
-                onPanEnd: (_) => setState(() => _isDragging = false),
-                child: Container(
-                  width: 16,
-                  color: Colors.transparent,
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 2,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: _isDragging
-                          ? palette.accent.primary
-                          : palette.border.primary,
-                      borderRadius: BorderRadius.circular(1),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            Expanded(
+            // Content (offset right of the resize handle)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 16,
+              right: 0,
               child: BaseDrawer(
                 header: widget.header,
                 body: widget.body,
                 footer: widget.footer,
+              ),
+            ),
+            // Resize Handle (absolutely positioned, never affects Row layout)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 16,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onPanStart: (_) => setState(() => _isDragging = true),
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _currentWidth -= details.delta.dx;
+                      if (_currentWidth < widget.minWidth) {
+                        _currentWidth = widget.minWidth;
+                      } else if (_currentWidth > widget.maxWidth) {
+                        _currentWidth = widget.maxWidth;
+                      }
+                    });
+                  },
+                  onPanEnd: (_) => setState(() => _isDragging = false),
+                  child: Container(
+                    color: Colors.transparent,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 2,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? palette.accent.primary
+                            : palette.border.primary,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

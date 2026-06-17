@@ -10,7 +10,7 @@ class DateTimeInlineField extends StatefulWidget {
   final DateTime value;
   final InlineFieldController controller;
   final bool isEditable;
-  final bool compact;
+  final ControlSize size;
   final ValueChanged<DateTime> onChanged;
 
   const DateTimeInlineField({
@@ -20,7 +20,7 @@ class DateTimeInlineField extends StatefulWidget {
     required this.controller,
     required this.onChanged,
     this.isEditable = true,
-    this.compact = false,
+    this.size = ControlSize.sm,
   });
 
   @override
@@ -455,7 +455,7 @@ class _DateTimeInlineFieldState extends State<DateTimeInlineField> {
       value: _formatDisplayValue(widget.value),
       controller: widget.controller,
       isEditable: widget.isEditable,
-      compact: widget.compact,
+      size: widget.size,
       trailing: calendarButton,
       editWidget: PrimaryInput(
         label: null,
@@ -465,7 +465,7 @@ class _DateTimeInlineFieldState extends State<DateTimeInlineField> {
         autofocus: true,
         inputFormatters: [DateTimeMaskFormatter()],
         suffixWidget: calendarButton,
-        size: widget.compact ? InputSize.sm : InputSize.md,
+        size: widget.size,
       ),
     );
   }

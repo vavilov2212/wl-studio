@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 import '../combobox/combobox.dart';
 import '../combobox/combobox_controller.dart';
@@ -32,7 +33,7 @@ class Select<T> extends StatefulWidget {
 
   /// External Combobox controller (optional)
   final ComboboxController? controller;
-  final SelectSize size;
+  final ControlSize size;
   final SelectVariant variant;
   final SelectMode mode;
   final bool matchTriggerWidth;
@@ -70,7 +71,7 @@ class Select<T> extends StatefulWidget {
     this.searchable = false,
     this.enabled = true,
     this.controller,
-    this.size = SelectSize.md,
+    this.size = ControlSize.sm,
     this.variant = SelectVariant.outline,
     this.mode = SelectMode.single,
     this.matchTriggerWidth = true,
@@ -240,6 +241,7 @@ class _SelectState<T> extends State<Select<T>> {
             close();
           },
           searchQuery: _searchQuery,
+          size: widget.size,
           actionBuilder: widget.actionBuilder != null
               ? (context, query) => widget.actionBuilder!(context, query, close)
               : null,

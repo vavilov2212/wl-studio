@@ -221,7 +221,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
 
                         // Title Input
                         InlineField(
-                          label: 'TASK TITLE',
+                          label: 'Task title',
                           value: _titleController.text,
                           placeholder: 'Enter task title...',
                           controller: _titleFieldController,
@@ -243,23 +243,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Description
-                          InlineField(
-                            label: 'DESCRIPTION',
-                            value: _descriptionController.text,
-                            placeholder: 'Add a description...',
-                            controller: _descriptionFieldController,
-                            textController: _descriptionController,
-                            isTextArea: true,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a description...',
-                              controller: _descriptionController,
-                              autofocus: true,
-                            ),
-                          ),
                           SizedBox(height: theme.spacings.x2l),
-
+                          LabeledDivider(label: 'Details'),
+                          SizedBox(height: theme.spacings.lg),
                           // Details Grid
                           Row(
                             children: [
@@ -288,7 +274,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                     }
 
                                     return InlineField(
-                                      label: 'PROJECT',
+                                      label: 'Project',
                                       value: selectedProject?.name ?? '',
                                       placeholder: 'Select Project',
                                       leading: leadingProjectWidget,
@@ -439,18 +425,28 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: theme.spacings.x3l),
-                            Divider(color: palette.border.primary),
                             SizedBox(height: theme.spacings.x2l),
-
-                            // Activity Log
-                            Text(
-                              'ACTIVITY LOG',
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(letterSpacing: 1.0),
+                          ],
+                          LabeledDivider(label: 'Notes'),
+                          SizedBox(height: theme.spacings.lg),
+                          InlineField(
+                            label: 'Notes',
+                            value: _descriptionController.text,
+                            placeholder: 'Add a description...',
+                            controller: _descriptionFieldController,
+                            textController: _descriptionController,
+                            isTextArea: true,
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a description...',
+                              controller: _descriptionController,
+                              autofocus: true,
                             ),
-                            SizedBox(height: theme.spacings.xl),
-
+                          ),
+                          if (!_isNew) ...[
+                            SizedBox(height: theme.spacings.x2l),
+                            LabeledDivider(label: 'Activity'),
+                            SizedBox(height: theme.spacings.lg),
                             Text(
                               'No activity yet.',
                               style: theme.commonTextStyles.body.copyWith(
@@ -458,9 +454,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               ),
                             ),
                           ],
-                          SizedBox(
-                            height: theme.spacings.xl,
-                          ), // Bottom padding for scroll
+                          SizedBox(height: theme.spacings.xl),
                         ],
                       ),
                     ),
