@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
@@ -9,7 +9,7 @@ import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:collection/collection.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 
 class MiniPanel extends StatefulWidget {
   const MiniPanel({super.key});
@@ -54,7 +54,7 @@ class _MiniPanelState extends State<MiniPanel> {
       return Row(
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(vertical: theme.spacings.s12),
+            padding: EdgeInsets.symmetric(vertical: theme.spacings.md),
             child: Text(
               'No active session running.',
               style: theme.commonTextStyles.caption.copyWith(
@@ -90,8 +90,8 @@ class _MiniPanelState extends State<MiniPanel> {
 
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.s16,
-          vertical: theme.spacings.s16,
+          horizontal: theme.spacings.lg,
+          vertical: theme.spacings.lg,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,9 +103,9 @@ class _MiniPanelState extends State<MiniPanel> {
                 letterSpacing: 1.1,
               ),
             ),
-            SizedBox(height: theme.spacings.s8),
+            SizedBox(height: theme.spacings.sm),
             Padding(
-              padding: EdgeInsets.all(theme.spacings.s12),
+              padding: EdgeInsets.all(theme.spacings.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
 
@@ -117,7 +117,7 @@ class _MiniPanelState extends State<MiniPanel> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (projectName != null) ...[
-                    SizedBox(height: theme.spacings.s2),
+                    SizedBox(height: theme.spacings.xs),
                     Text(
                       projectName,
                       style: theme.commonTextStyles.caption.copyWith(
@@ -127,7 +127,7 @@ class _MiniPanelState extends State<MiniPanel> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  SizedBox(height: theme.spacings.s24),
+                  SizedBox(height: theme.spacings.xl),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -219,8 +219,8 @@ class _MiniPanelState extends State<MiniPanel> {
       trailing: isActive
           ? Container(
               padding: EdgeInsets.symmetric(
-                horizontal: theme.spacings.s12,
-                vertical: theme.spacings.s16,
+                horizontal: theme.spacings.md,
+                vertical: theme.spacings.lg,
               ),
               child: Icon(
                 Icons.radio_button_checked,
@@ -234,7 +234,6 @@ class _MiniPanelState extends State<MiniPanel> {
           : (isHovered) {
               return PrimaryButton(
                 type: isHovered ? ButtonType.primary : ButtonType.ghost,
-                initialAnimationDuration: Duration(milliseconds: 20),
                 size: ButtonSize.sm,
                 leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
                 onTap: onTap,
@@ -250,7 +249,7 @@ class _MiniPanelState extends State<MiniPanel> {
     BuildContext context,
   ) {
     onTap() {
-      DesktopService().openMainWindowFromTray(route: "projects");
+      DesktopServiceRegistry.instance.openMainWindowFromTray(route: 'projects');
     }
 
     final initials = BadgeUtils.getProjectInitials(project.name);
@@ -266,7 +265,6 @@ class _MiniPanelState extends State<MiniPanel> {
       title: project.name,
       trailingWidget: (isHovered) => PrimaryButton(
         type: isHovered ? ButtonType.primary : ButtonType.ghost,
-        initialAnimationDuration: Duration(milliseconds: 20),
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.arrowSmallRight24Svg,
         onTap: onTap,
@@ -325,8 +323,8 @@ class _MiniPanelState extends State<MiniPanel> {
       trailing: isActive
           ? Container(
               padding: EdgeInsets.symmetric(
-                vertical: context.theme.spacings.s8,
-                horizontal: context.theme.spacings.s12,
+                vertical: context.theme.spacings.sm,
+                horizontal: context.theme.spacings.md,
               ),
               child: Icon(
                 Icons.radio_button_checked,
@@ -340,7 +338,6 @@ class _MiniPanelState extends State<MiniPanel> {
           : (isHovered) {
               return PrimaryButton(
                 type: isHovered ? ButtonType.primary : ButtonType.ghost,
-                initialAnimationDuration: Duration(milliseconds: 20),
                 size: ButtonSize.sm,
                 leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
                 onTap: onTap,
@@ -380,8 +377,8 @@ class _MiniPanelState extends State<MiniPanel> {
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          vertical: theme.spacings.s12,
-          horizontal: theme.spacings.s12,
+          vertical: theme.spacings.md,
+          horizontal: theme.spacings.md,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -392,12 +389,12 @@ class _MiniPanelState extends State<MiniPanel> {
               theme,
               trailing: InkWell(
                 onTap: () {
-                  DesktopService().openMainWindowFromTray(route: "history");
+                  DesktopServiceRegistry.instance.openMainWindowFromTray(route: 'history');
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: theme.spacings.s4,
-                    vertical: theme.spacings.s2,
+                    horizontal: theme.spacings.xxs,
+                    vertical: theme.spacings.xs,
                   ),
                   child: Text(
                     'VIEW ALL',
@@ -408,10 +405,10 @@ class _MiniPanelState extends State<MiniPanel> {
                 ),
               ),
             ),
-            SizedBox(height: theme.spacings.s8),
+            SizedBox(height: theme.spacings.sm),
             recentGroups.isEmpty
                 ? Padding(
-                    padding: EdgeInsets.all(theme.spacings.s12),
+                    padding: EdgeInsets.all(theme.spacings.md),
                     child: Text(
                       'No recent activity.',
                       style: theme.commonTextStyles.body.copyWith(
@@ -460,8 +457,8 @@ class _MiniPanelState extends State<MiniPanel> {
             filteredEntries.isEmpty)
           Padding(
             padding: EdgeInsets.symmetric(
-              vertical: theme.spacings.s12,
-              horizontal: theme.spacings.s12,
+              vertical: theme.spacings.md,
+              horizontal: theme.spacings.md,
             ),
             child: Text(
               'No results',
@@ -473,7 +470,7 @@ class _MiniPanelState extends State<MiniPanel> {
         else ...[
           if (filteredTasks.isNotEmpty) ...[
             _buildSectionHeader('TASKS', theme),
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.xxs),
             Container(
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
@@ -483,8 +480,8 @@ class _MiniPanelState extends State<MiniPanel> {
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s12,
-                  horizontal: theme.spacings.s12,
+                  vertical: theme.spacings.md,
+                  horizontal: theme.spacings.md,
                 ),
                 child: Column(
                   children: filteredTasks.map((task) {
@@ -506,11 +503,11 @@ class _MiniPanelState extends State<MiniPanel> {
                 ),
               ),
             ),
-            SizedBox(height: theme.spacings.s12),
+            SizedBox(height: theme.spacings.md),
           ],
           if (filteredProjects.isNotEmpty) ...[
             _buildSectionHeader('PROJECTS', theme),
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.xxs),
             Container(
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
@@ -520,8 +517,8 @@ class _MiniPanelState extends State<MiniPanel> {
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s12,
-                  horizontal: theme.spacings.s12,
+                  vertical: theme.spacings.md,
+                  horizontal: theme.spacings.md,
                 ),
                 child: Column(
                   children: filteredProjects.map((project) {
@@ -530,11 +527,11 @@ class _MiniPanelState extends State<MiniPanel> {
                 ),
               ),
             ),
-            SizedBox(height: theme.spacings.s12),
+            SizedBox(height: theme.spacings.md),
           ],
           if (filteredEntries.isNotEmpty) ...[
             _buildSectionHeader('RECENT LOGS', theme),
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.xxs),
             Container(
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
@@ -544,8 +541,8 @@ class _MiniPanelState extends State<MiniPanel> {
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s12,
-                  horizontal: theme.spacings.s12,
+                  vertical: theme.spacings.md,
+                  horizontal: theme.spacings.md,
                 ),
                 child: Column(
                   children: filteredEntries.map((entry) {
@@ -626,7 +623,7 @@ class _MiniPanelState extends State<MiniPanel> {
             margin: const EdgeInsets.all(0),
             decoration: BoxDecoration(
               color: Color(0xFFf8fafc),
-              borderRadius: BorderRadius.circular(theme.spacings.s12),
+              borderRadius: BorderRadius.circular(theme.spacings.md),
               boxShadow: [theme.shadows.md],
               border: Border.all(
                 color: palette.border.primary.withOpacity(0.5),
@@ -634,7 +631,7 @@ class _MiniPanelState extends State<MiniPanel> {
               ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(theme.spacings.s12),
+              borderRadius: BorderRadius.circular(theme.spacings.md),
 
               child: Column(
                 mainAxisSize: MainAxisSize.max,
@@ -648,7 +645,7 @@ class _MiniPanelState extends State<MiniPanel> {
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s16,
+                        horizontal: theme.spacings.lg,
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -664,7 +661,7 @@ class _MiniPanelState extends State<MiniPanel> {
                             leftIcon: WorklogStudioAssets.vectors.plus24Svg,
                             onTap: () {},
                           ),
-                          SizedBox(width: theme.spacings.s4),
+                          SizedBox(width: theme.spacings.xxs),
                           PrimaryButton(
                             type: ButtonType.ghost,
                             size: ButtonSize.sm,
@@ -673,17 +670,17 @@ class _MiniPanelState extends State<MiniPanel> {
                               size: 16,
                             ),
                             onTap: () {
-                              DesktopService().openMainWindowFromTray();
+                              DesktopServiceRegistry.instance.openMainWindowFromTray();
                             },
                           ),
                         ],
                       ),
                     ),
                   ),
-                  SizedBox(height: theme.spacings.s16),
+                  SizedBox(height: theme.spacings.lg),
                   Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: theme.spacings.s16,
+                      horizontal: theme.spacings.lg,
                     ),
                     child: PrimaryInput(
                       label: null,
@@ -721,14 +718,14 @@ class _MiniPanelState extends State<MiniPanel> {
                       },
                     ),
                   ),
-                  SizedBox(height: theme.spacings.s16),
+                  SizedBox(height: theme.spacings.lg),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(color: Color(0xFFf8fafc)),
                       child: _query.isEmpty
                           ? Padding(
                               padding: EdgeInsets.symmetric(
-                                horizontal: theme.spacings.s16,
+                                horizontal: theme.spacings.lg,
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -741,7 +738,7 @@ class _MiniPanelState extends State<MiniPanel> {
                                     theme,
                                     context,
                                   ),
-                                  SizedBox(height: theme.spacings.s16),
+                                  SizedBox(height: theme.spacings.lg),
                                   _buildRecentActivity(state, theme),
                                 ],
                               ),
@@ -750,7 +747,7 @@ class _MiniPanelState extends State<MiniPanel> {
                               physics: const ClampingScrollPhysics(),
                               child: Padding(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: theme.spacings.s16,
+                                  horizontal: theme.spacings.lg,
                                 ),
                                 child: _buildSearchResults(state, theme),
                               ),
@@ -764,8 +761,8 @@ class _MiniPanelState extends State<MiniPanel> {
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s16,
-                        vertical: theme.spacings.s8,
+                        horizontal: theme.spacings.lg,
+                        vertical: theme.spacings.sm,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -896,8 +893,8 @@ class _HoverableListItemState extends State<_HoverableListItem> {
         onTap: widget.onTap,
         child: Container(
           padding: EdgeInsets.symmetric(
-            vertical: theme.spacings.s8,
-            horizontal: theme.spacings.s12,
+            vertical: theme.spacings.sm,
+            horizontal: theme.spacings.md,
           ),
           decoration: BoxDecoration(
             color: _isHovered
@@ -912,7 +909,7 @@ class _HoverableListItemState extends State<_HoverableListItem> {
               widget.leadingWidget?.call(_isHovered) ?? SizedBox.shrink(),
               (widget.leading == null && widget.leadingWidget == null)
                   ? SizedBox.shrink()
-                  : SizedBox(width: theme.spacings.s12),
+                  : SizedBox(width: theme.spacings.md),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -927,7 +924,7 @@ class _HoverableListItemState extends State<_HoverableListItem> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (widget.subtitle != null) ...[
-                      SizedBox(height: theme.spacings.s2),
+                      SizedBox(height: theme.spacings.xs),
                       Text(
                         widget.subtitle!,
                         style: theme.commonTextStyles.caption.copyWith(
@@ -940,7 +937,7 @@ class _HoverableListItemState extends State<_HoverableListItem> {
                   ],
                 ),
               ),
-              SizedBox(width: theme.spacings.s8),
+              SizedBox(width: theme.spacings.sm),
               widget.trailing ?? SizedBox.shrink(),
               widget.trailingWidget?.call(_isHovered) ?? SizedBox.shrink(),
             ],

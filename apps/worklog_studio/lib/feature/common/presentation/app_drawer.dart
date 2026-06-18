@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -53,20 +53,15 @@ class _AppDrawerState extends State<AppDrawer> {
             widget.actions != null)) {
       headerWidget = Padding(
         padding: EdgeInsets.fromLTRB(
-          theme.spacings.s24,
-          theme.spacings.s24,
-          theme.spacings.s24,
-          theme.spacings.s16,
+          theme.spacings.xl,
+          theme.spacings.xl,
+          theme.spacings.xl,
+          theme.spacings.lg,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (widget.onClose != null)
-              IconButton(
-                icon: Icon(Icons.close, color: palette.text.secondary),
-                onPressed: widget.onClose,
-              )
-            else if (widget.title != null)
+            if (widget.title != null)
               Expanded(
                 child: Text(
                   widget.title!,
@@ -79,6 +74,16 @@ class _AppDrawerState extends State<AppDrawer> {
               const SizedBox.shrink(),
             if (widget.actions != null)
               Row(mainAxisSize: MainAxisSize.min, children: widget.actions!),
+            if (widget.onClose != null)
+              IconButton(
+                icon: Icon(Icons.close, color: palette.text.secondary, size: 18),
+                onPressed: widget.onClose,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 28,
+                  minHeight: 28,
+                ),
+              ),
           ],
         ),
       );
@@ -150,25 +155,32 @@ class _AppDrawerState extends State<AppDrawer> {
                         Expanded(
                           child: SingleChildScrollView(
                             padding: EdgeInsets.only(
-                              left: theme.spacings.s24,
-                              right: theme.spacings.s32,
+                              left: theme.spacings.xl,
+                              right: theme.spacings.x2l,
                               top: headerWidget == null
-                                  ? theme.spacings.s32
+                                  ? theme.spacings.x2l
                                   : 0,
                               bottom: widget.footer == null
-                                  ? theme.spacings.s32
+                                  ? theme.spacings.x2l
                                   : 0,
                             ),
                             child: widget.body,
                           ),
                         ),
                         if (widget.footer != null)
-                          Padding(
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: palette.border.primary,
+                                ),
+                              ),
+                            ),
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.s24,
-                              theme.spacings.s16,
-                              theme.spacings.s32,
-                              theme.spacings.s32,
+                              theme.spacings.xl,
+                              theme.spacings.lg,
+                              theme.spacings.x2l,
+                              theme.spacings.x2l,
                             ),
                             child: widget.footer!,
                           ),

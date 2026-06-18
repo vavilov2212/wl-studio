@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DrawerHeader;
+﻿import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -153,9 +153,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         ? Padding(
                             key: const ValueKey('delete_confirmation'),
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.s32,
-                              theme.spacings.s16,
-                              theme.spacings.s32,
+                              theme.spacings.x2l,
+                              theme.spacings.lg,
+                              theme.spacings.x2l,
                               0,
                             ),
                             child: InfoBar(
@@ -165,8 +165,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 'This action cannot be undone',
                               ),
                               actions: Wrap(
-                                spacing: theme.spacings.s8,
-                                runSpacing: theme.spacings.s8,
+                                spacing: theme.spacings.sm,
+                                runSpacing: theme.spacings.sm,
                                 alignment: WrapAlignment.end,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
@@ -221,7 +221,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
 
                         // Title Input
                         InlineField(
-                          label: 'TASK TITLE',
+                          label: 'Task title',
                           value: _titleController.text,
                           placeholder: 'Enter task title...',
                           controller: _titleFieldController,
@@ -237,29 +237,15 @@ class _TaskDrawerState extends State<TaskDrawer> {
                     ),
                     content: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s32,
+                        horizontal: theme.spacings.x2l,
                         vertical: 0,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Description
-                          InlineField(
-                            label: 'DESCRIPTION',
-                            value: _descriptionController.text,
-                            placeholder: 'Add a description...',
-                            controller: _descriptionFieldController,
-                            textController: _descriptionController,
-                            isTextArea: true,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a description...',
-                              controller: _descriptionController,
-                              autofocus: true,
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.s32),
-
+                          SizedBox(height: theme.spacings.x2l),
+                          LabeledDivider(label: 'Details'),
+                          SizedBox(height: theme.spacings.lg),
                           // Details Grid
                           Row(
                             children: [
@@ -288,7 +274,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                     }
 
                                     return InlineField(
-                                      label: 'PROJECT',
+                                      label: 'Project',
                                       value: selectedProject?.name ?? '',
                                       placeholder: 'Select Project',
                                       leading: leadingProjectWidget,
@@ -374,7 +360,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                   },
                                 ),
                               ),
-                              SizedBox(width: theme.spacings.s16),
+                              SizedBox(width: theme.spacings.lg),
                               Expanded(
                                 child: _DetailItem(
                                   label: 'PRIORITY',
@@ -385,7 +371,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                         size: 16,
                                         color: palette.text.secondary,
                                       ),
-                                      SizedBox(width: theme.spacings.s8),
+                                      SizedBox(width: theme.spacings.sm),
                                       Text(
                                         'Medium',
                                         style: theme.commonTextStyles.body
@@ -399,7 +385,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               ),
                             ],
                           ),
-                          SizedBox(height: theme.spacings.s24),
+                          SizedBox(height: theme.spacings.xl),
                           if (!_isNew) ...[
                             Row(
                               children: [
@@ -418,7 +404,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                             color: palette.text.secondary,
                                           ),
                                         ),
-                                        SizedBox(width: theme.spacings.s8),
+                                        SizedBox(width: theme.spacings.sm),
                                         Text(
                                           'Unassigned',
                                           style:
@@ -439,18 +425,28 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: theme.spacings.s40),
-                            Divider(color: palette.border.primary),
-                            SizedBox(height: theme.spacings.s32),
-
-                            // Activity Log
-                            Text(
-                              'ACTIVITY LOG',
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(letterSpacing: 1.0),
+                            SizedBox(height: theme.spacings.x2l),
+                          ],
+                          LabeledDivider(label: 'Notes'),
+                          SizedBox(height: theme.spacings.lg),
+                          InlineField(
+                            label: 'Notes',
+                            value: _descriptionController.text,
+                            placeholder: 'Add a description...',
+                            controller: _descriptionFieldController,
+                            textController: _descriptionController,
+                            isTextArea: true,
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a description...',
+                              controller: _descriptionController,
+                              autofocus: true,
                             ),
-                            SizedBox(height: theme.spacings.s24),
-
+                          ),
+                          if (!_isNew) ...[
+                            SizedBox(height: theme.spacings.x2l),
+                            LabeledDivider(label: 'Activity'),
+                            SizedBox(height: theme.spacings.lg),
                             Text(
                               'No activity yet.',
                               style: theme.commonTextStyles.body.copyWith(
@@ -458,9 +454,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               ),
                             ),
                           ],
-                          SizedBox(
-                            height: theme.spacings.s24,
-                          ), // Bottom padding for scroll
+                          SizedBox(height: theme.spacings.xl),
                         ],
                       ),
                     ),
@@ -529,7 +523,7 @@ class _DetailItem extends StatelessWidget {
             letterSpacing: 1.0,
           ),
         ),
-        SizedBox(height: theme.spacings.s8),
+        SizedBox(height: theme.spacings.sm),
         child,
       ],
     );

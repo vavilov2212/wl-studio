@@ -49,3 +49,10 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
+
+# Environment variables
+.env*
+!.env.example
+
+# Claude Code — machine-local project overrides (API keys, personal hooks)
+.claude/settings.local.json

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'inline_field_controller.dart';
 
@@ -11,6 +11,9 @@ class InlineField extends StatefulWidget {
   final InlineFieldController controller;
   final TextEditingController? textController;
   final Widget? leading;
+  final Widget? trailing;
+  final bool isEditable;
+  final ControlSize size;
 
   const InlineField({
     super.key,
@@ -22,6 +25,9 @@ class InlineField extends StatefulWidget {
     required this.controller,
     this.textController,
     this.leading,
+    this.trailing,
+    this.isEditable = true,
+    this.size = ControlSize.sm,
   });
 
   @override
@@ -82,6 +88,7 @@ class _InlineFieldState extends State<InlineField> {
   bool get _currentIsEditing => widget.controller.isEditing;
 
   void _handleTap() {
+    if (!widget.isEditable) return;
     widget.controller.enterEditMode(widget.value);
   }
 
@@ -89,11 +96,16 @@ class _InlineFieldState extends State<InlineField> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final tokens = theme.controlSize(widget.size);
 
     Widget content = MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
+      onEnter: (_) {
+        if (widget.isEditable) setState(() => _isHovered = true);
+      },
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
+      cursor: widget.isEditable
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: _handleTap,
         behavior: HitTestBehavior.opaque,
@@ -102,17 +114,17 @@ class _InlineFieldState extends State<InlineField> {
 
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s0),
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.none),
               child: Text(
                 widget.label,
-                style: theme.commonTextStyles.captionSemiBold.copyWith(
+                style: theme.commonTextStyles.labelSmall.copyWith(
                   color: _isHovered || _currentIsEditing
-                      ? palette.text.primary
+                      ? palette.text.secondary
                       : palette.text.secondary2,
                 ),
               ),
             ),
-            SizedBox(height: theme.spacings.s8),
+            SizedBox(height: theme.spacings.sm),
             if (widget.isTextArea && _currentIsEditing)
               widget.editWidget
             else
@@ -128,12 +140,13 @@ class _InlineFieldState extends State<InlineField> {
                     maintainState: true,
                     child: Container(
                       width: double.infinity,
+                      height: widget.size == ControlSize.sm ? tokens.height : null,
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s12,
-                        vertical: theme.spacings.s12,
+                        horizontal: tokens.horizontalPadding,
+                        vertical: tokens.verticalPadding,
                       ),
                       decoration: BoxDecoration(
-                        color: _isHovered
+                        color: _isHovered && widget.isEditable
                             ? palette.background.surfaceMuted
                             : Colors.transparent,
                         borderRadius: theme.radiuses.md.circular,
@@ -141,20 +154,23 @@ class _InlineFieldState extends State<InlineField> {
                         border: Border.all(color: Colors.transparent),
                       ),
                       child: Row(
-                        spacing: theme.spacings.s8,
+                        spacing: theme.spacings.sm,
                         children: [
-                          if (widget.leading != null &&
-                              _displayValue.isNotEmpty)
-                            widget.leading!,
+                          if (widget.leading != null) widget.leading!,
                           Expanded(
                             child: Text(
                               _displayValue.isEmpty
                                   ? widget.placeholder
                                   : _displayValue,
-                              style: theme.commonTextStyles.body.copyWith(
+                              style: tokens.textStyle
+                                  .copyWith(
                                 color: _displayValue.isEmpty
                                     ? palette.text.muted
-                                    : palette.text.primary,
+                                    : (widget.isEditable
+                                          ? palette.text.primary
+                                          : palette.text.secondary.withValues(
+                                              alpha: 0.5,
+                                            )),
                                 fontStyle: _displayValue.isEmpty
                                     ? FontStyle.italic
                                     : null,
@@ -165,15 +181,19 @@ class _InlineFieldState extends State<InlineField> {
                                   : TextOverflow.ellipsis,
                             ),
                           ),
-                          _isHovered
-                              ? Icon(
-                                  Icons.edit_sharp,
-                                  color: _isHovered
-                                      ? palette.text.secondary
-                                      : palette.text.muted,
-                                  size: 16.0,
-                                )
-                              : SizedBox.shrink(),
+                          if (widget.isEditable)
+                            Visibility(
+                              visible: _isHovered,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child: Icon(
+                                Icons.edit_sharp,
+                                color: palette.text.secondary,
+                                size: 16.0,
+                              ),
+                            ),
+                          if (widget.trailing != null) widget.trailing!,
                         ],
                       ),
                     ),

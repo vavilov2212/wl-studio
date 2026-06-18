@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 
@@ -6,12 +6,14 @@ class EntityMetaInfoRow extends StatelessWidget {
   final BadgeStatus status;
   final String statusLabel;
   final DateTime createdAt;
+  final BadgeSize badgeSize;
 
   const EntityMetaInfoRow({
     super.key,
     required this.status,
     required this.statusLabel,
     required this.createdAt,
+    this.badgeSize = BadgeSize.md,
   });
 
   @override
@@ -20,19 +22,20 @@ class EntityMetaInfoRow extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: theme.spacings.s16),
+      padding: EdgeInsets.only(bottom: theme.spacings.x2l),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           StatusBadge(
             status: status,
             label: statusLabel,
+            size: badgeSize,
           ),
-          SizedBox(width: theme.spacings.s12),
+          SizedBox(width: theme.spacings.md),
           Text(
             'Created ${DateFormatter.formatDateTime(createdAt)}',
-            style: theme.commonTextStyles.body2.copyWith(
-              color: palette.text.secondary,
+            style: theme.commonTextStyles.caption.copyWith(
+              color: palette.text.secondary2,
             ),
           ),
         ],

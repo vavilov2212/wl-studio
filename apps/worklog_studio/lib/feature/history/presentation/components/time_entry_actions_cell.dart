@@ -6,36 +6,36 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class TimeEntryActionsCell extends StatelessWidget {
   final ResolvedTimeEntry resolvedEntry;
-  final bool isHovered;
 
   const TimeEntryActionsCell({
     super.key,
     required this.resolvedEntry,
-    required this.isHovered,
   });
 
   @override
   Widget build(BuildContext context) {
     final entry = resolvedEntry.entry;
 
-    if (resolvedEntry.isRunning) {
-      return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
+    final isRunningThis = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.isRunning && bloc.state.activeEntryOrNull?.id == entry.id,
+    );
 
-        type: isHovered ? ButtonType.danger : ButtonType.ghost,
+    if (isRunningThis) {
+      return PrimaryButton(
+        type: ButtonType.danger,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.squareFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
+        backgroundColor: context.theme.colorsPalette.accent.danger,
         onTap: () {
           context.read<TimeTrackerBloc>().add(TimeTrackerStopped());
         },
       );
     } else {
       return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
-
-        type: isHovered ? ButtonType.primary : ButtonType.ghost,
+        type: ButtonType.ghost,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
         onTap: () {
           context.read<TimeTrackerBloc>().add(
             TimeTrackerStarted(

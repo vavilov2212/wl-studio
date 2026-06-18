@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
-import 'select_option.dart';
-
 class SelectContent<T> extends StatefulWidget {
   final bool searchable;
   final TextEditingController searchController;
@@ -10,9 +8,9 @@ class SelectContent<T> extends StatefulWidget {
   final T? selectedValue;
   final ValueChanged<T> onSelect;
   final String searchQuery;
-  final Widget Function(BuildContext context, String searchQuery)?
-  actionBuilder;
+  final Widget Function(BuildContext context, String searchQuery)? actionBuilder;
   final Widget Function(BuildContext context, String searchQuery)? emptyBuilder;
+  final ControlSize size;
 
   const SelectContent({
     super.key,
@@ -24,6 +22,7 @@ class SelectContent<T> extends StatefulWidget {
     required this.searchQuery,
     this.actionBuilder,
     this.emptyBuilder,
+    this.size = ControlSize.sm,
   });
 
   @override
@@ -58,12 +57,10 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
 
     final hasAction = widget.actionBuilder != null;
 
-    // 1. Identify the selected option from ALL options
     final selectedOption = widget.options
         .where((o) => o.value == widget.selectedValue)
         .firstOrNull;
 
-    // 2. Filter options based on search query
     final filteredOptions = widget.options.where((option) {
       if (!widget.searchable || widget.searchQuery.isEmpty) return true;
       return option.label.toLowerCase().contains(
@@ -71,43 +68,36 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
       );
     }).toList();
 
-    // 3. Remove selected option from filtered results to avoid duplication
     final filteredWithoutSelected = filteredOptions
         .where((o) => o.value != widget.selectedValue)
         .toList();
 
-    // 4. Explicitly compose the list items
     final List<Widget> listItems = [];
 
-    // A. Action Item (Always at the top)
     if (hasAction) {
       listItems.add(widget.actionBuilder!(context, widget.searchQuery));
     }
 
-    // B. Selected Item (Always visible, pinned to top)
     if (selectedOption != null) {
       listItems.add(
         _buildOptionItem(context, selectedOption, isSelected: true),
       );
     }
 
-    // C. Divider (Separate pinned items from scrollable results)
     final hasPinnedItems = listItems.isNotEmpty;
     if (hasPinnedItems && filteredWithoutSelected.isNotEmpty) {
       listItems.add(
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
+          padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
           child: Divider(height: 1, color: palette.border.primary),
         ),
       );
     }
 
-    // D. Filtered Results or Empty State
     if (filteredWithoutSelected.isEmpty && !hasPinnedItems) {
-      // Only show empty state if there are no pinned items and no results
       listItems.add(
         Padding(
-          padding: EdgeInsets.all(theme.spacings.s16),
+          padding: EdgeInsets.all(theme.spacings.lg),
           child: widget.emptyBuilder != null
               ? widget.emptyBuilder!(context, widget.searchQuery)
               : Text(
@@ -120,7 +110,6 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
         ),
       );
     } else {
-      // Add the remaining filtered options
       listItems.addAll(
         filteredWithoutSelected.map(
           (option) => _buildOptionItem(context, option, isSelected: false),
@@ -153,13 +142,14 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
   }) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final tokens = theme.controlSize(widget.size);
 
     return InkWell(
       onTap: () => widget.onSelect(option.value),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.s12,
-          vertical: theme.spacings.s12,
+          horizontal: tokens.horizontalPadding,
+          vertical: tokens.verticalPadding == 0 ? theme.spacings.sm : tokens.verticalPadding,
         ),
         color: isSelected
             ? palette.accent.primary.withValues(alpha: 0.08)
@@ -168,12 +158,12 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
           children: [
             if (option.leading != null) ...[
               option.leading!,
-              SizedBox(width: theme.spacings.s8),
+              SizedBox(width: theme.spacings.sm),
             ],
             Expanded(
               child: Text(
                 option.label,
-                style: theme.commonTextStyles.body.copyWith(
+                style: tokens.textStyle.copyWith(
                   color: isSelected
                       ? palette.accent.primary
                       : palette.text.primary,
@@ -182,7 +172,7 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check, size: 16, color: palette.accent.primary),
+              Icon(Icons.check, size: tokens.iconSize, color: palette.accent.primary),
           ],
         ),
       ),

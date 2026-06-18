@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -46,7 +48,7 @@ class ProjectCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +68,7 @@ class ProjectCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      SizedBox(height: theme.spacings.s8),
+                      SizedBox(height: theme.spacings.sm),
                       LinearProgressIndicator(
                         value: project.project.budgetUtilization,
                         backgroundColor: palette.border.primary,
@@ -103,12 +105,29 @@ class ProjectCard extends StatelessWidget {
           CardColumn(
             flex: 1,
             alignment: Alignment.centerRight,
-            child: Text(
-              getStatusText(project.status),
-              style: theme.commonTextStyles.caption3Bold.copyWith(
-                color: palette.text.muted,
-                letterSpacing: 1.0,
-              ),
+            child: Builder(
+              builder: (context) {
+                final isActive = context.select<TimeTrackerBloc, bool>(
+                  (bloc) =>
+                      bloc.state.activeEntryOrNull?.projectId == project.id,
+                );
+                if (isActive) {
+                  return Text(
+                    'RUNNING',
+                    style: theme.commonTextStyles.caption3Bold.copyWith(
+                      color: palette.accent.primary,
+                      letterSpacing: 1.0,
+                    ),
+                  );
+                }
+                return Text(
+                  getStatusText(project.status),
+                  style: theme.commonTextStyles.caption3Bold.copyWith(
+                    color: palette.text.muted,
+                    letterSpacing: 1.0,
+                  ),
+                );
+              },
             ),
           ),
         ],

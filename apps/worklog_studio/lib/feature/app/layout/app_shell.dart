@@ -1,4 +1,4 @@
-import 'package:collection/collection.dart';
+﻿import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -18,7 +18,7 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'dart:async';
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
@@ -32,12 +32,15 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppRoute _currentRoute = AppRoute.dashboard;
+  String? _pendingHistoryEntryId;
+  int _historyCreateToken = 0;
+  String? _pendingTaskId;
   StreamSubscription<String>? _navSub;
 
   @override
   void initState() {
     super.initState();
-    _navSub = DesktopService().navigationStream.listen((route) {
+    _navSub = DesktopServiceRegistry.instance.navigationStream.listen((route) {
       if (route == 'history') {
         _onRouteSelected(AppRoute.history);
       } else if (route == 'tasks') {
@@ -60,15 +63,46 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _openHistoryEntry(String entryId) {
+    setState(() {
+      _pendingHistoryEntryId = entryId;
+      _currentRoute = AppRoute.history;
+    });
+  }
+
+  void _openHistoryCreateEntry() {
+    setState(() {
+      _historyCreateToken++;
+      _currentRoute = AppRoute.history;
+    });
+  }
+
+  void _openTask(String taskId) {
+    setState(() {
+      _pendingTaskId = taskId;
+      _currentRoute = AppRoute.tasks;
+    });
+  }
+
   Widget _buildActiveScreen() {
     return IndexedStack(
       index: _currentRoute.index,
-      children: const [
-        HomePage(title: 'Dashboard'),
-        HistoryScreen(),
-        ProjectsScreen(),
-        TasksScreen(),
-        SettingsScreen(),
+      children: [
+        HomePage(
+          title: 'Dashboard',
+          onViewAllTasks: () => _onRouteSelected(AppRoute.tasks),
+          onViewAllHistory: () => _onRouteSelected(AppRoute.history),
+          onSelectHistoryEntry: _openHistoryEntry,
+          onAddTimeEntry: _openHistoryCreateEntry,
+          onSelectTask: _openTask,
+        ),
+        HistoryScreen(
+          initialSelectedEntryId: _pendingHistoryEntryId,
+          createRequestToken: _historyCreateToken,
+        ),
+        const ProjectsScreen(),
+        TasksScreen(initialSelectedTaskId: _pendingTaskId),
+        const SettingsScreen(),
       ],
     );
   }
@@ -109,11 +143,11 @@ class TopAppBar extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s32,
-        vertical: theme.spacings.s16,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: palette.background.surface,
+        border: Border(bottom: BorderSide(color: palette.border.primary)),
       ),
-      decoration: BoxDecoration(color: palette.background.canvas),
       child: const GlobalTimeTrackerPanel(),
     );
   }
@@ -187,26 +221,10 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           return Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(
-              horizontal: theme.spacings.s24,
-              vertical: theme.spacings.s16,
+              horizontal: theme.spacings.x2l,
+              vertical: theme.spacings.sm,
             ),
-            decoration: BoxDecoration(
-              color: palette.background.surface,
-              borderRadius: theme.radiuses.lg.circular,
-              border: Border.all(
-                color: isRunning
-                    ? palette.accent.primary.withValues(alpha: 0.5)
-                    : palette.border.primary,
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+            decoration: const BoxDecoration(color: Colors.transparent),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final projectField = _buildProjectSelector(
@@ -244,14 +262,14 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Expanded(child: projectField),
-                            SizedBox(width: theme.spacings.s16),
+                            SizedBox(width: theme.spacings.lg),
                             Expanded(child: taskField),
                           ],
                         ),
                       ),
-                      SizedBox(width: theme.spacings.s24),
+                      SizedBox(width: theme.spacings.xl),
                       Expanded(flex: 4, child: commentField),
-                      SizedBox(width: theme.spacings.s24),
+                      SizedBox(width: theme.spacings.xl),
                       ...timerAndAction,
                     ],
                   );
@@ -264,16 +282,16 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(child: projectField),
-                          SizedBox(width: theme.spacings.s16),
+                          SizedBox(width: theme.spacings.lg),
                           Expanded(child: taskField),
                         ],
                       ),
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(child: commentField),
-                          SizedBox(width: theme.spacings.s24),
+                          SizedBox(width: theme.spacings.xl),
                           ...timerAndAction,
                         ],
                       ),
@@ -285,11 +303,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       projectField,
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       taskField,
-                      SizedBox(height: theme.spacings.s16),
+                      SizedBox(height: theme.spacings.lg),
                       commentField,
-                      SizedBox(height: theme.spacings.s24),
+                      SizedBox(height: theme.spacings.xl),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -322,12 +340,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
-      SizedBox(width: theme.spacings.s24),
+      SizedBox(width: theme.spacings.xl),
       isRunning
           ? PrimaryButton(
-              size: ButtonSize.sm,
               type: ButtonType.danger,
-              title: 'STOP',
+              size: ButtonSize.sm,
               leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
               backgroundColor: palette.accent.danger,
               onTap: () {
@@ -338,7 +355,6 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             )
           : PrimaryButton(
               size: ButtonSize.sm,
-              title: 'START',
               leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
               onTap: () {
                 context.read<TimeTrackerBloc>().add(
@@ -397,12 +413,17 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     }
 
     return InlineField(
-      label: 'PROJECT',
+      label: 'Project',
       value: selectedProject?.name ?? '',
       placeholder: 'Select Project',
       leading: leadingWidget,
       controller: _projectFieldController,
       editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _projectFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _projectFieldController.handleEditorClose();
+        },
         value: selectedId,
         placeholder: 'Select Project',
         searchable: true,
@@ -512,12 +533,17 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     }
 
     return InlineField(
-      label: 'TASK',
+      label: 'Task',
       value: selectedTask?.title ?? '',
       placeholder: 'Select Task',
       leading: leadingWidget,
       controller: _taskFieldController,
       editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _taskFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _taskFieldController.handleEditorClose();
+        },
         value: selectedId,
         placeholder: 'Select Task',
         searchable: true,
@@ -595,7 +621,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
 
     return InlineField(
-      label: 'COMMENT',
+      label: 'Comment',
       value: _commentController.text,
       placeholder: 'Add a comment...',
       controller: _commentFieldController,
@@ -621,7 +647,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   }
 }
 
-class SidebarNavigation extends StatelessWidget {
+class SidebarNavigation extends StatefulWidget {
   final AppRoute currentRoute;
   final ValueChanged<AppRoute> onRouteSelected;
 
@@ -632,100 +658,211 @@ class SidebarNavigation extends StatelessWidget {
   });
 
   @override
+  State<SidebarNavigation> createState() => _SidebarNavigationState();
+}
+
+class _SidebarNavigationState extends State<SidebarNavigation> {
+  bool _collapsed = true;
+  bool _headerHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final navBg = palette.accent.nav;
+    final collapsedWidth = 56.0;
+    final expandedWidth = 220.0;
 
-    return Container(
-      width: 240,
-      color: palette.background.surface,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      width: _collapsed ? collapsedWidth : expandedWidth,
+      decoration: BoxDecoration(
+        color: navBg,
+        border: Border(
+          right: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+      ),
       child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.all(theme.spacings.s24),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: palette.accent.primary,
-                    borderRadius: theme.radiuses.sm.circular,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.work,
-                      color: palette.background.surface,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                SizedBox(width: theme.spacings.s12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Worklog Studio',
-                      style: theme.commonTextStyles.bodyBold,
-                    ),
-                    Text(
-                      'PROFESSIONAL TRACKING',
-                      style: theme.commonTextStyles.caption3Bold.copyWith(
-                        color: palette.text.muted,
-                        letterSpacing: 1.0,
+          // Brand + toggle — the whole row is clickable to expand/collapse.
+          Tooltip(
+            message: _collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+            preferBelow: true,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _headerHovered = true),
+              onExit: (_) => setState(() => _headerHovered = false),
+              child: GestureDetector(
+                onTap: () => setState(() => _collapsed = !_collapsed),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 56,
+                  color: _headerHovered
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.transparent,
+                  padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        margin: EdgeInsets.only(
+                          left: _collapsed ? 4 : 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: theme.radiuses.sm.circular,
+                        ),
+                        child: Icon(
+                          Icons.access_time_rounded,
+                          size: 18,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
                       ),
-                    ),
-                  ],
+                      if (!_collapsed) ...[
+                        SizedBox(width: theme.spacings.sm),
+                        Expanded(
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 150),
+                            opacity: _collapsed ? 0 : 1,
+                            child: Text(
+                              'Worklog Studio',
+                              style: theme.commonTextStyles.labelMedium
+                                  .copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_left_rounded,
+                          size: 18,
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
-          SizedBox(height: theme.spacings.s16),
+          // Nav items
           Expanded(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s12),
+              padding: EdgeInsets.symmetric(
+                horizontal: _collapsed ? 8 : theme.spacings.sm,
+                vertical: theme.spacings.sm,
+              ),
               child: Column(
+                spacing: theme.spacings.xxs,
                 children: [
-                  SidebarItem(
-                    label: 'Dashboard',
-                    isActive: currentRoute == AppRoute.dashboard,
-                    onTap: () => onRouteSelected(AppRoute.dashboard),
-                  ),
-                  SidebarItem(
-                    label: 'History',
-                    isActive: currentRoute == AppRoute.history,
-                    onTap: () => onRouteSelected(AppRoute.history),
-                  ),
-                  SidebarItem(
-                    label: 'Projects',
-                    isActive: currentRoute == AppRoute.projects,
-                    onTap: () => onRouteSelected(AppRoute.projects),
-                  ),
-                  SidebarItem(
-                    label: 'Tasks',
-                    isActive: currentRoute == AppRoute.tasks,
-                    onTap: () => onRouteSelected(AppRoute.tasks),
-                  ),
-                  SidebarItem(
-                    label: 'Settings',
-                    isActive: currentRoute == AppRoute.settings,
-                    onTap: () => onRouteSelected(AppRoute.settings),
-                  ),
+                  _navItem(AppRoute.dashboard, 'Dashboard', Icons.grid_view_rounded),
+                  _navItem(AppRoute.history, 'History', Icons.history_rounded),
+                  if (!_collapsed)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: theme.spacings.md,
+                        bottom: theme.spacings.xxs,
+                        left: theme.spacings.lg,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Manage',
+                          style: theme.commonTextStyles.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(height: theme.spacings.sm),
+                  _navItem(AppRoute.projects, 'Projects', Icons.folder_outlined),
+                  _navItem(AppRoute.tasks, 'Tasks', Icons.check_box_outlined),
+                  if (!_collapsed)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: theme.spacings.md,
+                        bottom: theme.spacings.xxs,
+                        left: theme.spacings.lg,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'General',
+                          style: theme.commonTextStyles.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(height: theme.spacings.sm),
+                  _navItem(AppRoute.settings, 'Settings', Icons.settings_outlined),
                 ],
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(theme.spacings.s12),
-            child: Column(
+          // Footer
+          Container(
+            height: 56,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+              ),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: _collapsed ? 8 : 12),
+            child: Row(
               children: [
-                SidebarItem(label: 'Help', onTap: () {}),
-                SidebarItem(label: 'Logout', onTap: () {}),
+                Container(
+                  width: 28,
+                  height: 28,
+                  margin: EdgeInsets.only(left: _collapsed ? 4 : 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'WS',
+                    style: theme.commonTextStyles.caption3Bold.copyWith(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+                if (!_collapsed) ...[
+                  SizedBox(width: theme.spacings.sm),
+                  Expanded(
+                    child: Text(
+                      'Worklog Studio',
+                      style: theme.commonTextStyles.labelSmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.45),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _navItem(AppRoute route, String label, IconData icon) {
+    final theme = context.theme;
+    return SidebarItem(
+      label: label,
+      icon: icon,
+      isActive: widget.currentRoute == route,
+      collapsed: _collapsed,
+      onTap: () => widget.onRouteSelected(route),
     );
   }
 }

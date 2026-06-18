@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
@@ -132,7 +132,7 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                 const SizedBox(height: 32),
 
                                 Row(
-                                  spacing: context.theme.spacings.s16,
+                                  spacing: context.theme.spacings.lg,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     PopoverPrimitive(

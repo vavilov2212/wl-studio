@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class BaseCard extends StatelessWidget {
   final Widget child;
@@ -20,13 +21,17 @@ class BaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
     return Container(
-      padding: padding,
+      padding: padding ?? EdgeInsets.all(theme.spacings.lg),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        border: borderColor != null ? Border.all(color: borderColor!) : null,
-        borderRadius: borderRadius,
-        boxShadow: boxShadow,
+        color: backgroundColor ?? palette.background.surface,
+        border: Border.all(
+          color: borderColor ?? palette.border.primary.withValues(alpha: 0.4),
+        ),
+        borderRadius: borderRadius ?? theme.radiuses.md.circular,
+        boxShadow: boxShadow ?? [theme.shadows.sm],
       ),
       child: child,
     );

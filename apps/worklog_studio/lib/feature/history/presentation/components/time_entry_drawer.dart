@@ -1,6 +1,10 @@
+﻿import 'dart:math' as math;
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
+import 'package:vector_svg/vector_svg.dart';
+import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
@@ -13,9 +17,11 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
+import 'package:worklog_studio/feature/common/presentation/components/date_time_inline_field.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 
 class TimeEntryDrawer extends StatefulWidget {
   final ResolvedTimeEntry? resolvedEntry;
@@ -39,8 +45,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   bool _isConfirmingDelete = false;
   late ResolvedTimeEntry _draft;
   late TextEditingController _commentController;
-  late TextEditingController _startTimeController;
-  late TextEditingController _endTimeController;
   final InlineFieldController _projectFieldController = InlineFieldController();
   final InlineFieldController _taskFieldController = InlineFieldController();
   final InlineFieldController _commentFieldController = InlineFieldController();
@@ -77,12 +81,48 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     _commentController = TextEditingController(
       text: _draft.entry.comment ?? '',
     );
-    _startTimeController = TextEditingController(
-      text: _formatTimeInput(_draft.startAt),
-    );
-    _endTimeController = TextEditingController(
-      text: _draft.endAt != null ? _formatTimeInput(_draft.endAt!) : '',
-    );
+    _commentFieldController.addListener(_onCommentEditModeChanged);
+  }
+
+  void _onCommentEditModeChanged() {
+    if (!mounted) return;
+    if (!_commentFieldController.isEditing) {
+      if (_draft.entry.comment != _commentController.text) {
+        _updateDraft(_draft.entry.copyWith(comment: _commentController.text));
+      }
+    }
+  }
+
+  void _updateDraft(TimeEntry updatedEntry) {
+    if (updatedEntry.endAt != null &&
+        updatedEntry.endAt!.isBefore(updatedEntry.startAt)) {
+      // Auto-correct: Push endAt to match startAt if invalid
+      updatedEntry = updatedEntry.copyWith(endAt: updatedEntry.startAt);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        final resolver = context.read<EntityResolver>();
+        final resolvedProject = updatedEntry.projectId != null
+            ? resolver.getResolvedProject(updatedEntry.projectId!)?.project
+            : null;
+        final resolvedTask = updatedEntry.taskId != null
+            ? resolver.getResolvedTask(updatedEntry.taskId!)?.task
+            : null;
+
+        _draft = _draft.copyWith(
+          entry: updatedEntry,
+          project: resolvedProject,
+          task: resolvedTask,
+        );
+      });
+      if (!_isNew) {
+        context.read<TimeTrackerBloc>().add(
+          TimeTrackerEntryUpdated(updatedEntry),
+        );
+      }
+    });
   }
 
   @override
@@ -94,73 +134,54 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     if (widget.resolvedEntry != oldWidget.resolvedEntry ||
         widget.isOpen != oldWidget.isOpen) {
       _initDraft();
-      _initControllers();
+
+      if (_commentController.text != (_draft.entry.comment ?? '')) {
+        _commentController.text = _draft.entry.comment ?? '';
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _projectFieldController.dispose();
+    _taskFieldController.dispose();
+    _commentFieldController.removeListener(_onCommentEditModeChanged);
+    _commentFieldController.dispose();
+    _startTimeFieldController.dispose();
+    _endTimeFieldController.dispose();
+    super.dispose();
   }
 
   bool get _isNew => widget.resolvedEntry == null;
 
   void _handleSave() async {
+    if (!_isNew) return; // Should not be called for existing entries
+
     final bloc = context.read<TimeTrackerBloc>();
-
-    final startAt = _parseTimeInput(_startTimeController.text, _draft.startAt);
-    final endAt = _endTimeController.text.isNotEmpty
-        ? _parseTimeInput(_endTimeController.text, _draft.endAt ?? startAt)
-        : null;
-
-    if (_isNew) {
-      final newEntry = TimeEntry(
-        id: '',
-        projectId: _draft.projectId,
-        taskId: _draft.taskId,
-        comment: _commentController.text,
-        startAt: startAt,
-        endAt: endAt,
-        status: TimeEntryStatus.stopped,
-      );
-      bloc.add(TimeTrackerEntryCreated(newEntry));
-    } else {
-      final updatedEntry = _draft.entry.copyWith(
-        projectId: _draft.projectId,
-        taskId: _draft.taskId,
-        comment: _commentController.text,
-        startAt: startAt,
-        endAt: endAt,
-      );
-      bloc.add(TimeTrackerEntryUpdated(updatedEntry));
-    }
-
+    final newEntry = TimeEntry(
+      id: '',
+      projectId: _draft.projectId,
+      taskId: _draft.taskId,
+      comment: _commentController.text,
+      startAt: _draft.startAt,
+      endAt: _draft.endAt,
+      status: TimeEntryStatus.stopped,
+    );
+    bloc.add(TimeTrackerEntryCreated(newEntry));
     widget.onClose();
-  }
-
-  String _formatTimeInput(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  DateTime _parseTimeInput(String input, DateTime baseDate) {
-    try {
-      final parts = input.split(':');
-      if (parts.length != 2) return baseDate;
-      final hour = int.parse(parts[0]);
-      final minute = int.parse(parts[1]);
-      return DateTime(
-        baseDate.year,
-        baseDate.month,
-        baseDate.day,
-        hour,
-        minute,
-      );
-    } catch (e) {
-      return baseDate;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+
+    final isActive = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.activeEntryOrNull?.id == _draft.entry.id &&
+          _draft.entry.id.isNotEmpty,
+    );
 
     return ResizableDrawer(
       isOpen: widget.isOpen,
@@ -196,9 +217,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       ? Padding(
                           key: const ValueKey('delete_confirmation'),
                           padding: EdgeInsets.fromLTRB(
-                            theme.spacings.s32,
-                            theme.spacings.s16,
-                            theme.spacings.s32,
+                            theme.spacings.x2l,
+                            theme.spacings.lg,
+                            theme.spacings.x2l,
                             0,
                           ),
                           child: InfoBar(
@@ -208,8 +229,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               'This action cannot be undone',
                             ),
                             actions: Wrap(
-                              spacing: theme.spacings.s8,
-                              runSpacing: theme.spacings.s8,
+                              spacing: theme.spacings.sm,
+                              runSpacing: theme.spacings.sm,
                               alignment: WrapAlignment.end,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
@@ -251,15 +272,18 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       children: [
                         if (!_isNew) ...[
                           EntityMetaInfoRow(
-                            status: widget.resolvedEntry!.isRunning
+                            status: isActive
                                 ? BadgeStatus.inProgress
                                 : BadgeStatus.ready,
-                            statusLabel: getStatusText(
-                              widget.resolvedEntry!.entry.status,
-                            ),
-                            createdAt: widget.resolvedEntry!.entry.startAt,
+                            statusLabel: isActive
+                                ? 'RUNNING'
+                                : getStatusText(_draft.entry.status),
+                            createdAt: _draft.entry.startAt,
+                            badgeSize: BadgeSize.sm,
                           ),
                         ],
+                        LabeledDivider(label: 'Assignment'),
+                        SizedBox(height: theme.spacings.lg),
 
                         // Project Select
                         Consumer<ProjectTaskState>(
@@ -268,7 +292,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((p) => p.id == _draft.projectId)
                                 .firstOrNull;
 
-                            Widget? leadingProjectWidget;
+                            Widget leadingProjectWidget;
                             if (selectedProject != null) {
                               final initials = BadgeUtils.getProjectInitials(
                                 selectedProject.name,
@@ -282,13 +306,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 textColor: colors.$2,
                                 size: WsInitialBadgeSize.small,
                               );
+                            } else {
+                              leadingProjectWidget = Icon(
+                                Icons.folder_outlined,
+                                size: 18,
+                                color: palette.text.muted,
+                              );
                             }
 
                             return InlineField(
-                              label: 'PROJECT',
+                              label: 'Project',
                               value: selectedProject?.name ?? '',
                               placeholder: 'Select Project',
                               leading: leadingProjectWidget,
+                              trailing: _selectChevron(palette),
                               controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
@@ -303,18 +334,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 value: _draft.projectId,
                                 placeholder: 'Select Project',
                                 onChanged: (value) {
-                                  setState(() {
-                                    _draft = _draft.copyWith(
-                                      entry: _draft.entry.copyWith(
-                                        projectId: value,
-                                        taskId: null,
-                                      ),
-                                      project: context
-                                          .read<EntityResolver>()
-                                          .getResolvedProject(value!)!
-                                          .project,
-                                    );
-                                  });
+                                  final updatedEntry = _draft.entry.copyWith(
+                                    projectId: value,
+                                    taskId: null,
+                                  );
+
+                                  _updateDraft(updatedEntry);
 
                                   _projectFieldController.handleEditorCommit();
                                 },
@@ -328,7 +353,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     return const SizedBox.shrink();
 
                                   return SelectCreateAction(
-                                    label: query.isEmpty
+                                        label: query.isEmpty
                                         ? 'Create new project'
                                         : 'Create project "$query"',
                                     onTap: () async {
@@ -339,16 +364,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                                 : query,
                                             '',
                                           );
-                                      setState(() {
-                                        _draft = _draft.copyWith(
-                                          entry: _draft.entry.copyWith(
+                                      final updatedEntry = _draft.entry
+                                          .copyWith(
                                             projectId: newProject.id,
                                             taskId: null,
-                                          ),
-                                          project: newProject,
-                                          task: null,
-                                        );
-                                      });
+                                          );
+                                      _updateDraft(updatedEntry);
                                       _projectFieldController
                                           .handleEditorCommit();
                                       close();
@@ -374,7 +395,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             );
                           },
                         ),
-                        SizedBox(height: theme.spacings.s16),
+                        SizedBox(height: theme.spacings.lg),
                         // Task Select
                         Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
@@ -382,7 +403,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((t) => t.id == _draft.taskId)
                                 .firstOrNull;
 
-                            Widget? leadingTaskWidget;
+                            Widget leadingTaskWidget;
                             if (selectedTask != null) {
                               final project = state.projects.firstWhereOrNull(
                                 (p) => p.id == selectedTask.projectId,
@@ -400,13 +421,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 textColor: colors.$2,
                                 size: WsInitialBadgeSize.small,
                               );
+                            } else {
+                              leadingTaskWidget = Icon(
+                                Icons.checklist,
+                                size: 18,
+                                color: palette.text.muted,
+                              );
                             }
 
                             return InlineField(
-                              label: 'TASK',
+                              label: 'Task',
                               value: selectedTask?.title ?? '',
                               placeholder: 'Select Task',
                               leading: leadingTaskWidget,
+                              trailing: _selectChevron(palette),
                               controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
@@ -421,17 +449,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 value: _draft.taskId,
                                 placeholder: 'Select Task',
                                 onChanged: (value) {
-                                  setState(() {
-                                    _draft = _draft.copyWith(
-                                      entry: _draft.entry.copyWith(
-                                        taskId: value,
-                                      ),
-                                      task: context
-                                          .read<EntityResolver>()
-                                          .getResolvedTask(value!)!
-                                          .task,
-                                    );
-                                  });
+                                  final updatedEntry = _draft.entry.copyWith(
+                                    taskId: value,
+                                  );
+                                  _updateDraft(updatedEntry);
                                   _taskFieldController.handleEditorCommit();
                                 },
                                 actionBuilder: (context, query, close) {
@@ -445,7 +466,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     return const SizedBox.shrink();
 
                                   return SelectCreateAction(
-                                    label: query.isEmpty
+                                        label: query.isEmpty
                                         ? 'Create new task'
                                         : 'Create task "$query"',
                                     onTap: () async {
@@ -455,16 +476,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                         query.isEmpty ? 'New task' : query,
                                         '',
                                       );
-                                      setState(() {
-                                        setState(() {
-                                          _draft = _draft.copyWith(
-                                            entry: _draft.entry.copyWith(
-                                              taskId: newTask.id,
-                                            ),
-                                            task: newTask,
-                                          );
-                                        });
-                                      });
+                                      final updatedEntry = _draft.entry
+                                          .copyWith(taskId: newTask.id);
+                                      _updateDraft(updatedEntry);
                                       _taskFieldController.handleEditorCommit();
                                       close();
                                     },
@@ -504,124 +518,109 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         ),
                       ],
                     ),
-                    content: SingleChildScrollView(
+                    content: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s32,
-                        vertical: 0,
+                        horizontal: theme.spacings.x2l,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Timeline
-                          Row(
-                            children: [
-                              Expanded(
-                                child: InlineField(
-                                  label: 'START TIME',
-                                  value: _startTimeController.text,
-                                  placeholder: 'HH:mm',
-                                  controller: _startTimeFieldController,
-                                  textController: _startTimeController,
-                                  editWidget: PrimaryInput(
-                                    label: null,
-                                    controller: _startTimeController,
-                                    hintText: 'HH:mm',
-                                    autofocus: true,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.s16),
-                              Expanded(
-                                child: InlineField(
-                                  label: 'END TIME',
-                                  value: _endTimeController.text,
-                                  placeholder: 'HH:mm',
-                                  controller: _endTimeFieldController,
-                                  textController: _endTimeController,
-                                  editWidget: PrimaryInput(
-                                    label: null,
-                                    controller: _endTimeController,
-                                    hintText: 'HH:mm',
-                                    autofocus: true,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: theme.spacings.s32),
-                          // Metrics Grid
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.s16),
-                                  decoration: BoxDecoration(
-                                    color: palette.background.surfaceMuted,
-                                    borderRadius: theme.radiuses.md.circular,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'DURATION',
-                                        style: theme
-                                            .commonTextStyles
-                                            .caption3Bold
-                                            .copyWith(
-                                              color: palette.text.muted,
-                                              letterSpacing: 1.0,
+                          SizedBox(height: theme.spacings.x2l),
+                          LabeledDivider(label: 'Time & Cost'),
+                          SizedBox(height: theme.spacings.lg),
+                          BaseCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Timeline
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DateTimeInlineField(
+                                        label: 'Start',
+                                        value: _draft.startAt,
+                                                  controller: _startTimeFieldController,
+                                        onChanged: (newStartAt) {
+                                          _updateDraft(
+                                            _draft.entry.copyWith(
+                                              startAt: newStartAt,
                                             ),
+                                          );
+                                        },
                                       ),
-                                      SizedBox(height: theme.spacings.s8),
-                                      Text(
-                                        _formatDuration(
-                                          _draft.duration(DateTime.now()),
+                                    ),
+                                    SizedBox(width: theme.spacings.lg),
+                                    Expanded(
+                                      child: DateTimeInlineField(
+                                        label: 'End',
+                                        value: _draft.endAt ?? DateTime.now(),
+                                        isEditable: !isActive,
+                                                  controller: _endTimeFieldController,
+                                        onChanged: (newEndAt) {
+                                          _updateDraft(
+                                            _draft.entry.copyWith(
+                                              endAt: newEndAt,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: theme.spacings.x2l),
+                                // Metrics Grid
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: MetricCard(
+                                        label: 'Duration',
+                                        icon: Icons.timer_outlined,
+                                        accent: isActive,
+                                        value: isActive
+                                            ? LiveDurationText(
+                                                durationBuilder: (now) => now
+                                                    .difference(
+                                                      _draft.startAt,
+                                                    ),
+                                                style: theme
+                                                    .commonTextStyles
+                                                    .subtitle,
+                                              )
+                                            : Text(
+                                                _formatDuration(
+                                                  _draft.duration(
+                                                    DateTime.now(),
+                                                  ),
+                                                ),
+                                                style: theme
+                                                    .commonTextStyles
+                                                    .subtitle,
+                                              ),
+                                      ),
+                                    ),
+                                    SizedBox(width: theme.spacings.lg),
+                                    Expanded(
+                                      child: MetricCard(
+                                        label: 'Cost est.',
+                                        icon: Icons.payments_outlined,
+                                        value: Text(
+                                          r'$0.00',
+                                          style:
+                                              theme.commonTextStyles.subtitle,
                                         ),
-                                        style: theme.commonTextStyles.h2,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              SizedBox(width: theme.spacings.s16),
-                              Expanded(
-                                child: Container(
-                                  padding: EdgeInsets.all(theme.spacings.s16),
-                                  decoration: BoxDecoration(
-                                    color: palette.background.surfaceMuted,
-                                    borderRadius: theme.radiuses.md.circular,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'COST EST.',
-                                        style: theme
-                                            .commonTextStyles
-                                            .caption3Bold
-                                            .copyWith(
-                                              color: palette.text.muted,
-                                              letterSpacing: 1.0,
-                                            ),
-                                      ),
-                                      SizedBox(height: theme.spacings.s8),
-                                      Text(
-                                        '\$0.00',
-                                        style: theme.commonTextStyles.h2,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          SizedBox(height: theme.spacings.s32),
-
+                          SizedBox(height: theme.spacings.x2l),
+                          LabeledDivider(label: 'Notes'),
+                          SizedBox(height: theme.spacings.lg),
                           // Comments
                           InlineField(
-                            label: 'COMMENTS',
+                            label: 'Comments',
                             value: _commentController.text,
                             placeholder: 'Add a comment...',
                             controller: _commentFieldController,
@@ -634,40 +633,49 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               autofocus: true,
                             ),
                           ),
-                          SizedBox(height: theme.spacings.s32),
-
-                          // Tags
-                          Text(
-                            'AI SUGGESTED TAGS',
-                            style: theme.commonTextStyles.caption3Bold.copyWith(
-                              color: palette.text.muted,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.s12),
-                          Wrap(
-                            spacing: theme.spacings.s8,
-                            runSpacing: theme.spacings.s8,
-                            children: <Widget>[],
-                          ),
-                          SizedBox(
-                            height: theme.spacings.s24,
-                          ), // Bottom padding for scroll
+                          SizedBox(height: theme.spacings.xl),
                         ],
                       ),
                     ),
-                    footer: SizedBox(
-                      width: double.infinity,
-                      child: PrimaryButton(
-                        onTap: _handleSave,
-                        title: _isNew ? 'Create Entry' : 'Save Changes',
-                        size: ButtonSize.lg,
-                      ),
-                    ),
+                    footer: _isNew
+                        ? SizedBox(
+                            width: double.infinity,
+                            child: PrimaryButton(
+                              onTap: _handleSave,
+                              title: 'Create Entry',
+                              size: ButtonSize.lg,
+                            ),
+                          )
+                        : isActive
+                        ? SizedBox(
+                            width: double.infinity,
+                            child: PrimaryButton(
+                              onTap: () => context
+                                  .read<TimeTrackerBloc>()
+                                  .add(const TimeTrackerStopped()),
+                              title: 'Stop Timer',
+                              leftIcon:
+                                  WorklogStudioAssets.vectors.squareFilled24Svg,
+                              type: ButtonType.danger,
+                              size: ButtonSize.lg,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _selectChevron(ColorsPalette palette) {
+    return Transform.rotate(
+      angle: math.pi / 2,
+      child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
+        width: 18,
+        height: 18,
+        colorFilter: palette.text.muted.filter,
+      ),
     );
   }
 

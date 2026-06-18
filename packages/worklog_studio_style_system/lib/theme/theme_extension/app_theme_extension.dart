@@ -1,6 +1,7 @@
 import 'package:worklog_studio_style_system/theme/app_theme.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
+import 'package:worklog_studio_style_system/theme/control_size.dart';
 import 'package:worklog_studio_style_system/theme/gradients/gradients.dart';
 import 'package:worklog_studio_style_system/theme/radiuses.dart';
 import 'package:worklog_studio_style_system/theme/shadows.dart';
@@ -28,6 +29,40 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 
   factory AppThemeExtension.dark() =>
       AppThemeExtension(colorsPalette: darkColorsPalette);
+
+  ControlSizeTokens controlSize(ControlSize size) => switch (size) {
+    ControlSize.sm => ControlSizeTokens(
+      height: spacings.x3l,
+      verticalPadding: 0,
+      horizontalPadding: spacings.md,
+      allPadding: EdgeInsets.symmetric(
+        horizontal: spacings.md,
+        vertical: spacings.sm,
+      ),
+      textStyle: commonTextStyles.body2,
+      iconSize: 16,
+      isDense: true,
+      contentPadding: EdgeInsets.zero,
+    ),
+    ControlSize.md => ControlSizeTokens(
+      height: spacings.x4l,
+      verticalPadding: spacings.md,
+      horizontalPadding: spacings.md,
+      allPadding: EdgeInsets.all(spacings.lg),
+      textStyle: commonTextStyles.body,
+      iconSize: 20,
+      isDense: false,
+    ),
+    ControlSize.lg => ControlSizeTokens(
+      height: spacings.x4l + spacings.sm,
+      verticalPadding: spacings.lg,
+      horizontalPadding: spacings.lg,
+      allPadding: EdgeInsets.all(spacings.xl),
+      textStyle: commonTextStyles.body,
+      iconSize: 20,
+      isDense: false,
+    ),
+  };
 
   @override
   ThemeExtension<AppThemeExtension> copyWith({ColorsPalette? colorsPalette}) =>

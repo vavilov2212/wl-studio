@@ -1,56 +1,58 @@
-import 'package:worklog_studio_style_system/theme/colors/colors.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
+import 'dart:ui';
 
 const lightColorsPalette = ColorsPalette(
-  base: BsColors(transparent: BaseColors.transparent),
+  base: BsColors(transparent: Color(0x00FFFFFF)),
   background: BackgroundColors(
-    canvas: BgColors.canvas,
-    surface: BgColors.surface,
-    surfaceMuted: BgColors.surfaceMuted,
+    canvas: Color(0xFFF5F4F1),
+    surface: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFEEECEA),
   ),
   border: BorderColors(
-    primary: BrdColors.primary,
-    hover: BrdColors.hover,
-    focus: BrdColors.focus,
+    primary: Color(0xFFE2E0DB),
+    hover: Color(0xFFBBCADE),
+    focus: Color(0xFF2563EB),
   ),
   text: TextColors(
-    primary: TxtColors.primary,
-    secondary: TxtColors.secondary,
-    secondary2: TxtColors.secondary2,
-    muted: TxtColors.muted,
+    primary: Color(0xFF1C1E21),
+    secondary: Color(0xFF4B5563),
+    secondary2: Color.fromARGB(255, 94, 103, 116),
+    muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: AccColors.primary,
-    primaryMuted: AccColors.primaryMuted,
-    danger: AccColors.danger,
-    success: AccColors.success,
-    warning: AccColors.warning,
+    primary: Color(0xFF185FA5),
+    primaryMuted: Color(0xFFE6F1FB),
+    danger: Color(0xFFDC2626),
+    success: Color(0xFF16A34A),
+    warning: Color(0xFFF59E0B),
+    nav: Color(0xFF0C447C),
   ),
 );
 
 const darkColorsPalette = ColorsPalette(
-  base: BsColors(transparent: BaseColors.transparent),
+  base: BsColors(transparent: Color(0x00FFFFFF)),
   background: BackgroundColors(
-    canvas: BgColors.canvas,
-    surface: BgColors.surface,
-    surfaceMuted: BgColors.surfaceMuted,
+    canvas: Color(0xFFF5F4F1),
+    surface: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFEEECEA),
   ),
   border: BorderColors(
-    primary: BrdColors.primary,
-    hover: BrdColors.hover,
-    focus: BrdColors.focus,
+    primary: Color(0xFFE2E0DB),
+    hover: Color(0xFFB5D4F4),
+    focus: Color(0xFF185FA5),
   ),
   text: TextColors(
-    primary: TxtColors.primary,
-    secondary: TxtColors.secondary,
-    secondary2: TxtColors.secondary2,
-    muted: TxtColors.muted,
+    primary: Color(0xFF1C1E21),
+    secondary: Color(0xFF4B5563),
+    secondary2: Color.fromARGB(255, 94, 103, 116),
+    muted: Color(0xFF9CA3AF),
   ),
   accent: AccentColors(
-    primary: AccColors.primary,
-    primaryMuted: AccColors.primaryMuted,
-    danger: AccColors.danger,
-    success: AccColors.success,
-    warning: AccColors.warning,
+    primary: Color(0xFF185FA5),
+    primaryMuted: Color(0xFFE6F1FB),
+    danger: Color(0xFFDC2626),
+    success: Color(0xFF16A34A),
+    warning: Color(0xFFF59E0B),
+    nav: Color(0xFF0C447C),
   ),
 );

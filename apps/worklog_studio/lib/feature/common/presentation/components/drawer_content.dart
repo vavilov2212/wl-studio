@@ -17,25 +17,34 @@ class DrawerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (meta != null) ...[
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              theme.spacings.s24,
-              theme.spacings.s12,
-              theme.spacings.s24,
-              theme.spacings.s0,
+    // Single scroll region: meta, content, and footer are all slivers
+    // so the entire drawer body scrolls as one unit regardless of screen height.
+    return CustomScrollView(
+      slivers: [
+        if (meta != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                theme.spacings.xl,
+                theme.spacings.md,
+                theme.spacings.xl,
+                theme.spacings.none,
+              ),
+              child: meta!,
             ),
-            child: meta!,
           ),
-          SizedBox(height: theme.spacings.s32),
-        ],
-        Expanded(child: content),
-        if (footer != null) ...[
-          Padding(padding: EdgeInsets.all(theme.spacings.s24), child: footer!),
-        ],
+        SliverToBoxAdapter(child: content),
+        if (footer != null)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.all(theme.spacings.xl),
+                child: footer!,
+              ),
+            ),
+          ),
       ],
     );
   }

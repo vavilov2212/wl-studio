@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "claude-sonnet-4-6",
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "Bash(fvm flutter pub run build_runner*)",
+      "Bash(fvm exec melos bootstrap*)",
+      "Bash(fvm exec melos clean*)",
+      "Bash(fvm flutter test*)",
+      "Bash(fvm flutter build*)",
+      "Bash(fvm flutter run*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(fvm exec melos clean --deep*)",
+      "Bash(flutter*)",
+      "Bash(dart*)"
+    ]
+  },
+  "ignorePatterns": [
+    ".fvm/**",
+    ".git/**",
+    ".dart_tool/**",
+    "**/build/**",
+    "**/*.freezed.dart",
+    "**/*.g.dart",
+    "**/macos/**",
+    "**/ios/**",
+    "**/android/**",
+    "**/linux/**",
+    "**/web/**"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo [codegen-sentinel] If you edited a @freezed / @JsonSerializable file, remind the user to run: fvm flutter pub run build_runner build --delete-conflicting-outputs"
+          }
+        ]
+      }
+    ]
+  }
+}

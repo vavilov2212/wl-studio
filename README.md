@@ -46,6 +46,41 @@
    flutter run -d macos
    ```
 
+### Running Locally using fvm & melos
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/vavilov2212/worklog_studio
+   cd worklog_studio
+   ```
+2. Add melos to PATH variable in the windows system environment variables:
+   ```bash
+   C:\Users\vavilov2212\AppData\Local\Pub\Cache\bin
+   ```
+3. Bootstrap project:
+   ```bash
+   dart pub global activate melos
+   fvm flutter pub get
+   fvm exec melos clean
+   fvm exec melos bootstrap
+   ```
+4. Generate code (freezed, json_serializable, retrofit_generator):
+   ```bash
+   fvm exec melos exec -- "fvm dart run build_runner build --delete-conflicting-outputs"
+   # OR if build_runner fails on build hooks
+   fvm exec melos exec -- "fvm dart run build_runner build --delete-conflicting-outputs --force-jit"
+   ```
+   If still fails, then from the root dir:
+   ```bash
+   fvm dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/worklog_studio_style_system/**"
+   fvm dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="packages/vector_svg/**"
+   fvm dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
+   ```
+5. Run the app:
+   ```bash
+   fvm flutter run -d macos
+   fvm flutter run -d windows
+   ```
+
 ---
 
 ## 📦 Dependency Management (Melos)
@@ -96,6 +131,46 @@ See Dart workspaces: https://dart.dev/tools/pub/workspaces
 - Use Melos to avoid version conflicts
 
 Flutter packages guide: https://docs.flutter.dev/packages-and-plugins/using-packages
+
+---
+
+## Troubleshooting
+
+### Windows
+
+#### Debug build
+
+```bash
+√ Built build\windows\x64\runner\Debug\worklog_studio.exe
+Error waiting for a debug connection: The log reader stopped unexpectedly, or never started.
+Error launching application on Windows.
+```
+The error string error while loading shared libraries: ... cannot open shared object file is a dead giveaway about your terminal environment. This is a classic log output from Linux/POSIX systems.
+
+Only Git Bash, MSYS2, or WSL would display this kind of text. A native Windows application compiled via MSVC is a pure Win32 binary. When you run it inside terminal emulators like Git Bash, their internal compatibility layer tries to handle the launch in its own way, gets confused by the paths to the dynamic-link libraries (.dll), and crashes with a Linux-style error message.
+
+Choose PowerShell or Command Prompt.
+In the newly opened native window, enter the launch command:
+
+```powershell
+cd apps/worklog_studio
+fvm flutter run -d windows -t lib/main_development.dart --flavor development --no-enable-impeller --no-dds
+``` 
+
+#### PowerShell Script Execution
+
+If you see an error like running scripts is disabled on this system when running .ps1 files, run this command in PowerShell to allow local scripts: 
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Then try running your script again:
+
+```powershell
+cd apps\worklog_studio
+.\tool\windows\build.ps1 dev
+```
 
 ---
 

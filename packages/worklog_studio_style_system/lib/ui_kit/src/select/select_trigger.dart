@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:vector_svg/vector_svg.dart';
 
 class SelectTrigger extends StatelessWidget {
   final String? label;
@@ -7,6 +9,7 @@ class SelectTrigger extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final bool isOpen;
+  final ControlSize size;
 
   const SelectTrigger({
     super.key,
@@ -15,18 +18,20 @@ class SelectTrigger extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.isOpen = false,
+    this.size = ControlSize.sm,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final tokens = theme.controlSize(size);
 
     return Container(
-      height: theme.spacings.s48,
+      height: tokens.height,
       padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s12,
-        vertical: theme.spacings.s12,
+        horizontal: tokens.horizontalPadding,
+        vertical: tokens.verticalPadding,
       ),
       decoration: BoxDecoration(
         border: Border.all(
@@ -43,12 +48,10 @@ class SelectTrigger extends StatelessWidget {
                 ? TextField(
                     controller: controller,
                     focusNode: focusNode,
-                    style: theme.commonTextStyles.body.copyWith(
-                      color: palette.text.primary,
-                    ),
+                    style: tokens.textStyle.copyWith(color: palette.text.primary),
                     decoration: InputDecoration(
                       hintText: isOpen ? 'Search...' : (label ?? placeholder),
-                      hintStyle: theme.commonTextStyles.body.copyWith(
+                      hintStyle: tokens.textStyle.copyWith(
                         color: label != null && !isOpen
                             ? palette.text.primary
                             : palette.text.muted,
@@ -56,13 +59,13 @@ class SelectTrigger extends StatelessWidget {
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      isDense: tokens.isDense,
+                      contentPadding: tokens.contentPadding,
                     ),
                   )
                 : Text(
                     label ?? placeholder,
-                    style: theme.commonTextStyles.body.copyWith(
+                    style: tokens.textStyle.copyWith(
                       color: label != null
                           ? palette.text.primary
                           : palette.text.muted,
@@ -71,7 +74,14 @@ class SelectTrigger extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
           ),
-          Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
+          Transform.rotate(
+            angle: math.pi / 2,
+            child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
+              width: tokens.iconSize,
+              height: tokens.iconSize,
+              colorFilter: palette.text.muted.filter,
+            ),
+          ),
         ],
       ),
     );

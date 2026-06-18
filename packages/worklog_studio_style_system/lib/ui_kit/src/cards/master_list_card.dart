@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class MasterListCard extends StatelessWidget {
@@ -33,12 +33,12 @@ class MasterListCard extends StatelessWidget {
               ? Border(
                   left: BorderSide(
                     color: accentColor!,
-                    width: 4.0,
+                    width: theme.spacings.xxs,
                   ),
                 )
               : null,
         ),
-        padding: EdgeInsets.all(theme.spacings.s16),
+        padding: EdgeInsets.all(theme.spacings.lg),
         child: Row(
           children: [
             Expanded(
@@ -47,12 +47,12 @@ class MasterListCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.commonTextStyles.title.copyWith(
+                    style: theme.commonTextStyles.body2Bold.copyWith(
                       color: palette.text.primary,
                     ),
                   ),
                   if (metadata != null) ...[
-                    SizedBox(height: theme.spacings.s4),
+                    SizedBox(height: theme.spacings.xxs),
                     Text(
                       metadata!,
                       style: theme.commonTextStyles.body2.copyWith(
@@ -64,7 +64,7 @@ class MasterListCard extends StatelessWidget {
               ),
             ),
             if (trailing != null) ...[
-              SizedBox(width: theme.spacings.s16),
+              SizedBox(width: theme.spacings.lg),
               trailing!,
             ],
           ],

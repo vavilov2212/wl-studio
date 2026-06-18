@@ -5,42 +5,42 @@ class CommonTextStyles {
     fontSize: 32,
     fontWeight: FontWeight.w700,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final h1 = const TextStyle(
     fontSize: 25,
     fontWeight: FontWeight.w700,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final h2 = const TextStyle(
     fontSize: 23,
     fontWeight: FontWeight.w800,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final h3 = const TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w700,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final title = const TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final subtitle = const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     height: 1.4,
-    fontFamily: 'Manrope',
+    fontFamily: 'NunitoSans',
   );
 
   final body = const TextStyle(
@@ -125,6 +125,21 @@ class CommonTextStyles {
     fontWeight: FontWeight.w700,
     height: 1.3,
     letterSpacing: 2.64,
+    fontFamily: 'Inter',
+  );
+
+  final labelMedium = const TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    fontFamily: 'Inter',
+  );
+
+  final labelSmall = const TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    letterSpacing: 0.3,
     fontFamily: 'Inter',
   );
 

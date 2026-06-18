@@ -1,13 +1,21 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
-enum BadgeStatus { ready, inProgress, needsReview, done, urgent }
+enum BadgeStatus { ready, inProgress, needsReview, done, urgent, logged, active }
+
+enum BadgeSize { sm, md }
 
 class StatusBadge extends StatelessWidget {
   final BadgeStatus status;
   final String label;
+  final BadgeSize size;
 
-  const StatusBadge({required this.status, required this.label, super.key});
+  const StatusBadge({
+    required this.status,
+    required this.label,
+    this.size = BadgeSize.md,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,24 +46,64 @@ class StatusBadge extends StatelessWidget {
         backgroundColor = palette.accent.danger.withValues(alpha: 0.12);
         textColor = palette.accent.danger;
         break;
+      case BadgeStatus.logged:
+        backgroundColor = palette.accent.success.withValues(alpha: 0.10);
+        textColor = palette.accent.success;
+        break;
+      case BadgeStatus.active:
+        backgroundColor = palette.accent.primary.withValues(alpha: 0.08);
+        textColor = palette.accent.primary;
+        break;
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s8,
-        vertical: theme.spacings.s4,
-      ),
+    // Threshold below which the full pill won't fit — show icon dot instead
+    final compactThreshold = size == BadgeSize.sm ? 56.0 : 72.0;
+
+    final pill = Container(
+      padding: switch (size) {
+        BadgeSize.sm => EdgeInsets.symmetric(
+            horizontal: theme.spacings.xxs,
+            vertical: theme.spacings.xs,
+          ),
+        BadgeSize.md => EdgeInsets.symmetric(
+            horizontal: theme.spacings.sm,
+            vertical: theme.spacings.xxs,
+          ),
+      },
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: theme.radiuses.pill.circular,
       ),
       child: Text(
         label.toUpperCase(),
+        maxLines: 1,
+        softWrap: false,
         style: theme.commonTextStyles.caption2Bold.copyWith(
           color: textColor,
           letterSpacing: 0.5,
         ),
       ),
+    );
+
+    final dot = Tooltip(
+      message: label,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: textColor,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < compactThreshold) {
+          return Align(alignment: Alignment.centerLeft, child: dot);
+        }
+        return pill;
+      },
     );
   }
 }

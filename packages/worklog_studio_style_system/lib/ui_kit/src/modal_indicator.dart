@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class ModalIndicator extends StatelessWidget {
@@ -7,7 +7,7 @@ class ModalIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: context.theme.spacings.s8),
+      margin: EdgeInsets.symmetric(vertical: context.theme.spacings.sm),
       width: 32,
       height: 4,
       decoration: BoxDecoration(

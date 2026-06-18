@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/domain/task.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
@@ -66,7 +68,7 @@ class TaskCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,44 +86,63 @@ class TaskCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s8,
-                              vertical: theme.spacings.s2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(
-                                task.status,
-                                palette,
-                              ).withValues(alpha: 0.1),
-                              borderRadius: theme.radiuses.sm.circular,
-                            ),
-                            child: Text(
-                              _getStatusText(task.status),
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(
-                                    color: _getStatusColor(
-                                      task.status,
-                                      palette,
-                                    ),
-                                    letterSpacing: 0.5,
-                                  ),
-                            ),
-                          ),
-                          SizedBox(width: theme.spacings.s8),
-                          Expanded(
-                            child: Text(
-                              task.projectName,
-                              style: theme.commonTextStyles.caption.copyWith(
-                                color: palette.text.secondary,
-                                overflow: TextOverflow.ellipsis,
+                      Builder(
+                        builder: (context) {
+                          final isActive = context
+                              .select<TimeTrackerBloc, bool>(
+                                (bloc) =>
+                                    bloc.state.activeEntryOrNull?.taskId ==
+                                    task.id,
+                              );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: theme.spacings.sm,
+                                  vertical: theme.spacings.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? palette.accent.primary.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : _getStatusColor(
+                                          task.status,
+                                          palette,
+                                        ).withValues(alpha: 0.1),
+                                  borderRadius: theme.radiuses.sm.circular,
+                                ),
+                                child: Text(
+                                  isActive
+                                      ? 'RUNNING'
+                                      : _getStatusText(task.status),
+                                  style: theme.commonTextStyles.caption3Bold
+                                      .copyWith(
+                                        color: isActive
+                                            ? palette.accent.primary
+                                            : _getStatusColor(
+                                                task.status,
+                                                palette,
+                                              ),
+                                        letterSpacing: 0.5,
+                                      ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
+                              SizedBox(width: theme.spacings.sm),
+                              Expanded(
+                                child: Text(
+                                  task.projectName,
+                                  style: theme.commonTextStyles.caption
+                                      .copyWith(
+                                        color: palette.text.secondary,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

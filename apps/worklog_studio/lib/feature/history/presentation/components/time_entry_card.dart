@@ -1,10 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
-import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 
 class TimeEntryCard extends StatelessWidget {
   final ResolvedTimeEntry resolvedEntry;
@@ -34,23 +37,22 @@ class TimeEntryCard extends StatelessWidget {
               children: [
                 Builder(
                   builder: (context) {
-                    final initials = BadgeUtils.getTaskInitials(
-                      resolvedEntry.taskTitle,
-                      resolvedEntry.projectName,
-                    );
                     final id =
                         resolvedEntry.task?.id ??
                         resolvedEntry.project?.id ??
                         resolvedEntry.id;
                     final colors = BadgeUtils.getBadgeColor(id);
-                    return WsInitialBadge(
-                      initials: initials,
-                      backgroundColor: colors.$1,
-                      textColor: colors.$2,
+                    return Container(
+                      width: 3,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colors.$1.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     );
                   },
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,14 +60,14 @@ class TimeEntryCard extends StatelessWidget {
                     children: [
                       Text(
                         resolvedEntry.taskTitle,
-                        style: theme.commonTextStyles.bodyBold.copyWith(
+                        style: theme.commonTextStyles.labelMedium.copyWith(
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(
                         resolvedEntry.projectName,
                         style: theme.commonTextStyles.caption.copyWith(
-                          color: palette.text.secondary,
+                          color: palette.text.muted,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -78,27 +80,48 @@ class TimeEntryCard extends StatelessWidget {
           CardColumn(
             flex: 2,
             alignment: Alignment.centerRight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatDuration(resolvedEntry.duration(DateTime.now())),
-                  style: theme.commonTextStyles.bodyBold.copyWith(
-                    color: resolvedEntry.isRunning
-                        ? palette.accent.primary
-                        : palette.text.primary,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: theme.spacings.s4),
-                Text(
-                  _formatTimeRange(resolvedEntry.startAt, resolvedEntry.endAt),
-                  style: theme.commonTextStyles.caption.copyWith(
-                    color: palette.text.secondary,
-                  ),
-                ),
-              ],
+            child: Builder(
+              builder: (context) {
+                final isActive = context.select<TimeTrackerBloc, bool>(
+                  (bloc) =>
+                      bloc.state.activeEntryOrNull?.id ==
+                      resolvedEntry.entry.id,
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    isActive
+                        ? LiveDurationText(
+                            durationBuilder: (now) =>
+                                resolvedEntry.duration(now),
+                            style: theme.commonTextStyles.labelMedium.copyWith(
+                              color: palette.accent.primary,
+                              fontSize: 14,
+                            ),
+                          )
+                        : Text(
+                            _formatDuration(
+                              resolvedEntry.duration(DateTime.now()),
+                            ),
+                            style: theme.commonTextStyles.labelMedium.copyWith(
+                              color: palette.text.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                    SizedBox(height: theme.spacings.xxs),
+                    Text(
+                      DateFormatUtils.formatTimeRangeWithDate(
+                        resolvedEntry.startAt,
+                        resolvedEntry.endAt,
+                      ),
+                      style: theme.commonTextStyles.caption.copyWith(
+                        color: palette.text.muted,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           CardColumn(
@@ -114,9 +137,26 @@ class TimeEntryCard extends StatelessWidget {
                 color:
                     (resolvedEntry.entry.comment?.isEmpty == null ||
                         resolvedEntry.entry.comment?.isEmpty == true)
-                    ? palette.text.secondary.withValues(alpha: 0.5)
+                    ? palette.text.muted
                     : palette.text.secondary,
               ),
+            ),
+          ),
+          CardColumn(
+            flex: 1,
+            alignment: Alignment.centerRight,
+            child: Builder(
+              builder: (context) {
+                final isActive = context.select<TimeTrackerBloc, bool>(
+                  (bloc) =>
+                      bloc.state.activeEntryOrNull?.id ==
+                      resolvedEntry.entry.id,
+                );
+                return StatusBadge(
+                  status: isActive ? BadgeStatus.active : BadgeStatus.logged,
+                  label: isActive ? 'Running' : 'Logged',
+                );
+              },
             ),
           ),
         ],
@@ -129,12 +169,6 @@ class TimeEntryCard extends StatelessWidget {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTimeRange(DateTime start, DateTime? end) {
-    final startStr = _formatTime(start);
-    final endStr = end != null ? _formatTime(end) : 'Now';
-    return '$startStr - $endStr';
   }
 
   String _formatTime(DateTime time) {

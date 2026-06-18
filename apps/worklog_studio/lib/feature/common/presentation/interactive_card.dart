@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class InteractiveCard extends StatefulWidget {
@@ -79,7 +79,7 @@ class _InteractiveCardState extends State<InteractiveCard> {
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
           child: Padding(
-            padding: EdgeInsets.all(theme.spacings.s16),
+            padding: EdgeInsets.all(theme.spacings.lg),
             child: widget.child,
           ),
         ),

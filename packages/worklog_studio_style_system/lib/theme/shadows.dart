@@ -5,19 +5,18 @@ class Shadows {
   final ColorsPalette colorsPalette;
   Shadows(this.colorsPalette);
 
-  BoxShadow? _none;
-  BoxShadow get none =>
-      _none ??= BoxShadow(color: colorsPalette.base.transparent, blurRadius: 0);
+  late final BoxShadow none = BoxShadow(
+    color: colorsPalette.base.transparent,
+    blurRadius: 0,
+  );
 
-  BoxShadow? _sm;
-  BoxShadow get sm => _sm ??= BoxShadow(
+  late final BoxShadow sm = BoxShadow(
     offset: Offset(0, 1),
     color: Color(0x08_000000),
     blurRadius: 2,
   );
 
-  BoxShadow? _md;
-  BoxShadow get md => _md ??= BoxShadow(
+  late final BoxShadow md = BoxShadow(
     offset: Offset(0, 4),
     color: Color(0x12_000000),
     blurRadius: 12,

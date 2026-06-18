@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/project_card.dart';
 import 'components/project_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
@@ -97,56 +99,44 @@ class ProjectList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final palette = theme.colorsPalette;
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.s32),
+      padding: EdgeInsets.all(theme.spacings.x2l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Active Projects',
-                    style: theme.commonTextStyles.displayLarge,
-                  ),
-                  SizedBox(height: theme.spacings.s4),
-                  Text(
-                    '${projects.length} currently in progress',
-                    style: theme.commonTextStyles.body.copyWith(
-                      color: palette.text.secondary,
-                    ),
-                  ),
-                ],
-              ),
+              Text('Active Projects', style: theme.commonTextStyles.h3),
               Row(
-                spacing: theme.spacings.s12,
+                spacing: theme.spacings.md,
                 children: [
-                  _ProjectViewModeToggle(
-                    viewMode: viewMode,
+                  SegmentedToggle<ProjectViewMode>(
+                    value: viewMode,
                     onChanged: onViewModeChanged,
+                    options: const [
+                      SegmentedToggleOption(
+                        value: ProjectViewMode.cards,
+                        icon: Icons.grid_view_rounded,
+                      ),
+                      SegmentedToggleOption(
+                        value: ProjectViewMode.table,
+                        icon: Icons.table_rows_rounded,
+                      ),
+                    ],
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: palette.accent.primary,
-                      borderRadius: theme.radiuses.sm.circular,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.add, color: palette.background.surface),
-                      onPressed: onCreateProject,
-                    ),
+                  PrimaryButton(
+                    title: 'New Project',
+                    leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                    size: ButtonSize.sm,
+                    onTap: onCreateProject,
                   ),
                 ],
               ),
             ],
           ),
-          SizedBox(height: theme.spacings.s32),
+          SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
               child: viewMode == ProjectViewMode.table
@@ -160,7 +150,7 @@ class ProjectList extends StatelessWidget {
                       columns: _getTableColumns(theme),
                     )
                   : Column(
-                      spacing: theme.spacings.s16,
+                      spacing: theme.spacings.lg,
                       children: projects.map((project) {
                         final isSelected = selectedProject?.id == project.id;
                         return ProjectCard(
@@ -195,8 +185,9 @@ class ProjectList extends StatelessWidget {
                 initials: initials,
                 backgroundColor: colors.$1,
                 textColor: colors.$2,
+                size: WsInitialBadgeSize.small,
               ),
-              SizedBox(width: theme.spacings.s12),
+              SizedBox(width: theme.spacings.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,16 +195,17 @@ class ProjectList extends StatelessWidget {
                   children: [
                     Text(
                       item.name,
-                      style: theme.commonTextStyles.bodyBold.copyWith(
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.commonTextStyles.labelMedium,
                     ),
                     if (item.project.clientName.isNotEmpty)
                       Text(
                         item.project.clientName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.commonTextStyles.caption.copyWith(
                           color: palette.text.secondary,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
@@ -232,7 +224,7 @@ class ProjectList extends StatelessWidget {
             item.project.description.isEmpty
                 ? 'No description'
                 : item.project.description,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.commonTextStyles.body2.copyWith(
               color: item.project.description.isEmpty
@@ -246,10 +238,23 @@ class ProjectList extends StatelessWidget {
         title: 'Time Tracked',
         flex: 2,
         builder: (context, item, isHovered) {
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.projectId == item.id,
+          );
+
+          if (isActive) {
+            return LiveDurationText(
+              durationBuilder: (now) => item.duration(now),
+              style: theme.commonTextStyles.labelMedium.copyWith(
+                color: theme.colorsPalette.accent.primary,
+              ),
+            );
+          }
+
           final duration = item.duration(DateTime.now());
           return Text(
             _formatExactDuration(duration),
-            style: theme.commonTextStyles.bodyBold,
+            style: theme.commonTextStyles.labelMedium,
           );
         },
       ),
@@ -257,6 +262,20 @@ class ProjectList extends StatelessWidget {
         title: 'Status',
         flex: 1,
         builder: (context, item, isHovered) {
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.projectId == item.id,
+          );
+
+          if (isActive) {
+            return const Align(
+              alignment: Alignment.centerLeft,
+              child: StatusBadge(
+                status: BadgeStatus.inProgress,
+                label: 'RUNNING',
+              ),
+            );
+          }
+
           return Align(
             alignment: Alignment.centerLeft,
             child: StatusBadge(
@@ -271,8 +290,8 @@ class ProjectList extends StatelessWidget {
         alignment: Alignment.centerRight,
 
         flex: 1,
-        builder: (context, item, isHovered) {
-          return ProjectActionsCell(project: item, isHovered: isHovered);
+        builder: (context, item, _) {
+          return ProjectActionsCell(project: item);
         },
       ),
     ];
@@ -297,83 +316,3 @@ class ProjectList extends StatelessWidget {
   }
 }
 
-class _ProjectViewModeToggle extends StatelessWidget {
-  final ProjectViewMode viewMode;
-  final ValueChanged<ProjectViewMode> onChanged;
-
-  const _ProjectViewModeToggle({
-    required this.viewMode,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.sm.circular,
-        border: Border.all(
-          color: palette.border.primary.withValues(alpha: 0.5),
-        ),
-      ),
-      padding: EdgeInsets.all(theme.spacings.s4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildToggleButton(
-            context,
-            icon: Icons.grid_view_rounded,
-            isSelected: viewMode == ProjectViewMode.cards,
-            onTap: () => onChanged(ProjectViewMode.cards),
-          ),
-          SizedBox(width: theme.spacings.s4),
-          _buildToggleButton(
-            context,
-            icon: Icons.table_rows_rounded,
-            isSelected: viewMode == ProjectViewMode.table,
-            onTap: () => onChanged(ProjectViewMode.table),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton(
-    BuildContext context, {
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Material(
-      color: isSelected ? palette.background.surface : Colors.transparent,
-      borderRadius: theme.radiuses.sm.circular,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(theme.spacings.s8),
-          decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(
-                    color: palette.border.primary.withValues(alpha: 0.5),
-                  )
-                : Border.all(color: Colors.transparent),
-            borderRadius: theme.radiuses.sm.circular,
-            boxShadow: isSelected ? [theme.shadows.sm] : null,
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: isSelected ? palette.text.primary : palette.text.secondary,
-          ),
-        ),
-      ),
-    );
-  }
-}

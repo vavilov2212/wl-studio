@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class CardColumn {
@@ -37,7 +37,7 @@ class CardRow extends StatelessWidget {
             ),
           ),
           if (i < columns.length - 1)
-            SizedBox(width: theme.spacings.s16),
+            SizedBox(width: theme.spacings.lg),
         ],
       ],
     );

@@ -1,46 +1,108 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:vector_svg/vector_svg.dart';
 
 class SidebarItem extends StatefulWidget {
-  final String label;
-  final String? iconPath;
-  final bool isActive;
-  final VoidCallback onTap;
+final String label;
+final String? iconPath;
+final IconData? icon;
+final bool isActive;
+  final bool collapsed;
+final VoidCallback onTap;
 
-  const SidebarItem({
-    required this.label,
-    required this.onTap,
-    this.iconPath,
+const SidebarItem({
+required this.label,
+required this.onTap,
+this.iconPath,
+  this.icon,
     this.isActive = false,
-    super.key,
+  this.collapsed = false,
+  super.key,
   });
 
   @override
-  State<SidebarItem> createState() => _SidebarItemState();
+State<SidebarItem> createState() => _SidebarItemState();
 }
 
 class _SidebarItemState extends State<SidebarItem> {
-  bool isHovered = false;
+bool isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
+Widget build(BuildContext context) {
+final theme = context.theme;
+final palette = theme.colorsPalette;
 
-    final backgroundColor = widget.isActive
-        ? palette.background.surface
-        : isHovered
-        ? palette.background.surfaceMuted.withValues(alpha: 0.5)
-        : palette.base.transparent;
+if (widget.collapsed) {
+      return _buildCollapsed(context, theme, palette);
+}
+return _buildExpanded(context, theme, palette);
+}
 
-    final textColor = widget.isActive
-        ? palette.text.primary
-        : palette.text.secondary;
+Widget _buildCollapsed(
+BuildContext context,
+AppThemeExtension theme,
+    colorsPalette,
+) {
+final palette = theme.colorsPalette;
+final isNavDark = true; // collapsed sidebar is always on dark nav bg
 
-    final iconColor = widget.isActive
-        ? palette.accent.primary
-        : palette.text.muted;
+final iconColor = widget.isActive
+? Colors.white
+: isHovered
+? Colors.white.withValues(alpha: 0.75)
+: Colors.white.withValues(alpha: 0.38);
+
+final bgColor = widget.isActive
+? Colors.white.withValues(alpha: 0.12)
+: isHovered
+? Colors.white.withValues(alpha: 0.07)
+: Colors.transparent;
+
+return MouseRegion(
+onEnter: (_) => setState(() => isHovered = true),
+onExit: (_) => setState(() => isHovered = false),
+cursor: SystemMouseCursors.click,
+child: Tooltip(
+message: widget.label,
+preferBelow: false,
+child: GestureDetector(
+onTap: widget.onTap,
+child: AnimatedContainer(
+duration: kThemeAnimationDuration,
+width: 36,
+height: 36,
+decoration: BoxDecoration(
+color: bgColor,
+borderRadius: theme.radiuses.md.circular,
+),
+alignment: Alignment.center,
+child: _buildIcon(iconColor, theme, size: 18),
+),
+),
+),
+);
+}
+
+Widget _buildExpanded(
+BuildContext context,
+AppThemeExtension theme,
+colorsPalette,
+) {
+final palette = theme.colorsPalette;
+
+final backgroundColor = widget.isActive
+? palette.accent.primary
+: isHovered
+? Colors.white.withValues(alpha: 0.07)
+: palette.base.transparent;
+
+final textColor = widget.isActive
+? Colors.white
+: Colors.white.withValues(alpha: 0.55);
+
+final iconColor = widget.isActive
+? Colors.white
+: Colors.white.withValues(alpha: 0.45);
 
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
@@ -51,8 +113,8 @@ class _SidebarItemState extends State<SidebarItem> {
         child: AnimatedContainer(
           duration: kThemeAnimationDuration,
           padding: EdgeInsets.symmetric(
-            horizontal: theme.spacings.s16,
-            vertical: theme.spacings.s12,
+            horizontal: theme.spacings.md,
+            vertical: theme.spacings.sm,
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -62,33 +124,43 @@ class _SidebarItemState extends State<SidebarItem> {
             children: [
               if (widget.iconPath != null) ...[
                 widget.iconPath!.vector(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   colorFilter: iconColor.filter,
                 ),
-                SizedBox(width: theme.spacings.s12),
+                SizedBox(width: theme.spacings.sm),
+              ] else if (widget.icon != null) ...[
+                Icon(widget.icon, size: 18, color: iconColor),
+                SizedBox(width: theme.spacings.sm),
               ],
               Expanded(
                 child: Text(
                   widget.label,
-                  style: theme.commonTextStyles.bodyBold.copyWith(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: theme.commonTextStyles.body2Bold.copyWith(
                     color: textColor,
                   ),
                 ),
               ),
-              if (widget.isActive)
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: palette.accent.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildIcon(Color color, AppThemeExtension theme, {double size = 20}) {
+    if (widget.iconPath != null) {
+      return widget.iconPath!.vector(
+        width: size,
+        height: size,
+        colorFilter: color.filter,
+      );
+    } else if (widget.icon != null) {
+      return Icon(widget.icon, size: size, color: color);
+    }
+    return SizedBox(width: size, height: size);
   }
 }

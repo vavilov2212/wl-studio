@@ -1,4 +1,4 @@
-name: worklog_studio
+﻿name: worklog_studio
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -18,7 +18,7 @@ resolution: workspace
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.7+38
+version: 1.0.8-dev.13+51
 
 environment:
   sdk: ^3.10.1
@@ -74,6 +74,8 @@ dependencies:
     path: ../../packages/vector_svg
   path_provider: ^2.1.5
   collection: ^1.19.1
+  window_manager: ^0.4.3
+  tray_manager: ^0.2.3
 
 dependency_overrides:
   uuid: ^4.5.2
@@ -81,6 +83,7 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -117,6 +120,8 @@ flutter:
   assets:
     - assets/app_icon_idle.png
     - assets/app_icon_running.png
+    - assets/app_icon_idle.ico
+    - assets/app_icon_running.ico
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -143,3 +148,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+
+
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class DrawerHeader extends StatefulWidget {
@@ -33,16 +33,19 @@ class _DrawerHeaderState extends State<DrawerHeader> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        theme.spacings.s24,
-        theme.spacings.s24,
-        theme.spacings.s24,
-        theme.spacings.s16,
+        theme.spacings.xl,
+        theme.spacings.xl,
+        theme.spacings.xl,
+        theme.spacings.xxs,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(Icons.close, color: palette.text.secondary),
+            icon: Icon(Icons.close, color: palette.text.secondary, size: 18),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             onPressed: widget.onClose,
           ),
           Row(
@@ -55,14 +58,24 @@ class _DrawerHeaderState extends State<DrawerHeader> {
                 followerAnchor: Alignment.topRight,
                 width: 180,
                 trigger: IconButton(
-                  icon: Icon(Icons.more_horiz, color: palette.text.secondary),
+                  icon: Icon(
+                    Icons.more_horiz,
+                    color: palette.text.secondary,
+                    size: 18,
+                  ),
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                   onPressed: _popoverController.toggle,
                 ),
                 contentBuilder: (context) {
                   return PopoverSurface(
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        vertical: theme.spacings.s8,
+                        vertical: theme.spacings.sm,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -110,13 +123,13 @@ class _PopoverAction extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: theme.spacings.s16,
-          vertical: theme.spacings.s12,
+          horizontal: theme.spacings.lg,
+          vertical: theme.spacings.md,
         ),
         child: Row(
           children: [
             Icon(icon, color: color, size: 20),
-            SizedBox(width: theme.spacings.s12),
+            SizedBox(width: theme.spacings.md),
             Text(
               label,
               style: theme.commonTextStyles.body.copyWith(color: color),

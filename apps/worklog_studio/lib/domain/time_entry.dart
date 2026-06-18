@@ -24,13 +24,8 @@ class TimeEntry {
   bool get isRunning => status == TimeEntryStatus.running;
 
   Duration duration(DateTime now) {
-    if (isRunning) {
-      return now.difference(startAt);
-    }
-    if (endAt == null) {
-      return Duration.zero;
-    }
-    return endAt!.difference(startAt);
+    final effectiveEnd = endAt ?? now;
+    return effectiveEnd.difference(startAt);
   }
 
   TimeEntry copyWith({
