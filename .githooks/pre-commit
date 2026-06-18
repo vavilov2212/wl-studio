@@ -1,0 +1,24 @@
+#!/bin/sh
+# Forces the live app icon back to the prod variant before every commit.
+# Protects against accidentally committing a dev-flavored icon left over
+# from a local `select_app_icon -Flavor dev` session (e.g. via VS Code's
+# debug preLaunchTask). Pure `sh` + `cp` — no PowerShell/pwsh dependency,
+# works identically on Windows (Git Bash) and macOS.
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+APP_DIR="$ROOT_DIR/apps/worklog_studio"
+
+WIN_LIVE_ICO="$APP_DIR/windows/runner/resources/app_icon.ico"
+WIN_PROD_ICO="$APP_DIR/windows/runner/resources/app_icon_prod.ico"
+MAC_LIVE_DIR="$APP_DIR/macos/Runner/Assets.xcassets/AppIcon.appiconset"
+MAC_PROD_DIR="$APP_DIR/macos/Runner/Assets.xcassets/AppIconProd.appiconset"
+
+if [ -f "$WIN_PROD_ICO" ]; then
+  cp "$WIN_PROD_ICO" "$WIN_LIVE_ICO"
+  git add "$WIN_LIVE_ICO"
+fi
+
+if [ -d "$MAC_PROD_DIR" ]; then
+  cp "$MAC_PROD_DIR"/*.png "$MAC_LIVE_DIR"/
+  git add "$MAC_LIVE_DIR"/*.png
+fi

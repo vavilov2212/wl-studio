@@ -188,6 +188,7 @@ There's a separate, native switcher script per platform — no cross-platform ru
 Switching the icon is automated:
 - **VS Code debugger (F5)**: `.vscode/launch.json` runs a `preLaunchTask` (`select-app-icon-dev`/`select-app-icon-prod` in `.vscode/tasks.json`) before every launch, which picks the right script for your OS automatically.
 - **Packaged builds**: `tool/windows/build.ps1`, `tool/macos/build.sh`, and the CI release workflow already call the matching script based on the version being built.
+- **Git commits**: a pre-commit hook (`.githooks/pre-commit`) force-resets the live icon files back to prod before every commit, so a forgotten `-Flavor dev` switch from a local debug session never gets committed by accident. One-time setup after cloning: `git config core.hooksPath .githooks`.
 
 ### When to run this manually
 Only needed when running `flutter run`/`flutter build` directly from a terminal instead of the VS Code debugger:
