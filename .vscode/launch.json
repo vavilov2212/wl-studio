@@ -8,6 +8,7 @@
       "name": "worklog_studio",
       "request": "launch",
       "type": "dart",
+      "preLaunchTask": "select-app-icon-prod",
       "program": "apps/worklog_studio/lib/main.dart"
 
     },
@@ -16,6 +17,7 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
+      "preLaunchTask": "select-app-icon-dev",
       "args": [
         "--flavor development",
         "--no-enable-impeller"
@@ -27,6 +29,7 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "release",
+      "preLaunchTask": "select-app-icon-prod",
       "program": "apps/worklog_studio/lib/main.dart"
 
     }

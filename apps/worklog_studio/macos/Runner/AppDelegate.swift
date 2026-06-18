@@ -186,8 +186,9 @@ class AppDelegate: FlutterAppDelegate {
                     }
                 }
                 if let iconName = args["icon"] as? String {
-                    if iconName == "AppIconRunning" {
-                        if let imagePath = Bundle.main.path(forResource: "app_icon_running", ofType: "png", inDirectory: "flutter_assets/assets") {
+                    if iconName == "AppIconRunning" || iconName == "AppIconRunningDev" {
+                        let pngName = iconName == "AppIconRunningDev" ? "app_icon_running_dev" : "app_icon_running"
+                        if let imagePath = Bundle.main.path(forResource: pngName, ofType: "png", inDirectory: "flutter_assets/assets") {
                             self.statusItem.button?.image = NSImage(contentsOfFile: imagePath)
                         } else {
                             if #available(macOS 11.0, *) {

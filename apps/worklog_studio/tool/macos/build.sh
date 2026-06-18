@@ -108,7 +108,19 @@ flutter test test/core/ test/feature/ --reporter expanded
 echo "✅ All tests passed"
 
 # -----------------------------
-# 3. Build
+# 3a. Select app icon (prod for release/patch/minor/major, dev for pre-releases)
+# -----------------------------
+
+if [[ "$NEW_NAME" =~ -dev\. ]]; then
+  ICON_FLAVOR="dev"
+else
+  ICON_FLAVOR="prod"
+fi
+echo "🎨 Selecting '$ICON_FLAVOR' app icon..."
+bash "$(dirname "$0")/select_app_icon.sh" "$ICON_FLAVOR"
+
+# -----------------------------
+# 3b. Build
 # -----------------------------
 
 flutter build macos

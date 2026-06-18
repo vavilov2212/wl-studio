@@ -18,7 +18,7 @@ resolution: workspace
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.8+52
+version: 1.0.9-dev.1+53
 
 environment:
   sdk: ^3.10.1
@@ -122,6 +122,10 @@ flutter:
     - assets/app_icon_running.png
     - assets/app_icon_idle.ico
     - assets/app_icon_running.ico
+    - assets/app_icon_idle_dev.png
+    - assets/app_icon_running_dev.png
+    - assets/app_icon_idle_dev.ico
+    - assets/app_icon_running_dev.ico
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -148,6 +152,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
 
 
 

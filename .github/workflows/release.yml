@@ -147,10 +147,10 @@ jobs:
       - name: Build Runner — app
         run: dart run build_runner build --delete-conflicting-outputs --force-jit --build-filter="apps/worklog_studio/**"
 
-      - name: Generate tray ICO assets
+      - name: Select app icon
         shell: pwsh
         working-directory: apps/worklog_studio
-        run: pwsh tool/windows/generate_tray_icons.ps1
+        run: tool/windows/select_app_icon.ps1 -Flavor ${{ needs.tag.outputs.prerelease == 'true' && 'dev' || 'prod' }}
 
       - name: Build Windows release
         working-directory: apps/worklog_studio
@@ -213,6 +213,10 @@ jobs:
 
       - name: Update CocoaPods repo
         run: pod repo update
+
+      - name: Select app icon
+        working-directory: apps/worklog_studio
+        run: bash tool/macos/select_app_icon.sh ${{ needs.tag.outputs.prerelease == 'true' && 'dev' || 'prod' }}
 
       - name: Build macOS release
         working-directory: apps/worklog_studio

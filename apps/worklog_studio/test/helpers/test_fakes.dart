@@ -15,6 +15,9 @@
 /// the domain logic being tested.  A mock would force each test to re-specify
 /// that behaviour as stub calls, making tests brittle and repetitive.  With a
 /// fake, the test simply manipulates state directly and lets the real logic run.
+import 'dart:io';
+
+import 'package:worklog_studio/domain/backup.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/time_tracker.dart';
 
@@ -134,4 +137,63 @@ class FakeTimeEntryRepository implements TimeEntryRepository {
   /// directly.  Use this to set up preconditions that would otherwise require
   /// calling the service layer (e.g. seeding a running entry before testing stop()).
   void seed(TimeEntry entry) => _store.add(entry);
+}
+
+// ---------------------------------------------------------------------------
+// FakeBackupRepository
+// ---------------------------------------------------------------------------
+
+/// A pure in-memory implementation of [BackupRepository] for use in tests.
+///
+/// Mirrors the production [FileBackupRepository] contract — most-recent-first
+/// ordering from [listBackups], pruning down to `keep` entries — without
+/// touching the real file system. [dbFile]/[backupsDir] arguments are
+/// accepted (to satisfy the interface) but never read or written.
+class FakeBackupRepository implements BackupRepository {
+  final List<BackupInfo> _backups = [];
+  int createCalls = 0;
+  BackupInfo? restoredFrom;
+
+  @override
+  Future<BackupInfo> createBackup({
+    required File dbFile,
+    required Directory backupsDir,
+  }) async {
+    createCalls++;
+    final info = BackupInfo(
+      file: File('${backupsDir.path}/worklog_fake_$createCalls.db'),
+      createdAt: DateTime(2025, 1, 1).add(Duration(seconds: createCalls)),
+    );
+    _backups.add(info);
+    return info;
+  }
+
+  @override
+  Future<List<BackupInfo>> listBackups(Directory backupsDir) async {
+    final sorted = [..._backups]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+
+  @override
+  Future<void> restoreBackup({
+    required BackupInfo backup,
+    required File dbFile,
+  }) async {
+    restoredFrom = backup;
+  }
+
+  @override
+  Future<void> pruneBackups(Directory backupsDir, {required int keep}) async {
+    final sorted = [..._backups]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (sorted.length <= keep) return;
+    final stale = sorted.skip(keep).toSet();
+    _backups.removeWhere(stale.contains);
+  }
+
+  // ── Test-only helpers ───────────────────────────────────────────────────
+
+  /// Synchronous read-only snapshot of the store.
+  List<BackupInfo> get all => List.unmodifiable(_backups);
 }

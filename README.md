@@ -4,6 +4,8 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://apple.com/)
+[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+[![Tests](https://github.com/vavilov2212/worklog_studio/actions/workflows/release.yml/badge.svg)](https://github.com/vavilov2212/worklog_studio/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -12,14 +14,14 @@
 - **Effortless Time Tracking**: Start and stop sessions with minimal effort.
 - **Fast Work Logs**: Designed for quick data entry to minimize friction.
 - **Distraction-Free**: Minimal interface, allowing you to focus on your work.
-- **Built for macOS**: Native-like feel with smooth performance.
+- **Built for macOS & Windows**: Native-like feel with smooth performance.
 - **Automatic Updates**: Seamless updates via Sparkle integration.
 
 ---
 
 ## 🛠 Tech Stack
 - **Framework**: [Flutter](https://flutter.dev/)
-- **Target Platform**: macOS
+- **Target Platform**: macOS & Windows
 - **Backend**: Firebase (Authentication & Data)
 - **Updates**: [Sparkle Framework](https://sparkle-project.org/)
 
@@ -29,7 +31,7 @@
 
 ### Prerequisites
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
-- macOS environment.
+- macOS or Windows environment.
 
 ### Running Locally
 1. Clone the repository:
@@ -44,6 +46,7 @@
 3. Run the app:
    ```bash
    flutter run -d macos
+   flutter run -d windows
    ```
 
 ### Running Locally using fvm & melos
@@ -171,6 +174,57 @@ Then try running your script again:
 cd apps\worklog_studio
 .\tool\windows\build.ps1 dev
 ```
+
+---
+
+## 🎨 App Icons
+
+The app ships two icon variants: **prod** (default, committed as the live icon) and **dev** (same artwork with a red "DEV" ribbon). Both platforms' native build systems are not flavor-aware, so the live icon files (`windows\runner\resources\app_icon.ico` and `macos\Runner\Assets.xcassets\AppIcon.appiconset\*.png`) must be swapped on disk before building/running the target flavor.
+
+There's a separate, native switcher script per platform — no cross-platform runtime dependency required:
+- **Windows**: `tool/windows/select_app_icon.ps1` (plain PowerShell, ships with Windows)
+- **macOS**: `tool/macos/select_app_icon.sh` (plain bash, ships with macOS)
+
+Switching the icon is automated:
+- **VS Code debugger (F5)**: `.vscode/launch.json` runs a `preLaunchTask` (`select-app-icon-dev`/`select-app-icon-prod` in `.vscode/tasks.json`) before every launch, which picks the right script for your OS automatically.
+- **Packaged builds**: `tool/windows/build.ps1`, `tool/macos/build.sh`, and the CI release workflow already call the matching script based on the version being built.
+- **Git commits**: a pre-commit hook (`.githooks/pre-commit`) force-resets the live icon files back to prod before every commit, so a forgotten `-Flavor dev` switch from a local debug session never gets committed by accident. `fvm exec melos bootstrap` wires this up automatically (`git config core.hooksPath .githooks` runs as a post-bootstrap hook, see the `melos:` section in the root `pubspec.yaml`) — no manual step needed.
+
+### When to run this manually
+Only needed when running `flutter run`/`flutter build` directly from a terminal instead of the VS Code debugger:
+- Before `flutter run -d windows --flavor development` (switch to dev icon):
+  ```powershell
+  powershell apps/worklog_studio/tool/windows/select_app_icon.ps1 -Flavor dev
+  ```
+- Before `flutter run -d macos --flavor development`:
+  ```bash
+  bash apps/worklog_studio/tool/macos/select_app_icon.sh dev
+  ```
+- Pass `prod`/`-Flavor prod` the same way to switch back (or restore after a dev session).
+- `tool/windows/build.ps1` and `tool/macos/build.sh` (and the CI release workflow) already call this automatically based on the version being built — no manual step needed for packaged releases.
+
+### When to regenerate the icon artwork
+Only needed if the source artwork changes (`assets/branding/app_icon_prod_master.png`). After updating the prod master:
+```powershell
+pwsh apps/worklog_studio/tool/windows/generate_dev_icon_master.ps1   # re-draws the DEV ribbon over the new prod master
+pwsh apps/worklog_studio/tool/windows/generate_dev_icon_set.ps1      # regenerates AppIconDev.appiconset + app_icon_dev.ico
+```
+The prod-side `AppIconProd.appiconset` / `app_icon_prod.ico` backups must be updated manually (copy the new live prod files over them) since they are the restore source for `select_app_icon.ps1 -Flavor prod`.
+
+Tray icons (`assets/app_icon_idle.ico`, `assets/app_icon_running.ico`) are also committed binaries — regenerate them locally with `pwsh apps/worklog_studio/tool/windows/generate_tray_icons.ps1` after editing `assets/app_icon_idle.png` / `assets/app_icon_running.png`. This is not run in CI since the `.ico` outputs are deterministic and already committed.
+
+The tray icon also gets a DEV marker (small amber badge dot, since "DEV" text isn't legible at tray size) — `app_icon_idle_dev.{png,ico}` / `app_icon_running_dev.{png,ico}`, regenerated via `pwsh apps/worklog_studio/tool/windows/generate_dev_tray_icons.ps1`. The active flavor (`Flavor.development`/`Flavor.production`) picks the right asset at runtime — no manual swap needed, unlike the app/dock icon. macOS's idle tray state reuses the same `AppIcon.appiconset` as the dock icon, so it already shows the DEV ribbon for free once `select_app_icon.sh -Flavor dev` has been run; only the "running" tray state needed a dedicated dev asset (`AppDelegate.swift`).
+
+---
+
+## 🗄️ Database & Backups
+
+The app stores its data in a local SQLite file (`worklog.db`) under the OS application-support directory. **Dev and prod flavors each get their own subfolder** (`Worklog_studio` vs `Worklog_studio-dev`, see `Flavor.appFolder` in `lib/core/environment/flavors.dart`), so running the dev build never touches the production database — they're fully isolated, no manual setup required.
+
+### Backups
+- **Automatic**: on every app start, the previous session's DB file is snapshotted into `<appFolder>/backups/` before a new connection opens (`BackupService.backupOnStartup`, wired in `lib/runner/runner.dart`). Safe by construction — the file is closed and untouched at that point.
+- **Manual**: the Settings screen has "Backup now" (snapshot on demand) and "Restore from backup" (pick a timestamped snapshot, then restart the app for it to take effect — the live DB connection doesn't hot-swap).
+- **Rotation**: only the 10 most recent backups are kept per flavor; older ones are pruned automatically after each backup (`BackupService`/`FileBackupRepository` in `lib/core/services/` and `lib/data/backup/`).
 
 ---
 

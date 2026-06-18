@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
@@ -320,7 +321,10 @@ class MacOSDesktopService implements IDesktopPlatformService {
       title = '$projectName - $taskName';
     }
 
-    final iconName = isRunning ? 'AppIconRunning' : 'AppIcon';
+    final isDev = appEnvironment.config.flavor == Flavor.development;
+    final iconName = isRunning
+        ? (isDev ? 'AppIconRunningDev' : 'AppIconRunning')
+        : 'AppIcon';
 
     try {
       _channel.invokeMethod('updateTray', {'title': title, 'icon': iconName});
