@@ -24,6 +24,7 @@ class WsTable<T> extends StatelessWidget {
   final T? selectedItem;
   final ValueChanged<T>? onRowTap;
   final bool Function(T item, T? selectedItem)? isSelected;
+  final Key? Function(T item)? rowKeyBuilder;
 
   const WsTable({
     super.key,
@@ -33,6 +34,7 @@ class WsTable<T> extends StatelessWidget {
     this.selectedItem,
     this.onRowTap,
     this.isSelected,
+    this.rowKeyBuilder,
   });
 
   @override
@@ -66,6 +68,7 @@ class WsTable<T> extends StatelessWidget {
                   : item == selectedItem;
 
               return Column(
+                key: rowKeyBuilder?.call(item),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [

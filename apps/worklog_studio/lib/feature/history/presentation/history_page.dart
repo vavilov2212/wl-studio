@@ -19,7 +19,14 @@ import 'components/time_entry_actions_cell.dart';
 enum HistoryViewMode { cards, table }
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final String? initialSelectedEntryId;
+  final int createRequestToken;
+
+  const HistoryScreen({
+    super.key,
+    this.initialSelectedEntryId,
+    this.createRequestToken = 0,
+  });
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -29,6 +36,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
   DrawerControllerState<TimeEntry> _drawerState =
       DrawerControllerState.closed();
   HistoryViewMode _viewMode = HistoryViewMode.table;
+  final GlobalKey _selectedRowKey = GlobalKey();
+  late int _handledCreateToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _handledCreateToken = widget.createRequestToken;
+    if (widget.initialSelectedEntryId != null) {
+      _selectEntryById(widget.initialSelectedEntryId!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedEntryId != null &&
+        widget.initialSelectedEntryId != oldWidget.initialSelectedEntryId) {
+      _selectEntryById(widget.initialSelectedEntryId!);
+    }
+    if (widget.createRequestToken != _handledCreateToken) {
+      _handledCreateToken = widget.createRequestToken;
+      _handleCreateEntry();
+    }
+  }
+
+  void _selectEntryById(String entryId) {
+    final resolvedEntry = context
+        .read<EntityResolver>()
+        .getResolvedTimeEntries()
+        .firstWhereOrNull((e) => e.entry.id == entryId);
+    if (resolvedEntry != null) {
+      setState(() {
+        _drawerState = DrawerControllerState.edit(resolvedEntry.entry);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final rowContext = _selectedRowKey.currentContext;
+        if (rowContext != null) {
+          Scrollable.ensureVisible(
+            rowContext,
+            duration: const Duration(milliseconds: 300),
+            alignment: 0.5,
+          );
+        }
+      });
+    }
+  }
 
   void _handleCreateEntry() {
     setState(() {
@@ -67,6 +120,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: TimeEntryList(
               entries: resolvedEntries,
               selectedEntry: _drawerState.entity,
+              selectedRowKey: _selectedRowKey,
               onEntrySelected: _handleEntrySelected,
               onCreateEntry: _handleCreateEntry,
               viewMode: _viewMode,
@@ -91,6 +145,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 class TimeEntryList extends StatelessWidget {
   final List<ResolvedTimeEntry> entries;
   final TimeEntry? selectedEntry;
+  final GlobalKey? selectedRowKey;
   final ValueChanged<TimeEntry> onEntrySelected;
   final VoidCallback onCreateEntry;
   final HistoryViewMode viewMode;
@@ -100,6 +155,7 @@ class TimeEntryList extends StatelessWidget {
     super.key,
     required this.entries,
     required this.selectedEntry,
+    this.selectedRowKey,
     required this.onEntrySelected,
     required this.onCreateEntry,
     required this.viewMode,
@@ -315,6 +371,7 @@ class TimeEntryList extends StatelessWidget {
                               final isSelected = selectedEntry?.id == entry.id;
 
                               return TimeEntryCard(
+                                key: isSelected ? selectedRowKey : null,
                                 resolvedEntry: resolvedEntry,
                                 isSelected: isSelected,
                                 onTap: () => onEntrySelected(entry),
@@ -328,6 +385,10 @@ class TimeEntryList extends StatelessWidget {
                             selectedItem: dailyEntries.firstWhereOrNull(
                               (e) => e.entry.id == selectedEntry?.id,
                             ),
+                            rowKeyBuilder: (item) =>
+                                item.entry.id == selectedEntry?.id
+                                    ? selectedRowKey
+                                    : null,
                             onRowTap: (item) => onEntrySelected(item.entry),
                             isSelected: (item, selected) =>
                                 item.entry.id == selected?.entry.id,
@@ -541,7 +602,6 @@ class TimeEntryList extends StatelessWidget {
         builder: (context, item, isHovered) {
           return TimeEntryActionsCell(
             resolvedEntry: item,
-            isHovered: isHovered,
           );
         },
       ),

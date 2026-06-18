@@ -17,3 +17,4 @@ export 'src/dividers/labeled_divider.dart';
 export 'src/navigation/sidebar_item.dart';
 export 'src/segmented_toggle/segmented_toggle.dart';
 export 'src/table/ws_table.dart';
+export 'src/links/text_link.dart';

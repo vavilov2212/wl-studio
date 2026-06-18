@@ -32,6 +32,9 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppRoute _currentRoute = AppRoute.dashboard;
+  String? _pendingHistoryEntryId;
+  int _historyCreateToken = 0;
+  String? _pendingTaskId;
   StreamSubscription<String>? _navSub;
 
   @override
@@ -60,15 +63,46 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _openHistoryEntry(String entryId) {
+    setState(() {
+      _pendingHistoryEntryId = entryId;
+      _currentRoute = AppRoute.history;
+    });
+  }
+
+  void _openHistoryCreateEntry() {
+    setState(() {
+      _historyCreateToken++;
+      _currentRoute = AppRoute.history;
+    });
+  }
+
+  void _openTask(String taskId) {
+    setState(() {
+      _pendingTaskId = taskId;
+      _currentRoute = AppRoute.tasks;
+    });
+  }
+
   Widget _buildActiveScreen() {
     return IndexedStack(
       index: _currentRoute.index,
-      children: const [
-        HomePage(title: 'Dashboard'),
-        HistoryScreen(),
-        ProjectsScreen(),
-        TasksScreen(),
-        SettingsScreen(),
+      children: [
+        HomePage(
+          title: 'Dashboard',
+          onViewAllTasks: () => _onRouteSelected(AppRoute.tasks),
+          onViewAllHistory: () => _onRouteSelected(AppRoute.history),
+          onSelectHistoryEntry: _openHistoryEntry,
+          onAddTimeEntry: _openHistoryCreateEntry,
+          onSelectTask: _openTask,
+        ),
+        HistoryScreen(
+          initialSelectedEntryId: _pendingHistoryEntryId,
+          createRequestToken: _historyCreateToken,
+        ),
+        const ProjectsScreen(),
+        TasksScreen(initialSelectedTaskId: _pendingTaskId),
+        const SettingsScreen(),
       ],
     );
   }
@@ -309,9 +343,8 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       SizedBox(width: theme.spacings.xl),
       isRunning
           ? PrimaryButton(
-              size: ButtonSize.sm,
               type: ButtonType.danger,
-              title: 'STOP',
+              size: ButtonSize.sm,
               leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
               backgroundColor: palette.accent.danger,
               onTap: () {
@@ -322,7 +355,6 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             )
           : PrimaryButton(
               size: ButtonSize.sm,
-              title: 'START',
               leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
               onTap: () {
                 context.read<TimeTrackerBloc>().add(
@@ -631,6 +663,7 @@ class SidebarNavigation extends StatefulWidget {
 
 class _SidebarNavigationState extends State<SidebarNavigation> {
   bool _collapsed = true;
+  bool _headerHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -652,19 +685,26 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       ),
       child: Column(
         children: [
-          // Brand + toggle
-          SizedBox(
-            height: 56,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
-              child: Row(
-                children: [
-                  // Logo square — always visible, acts as expand toggle when collapsed
-                  GestureDetector(
-                    onTap: () => setState(() => _collapsed = !_collapsed),
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: Container(
+          // Brand + toggle — the whole row is clickable to expand/collapse.
+          Tooltip(
+            message: _collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+            preferBelow: true,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _headerHovered = true),
+              onExit: (_) => setState(() => _headerHovered = false),
+              child: GestureDetector(
+                onTap: () => setState(() => _collapsed = !_collapsed),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 56,
+                  color: _headerHovered
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.transparent,
+                  padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
+                  child: Row(
+                    children: [
+                      Container(
                         width: 32,
                         height: 32,
                         margin: EdgeInsets.only(
@@ -680,36 +720,31 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           color: Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
-                    ),
-                  ),
-                  if (!_collapsed) ...[
-                    SizedBox(width: theme.spacings.sm),
-                    Expanded(
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 150),
-                        opacity: _collapsed ? 0 : 1,
-                        child: Text(
-                          'Worklog Studio',
-                          style: theme.commonTextStyles.labelMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
+                      if (!_collapsed) ...[
+                        SizedBox(width: theme.spacings.sm),
+                        Expanded(
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 150),
+                            opacity: _collapsed ? 0 : 1,
+                            child: Text(
+                              'Worklog Studio',
+                              style: theme.commonTextStyles.labelMedium
+                                  .copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => setState(() => _collapsed = true),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: Icon(
+                        Icon(
                           Icons.chevron_left_rounded,
                           size: 18,
                           color: Colors.white.withValues(alpha: 0.35),
                         ),
-                      ),
-                    ),
-                  ],
-                ],
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -721,6 +756,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 vertical: theme.spacings.sm,
               ),
               child: Column(
+                spacing: theme.spacings.xxs,
                 children: [
                   _navItem(AppRoute.dashboard, 'Dashboard', Icons.grid_view_rounded),
                   _navItem(AppRoute.history, 'History', Icons.history_rounded),

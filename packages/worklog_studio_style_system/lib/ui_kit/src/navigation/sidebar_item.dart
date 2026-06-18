@@ -69,14 +69,14 @@ child: GestureDetector(
 onTap: widget.onTap,
 child: AnimatedContainer(
 duration: kThemeAnimationDuration,
-width: 40,
-height: 40,
+width: 36,
+height: 36,
 decoration: BoxDecoration(
 color: bgColor,
 borderRadius: theme.radiuses.md.circular,
 ),
 alignment: Alignment.center,
-child: _buildIcon(iconColor, theme, size: 20),
+child: _buildIcon(iconColor, theme, size: 18),
 ),
 ),
 ),
@@ -113,8 +113,8 @@ final iconColor = widget.isActive
         child: AnimatedContainer(
           duration: kThemeAnimationDuration,
           padding: EdgeInsets.symmetric(
-            horizontal: theme.spacings.lg,
-            vertical: theme.spacings.md,
+            horizontal: theme.spacings.md,
+            vertical: theme.spacings.sm,
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -122,16 +122,16 @@ final iconColor = widget.isActive
           ),
           child: Row(
             children: [
-              if (widget.iconPath != null) ...[    
+              if (widget.iconPath != null) ...[
                 widget.iconPath!.vector(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   colorFilter: iconColor.filter,
                 ),
-                SizedBox(width: theme.spacings.md),
-              ] else if (widget.icon != null) ...[    
-                Icon(widget.icon, size: 20, color: iconColor),
-                SizedBox(width: theme.spacings.md),
+                SizedBox(width: theme.spacings.sm),
+              ] else if (widget.icon != null) ...[
+                Icon(widget.icon, size: 18, color: iconColor),
+                SizedBox(width: theme.spacings.sm),
               ],
               Expanded(
                 child: Text(
@@ -139,7 +139,7 @@ final iconColor = widget.isActive
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
-                  style: theme.commonTextStyles.bodyBold.copyWith(
+                  style: theme.commonTextStyles.body2Bold.copyWith(
                     color: textColor,
                   ),
                 ),

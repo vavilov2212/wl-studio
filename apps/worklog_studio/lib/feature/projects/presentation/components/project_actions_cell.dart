@@ -6,12 +6,10 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class ProjectActionsCell extends StatelessWidget {
   final ResolvedProject project;
-  final bool isHovered;
 
   const ProjectActionsCell({
     super.key,
     required this.project,
-    required this.isHovered,
   });
 
   @override
@@ -25,22 +23,18 @@ class ProjectActionsCell extends StatelessWidget {
 
     if (isRunningThis) {
       return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
-
-        type: isHovered ? ButtonType.danger : ButtonType.ghost,
+        type: ButtonType.danger,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.squareFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
         onTap: () {
           context.read<TimeTrackerBloc>().add(TimeTrackerStopped());
         },
       );
     } else {
       return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
-
-        type: isHovered ? ButtonType.primary : ButtonType.ghost,
+        type: ButtonType.ghost,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
         onTap: () {
           context.read<TimeTrackerBloc>().add(
             TimeTrackerStarted(

@@ -290,8 +290,8 @@ class ProjectList extends StatelessWidget {
         alignment: Alignment.centerRight,
 
         flex: 1,
-        builder: (context, item, isHovered) {
-          return ProjectActionsCell(project: item, isHovered: isHovered);
+        builder: (context, item, _) {
+          return ProjectActionsCell(project: item);
         },
       ),
     ];

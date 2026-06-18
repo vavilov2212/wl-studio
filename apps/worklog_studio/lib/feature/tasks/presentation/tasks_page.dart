@@ -17,7 +17,9 @@ import 'components/task_actions_cell.dart';
 enum TaskViewMode { cards, table }
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  final String? initialSelectedTaskId;
+
+  const TasksScreen({super.key, this.initialSelectedTaskId});
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -26,6 +28,46 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
   TaskViewMode _viewMode = TaskViewMode.table;
+  final GlobalKey _selectedRowKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSelectedTaskId != null) {
+      _selectTaskById(widget.initialSelectedTaskId!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TasksScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedTaskId != null &&
+        widget.initialSelectedTaskId != oldWidget.initialSelectedTaskId) {
+      _selectTaskById(widget.initialSelectedTaskId!);
+    }
+  }
+
+  void _selectTaskById(String taskId) {
+    final resolvedTask = context
+        .read<EntityResolver>()
+        .getResolvedTasks()
+        .firstWhereOrNull((t) => t.id == taskId);
+    if (resolvedTask != null) {
+      setState(() {
+        _drawerState = DrawerControllerState.edit(resolvedTask.task);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final rowContext = _selectedRowKey.currentContext;
+        if (rowContext != null) {
+          Scrollable.ensureVisible(
+            rowContext,
+            duration: const Duration(milliseconds: 300),
+            alignment: 0.5,
+          );
+        }
+      });
+    }
+  }
 
   void _handleTaskSelected(Task task) {
     setState(() {
@@ -62,6 +104,7 @@ class _TasksScreenState extends State<TasksScreen> {
           child: TaskList(
             tasks: resolvedTasks,
             selectedTask: _drawerState.entity,
+            selectedRowKey: _selectedRowKey,
             onTaskSelected: _handleTaskSelected,
             onCreateTask: _handleCreateTask,
             viewMode: _viewMode,
@@ -81,6 +124,7 @@ class _TasksScreenState extends State<TasksScreen> {
 class TaskList extends StatelessWidget {
   final List<ResolvedTask> tasks;
   final Task? selectedTask;
+  final GlobalKey? selectedRowKey;
   final ValueChanged<Task> onTaskSelected;
   final VoidCallback onCreateTask;
   final TaskViewMode viewMode;
@@ -90,6 +134,7 @@ class TaskList extends StatelessWidget {
     super.key,
     required this.tasks,
     required this.selectedTask,
+    this.selectedRowKey,
     required this.onTaskSelected,
     required this.onCreateTask,
     required this.viewMode,
@@ -145,6 +190,8 @@ class TaskList extends StatelessWidget {
                       selectedItem: tasks.firstWhereOrNull(
                         (e) => e.id == selectedTask?.id,
                       ),
+                      rowKeyBuilder: (item) =>
+                          item.id == selectedTask?.id ? selectedRowKey : null,
                       onRowTap: (item) => onTaskSelected(item.task),
                       isSelected: (item, selected) => item.id == selected?.id,
                       columns: _getTableColumns(theme),
@@ -154,6 +201,7 @@ class TaskList extends StatelessWidget {
                       children: tasks.map((task) {
                         final isSelected = selectedTask?.id == task.id;
                         return TaskCard(
+                          key: isSelected ? selectedRowKey : null,
                           task: task,
                           isSelected: isSelected,
                           onTap: () => onTaskSelected(task.task),
@@ -291,8 +339,8 @@ class TaskList extends StatelessWidget {
         alignment: Alignment.centerRight,
 
         flex: 1,
-        builder: (context, item, isHovered) {
-          return TaskActionsCell(task: item, isHovered: isHovered);
+        builder: (context, item, _) {
+          return TaskActionsCell(task: item);
         },
       ),
     ];

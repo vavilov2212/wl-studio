@@ -6,12 +6,10 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class TaskActionsCell extends StatelessWidget {
   final ResolvedTask task;
-  final bool isHovered;
 
   const TaskActionsCell({
     super.key,
     required this.task,
-    required this.isHovered,
   });
 
   @override
@@ -25,18 +23,18 @@ class TaskActionsCell extends StatelessWidget {
 
     if (isRunningThis) {
       return PrimaryButton(
-        type: isHovered ? ButtonType.danger : ButtonType.ghost,
+        type: ButtonType.danger,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.squareFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
         onTap: () {
           context.read<TimeTrackerBloc>().add(TimeTrackerStopped());
         },
       );
     } else {
       return PrimaryButton(
-        type: isHovered ? ButtonType.primary : ButtonType.ghost,
+        type: ButtonType.ghost,
         size: ButtonSize.sm,
-        leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
+        leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
         onTap: () {
           context.read<TimeTrackerBloc>().add(
             TimeTrackerStarted(

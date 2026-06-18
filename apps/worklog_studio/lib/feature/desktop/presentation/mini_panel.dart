@@ -234,7 +234,6 @@ class _MiniPanelState extends State<MiniPanel> {
           : (isHovered) {
               return PrimaryButton(
                 type: isHovered ? ButtonType.primary : ButtonType.ghost,
-                initialAnimationDuration: Duration(milliseconds: 20),
                 size: ButtonSize.sm,
                 leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
                 onTap: onTap,
@@ -266,7 +265,6 @@ class _MiniPanelState extends State<MiniPanel> {
       title: project.name,
       trailingWidget: (isHovered) => PrimaryButton(
         type: isHovered ? ButtonType.primary : ButtonType.ghost,
-        initialAnimationDuration: Duration(milliseconds: 20),
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.arrowSmallRight24Svg,
         onTap: onTap,
@@ -340,7 +338,6 @@ class _MiniPanelState extends State<MiniPanel> {
           : (isHovered) {
               return PrimaryButton(
                 type: isHovered ? ButtonType.primary : ButtonType.ghost,
-                initialAnimationDuration: Duration(milliseconds: 20),
                 size: ButtonSize.sm,
                 leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
                 onTap: onTap,

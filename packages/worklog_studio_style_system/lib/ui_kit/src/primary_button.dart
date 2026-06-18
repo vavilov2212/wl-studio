@@ -16,7 +16,7 @@ class PrimaryButton extends StatefulWidget {
   final AlignmentGeometry? alignment;
   final Color? backgroundColor;
   final Color? foregroundColor;
-  final Duration? initialAnimationDuration;
+  final Duration initialAnimationDuration;
 
   const PrimaryButton({
     required this.onTap,
@@ -32,7 +32,7 @@ class PrimaryButton extends StatefulWidget {
     this.alignment,
     this.backgroundColor,
     this.foregroundColor,
-    this.initialAnimationDuration,
+    this.initialAnimationDuration = const Duration(milliseconds: 20),
     super.key,
   });
 
@@ -42,7 +42,15 @@ class PrimaryButton extends StatefulWidget {
 
 class _PrimaryButtonState extends State<PrimaryButton> {
   bool isActive = false;
+  bool isHovered = false;
   bool get isDisabled => widget.isDisabled || widget.onTap == null;
+
+  bool get _isHoverApplied => isHovered && !isDisabled && !isActive;
+
+  Color _darken(Color color, [double amount = 0.08]) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  }
 
   EdgeInsetsGeometry get innerPadding {
     return switch (widget.size) {
@@ -121,13 +129,12 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   Gradient? get backgroundGradient {
     if (isDisabled || isActive) return null;
     if (widget.type == ButtonType.primary) {
+      final base = context.theme.colorsPalette.accent.primary;
+      final start = _isHoverApplied ? _darken(base) : base;
       return LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          context.theme.colorsPalette.accent.primary,
-          context.theme.colorsPalette.accent.primary.withValues(alpha: 0.8),
-        ],
+        colors: [start, start.withValues(alpha: 0.8)],
       );
     }
     return null;
@@ -136,7 +143,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   Color get backgroundColor {
     if (isDisabled) return context.theme.colorsPalette.background.surfaceMuted;
 
-    return widget.backgroundColor ??
+    final base = widget.backgroundColor ??
         switch (widget.type) {
           ButtonType.primary =>
             isActive
@@ -154,6 +161,16 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                 ? context.theme.colorsPalette.background.surfaceMuted
                 : context.theme.colorsPalette.base.transparent,
         };
+
+    if (!_isHoverApplied) return base;
+
+    // Ghost is transparent at rest — darkening a transparent color is a
+    // no-op, so give it a faint surface tint instead for the same sense
+    // of depth on hover.
+    if (base.a == 0) {
+      return context.theme.colorsPalette.background.surfaceMuted;
+    }
+    return _darken(base);
   }
 
   Color get foregroundColor {
@@ -196,13 +213,15 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: isDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
       child: GestureDetector(
         onTap: widget.isDisabled ? null : _onTap,
         onTapDown: (_) => setState(() => isActive = true),
         onTapCancel: () => setState(() => isActive = false),
         onTapUp: (_) => setState(() => isActive = false),
         child: AnimatedContainer(
-          duration: widget.initialAnimationDuration ?? kThemeAnimationDuration,
+          duration: widget.initialAnimationDuration,
           decoration: BoxDecoration(
             color: backgroundGradient == null ? backgroundColor : null,
             gradient: backgroundGradient,
@@ -211,63 +230,59 @@ class _PrimaryButtonState extends State<PrimaryButton> {
             border: border,
           ),
           padding: innerPadding,
-          alignment: widget.alignment,
+          alignment: widget.alignment ?? Alignment.center,
           height: height,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Stack(
-                children: [
-                  Opacity(
-                    opacity: widget.type == ButtonType.ghost && widget.isLoading
-                        ? 0
-                        : 1,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.leftIconWidget != null)
-                          _wrapIcon(widget.leftIconWidget!)
-                        else if (widget.leftIcon != null)
-                          buildIcon(widget.leftIcon)!,
-                        if (widget.title != null) ...[
-                          SizedBox(width: context.theme.spacings.sm),
-                          Flexible(
-                            child: Text(
-                              widget.title!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                              style: textStyle.copyWith(color: foregroundColor),
-                            ),
-                          ),
-                        ],
-                        if (widget.rightIconWidget != null)
-                          _wrapIcon(widget.rightIconWidget!)
-                        else if (widget.rightIcon != null)
-                          buildIcon(widget.rightIcon)!,
-                      ],
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: AnimatedCrossFade(
-                      firstChild: SizedBox.shrink(),
-                      secondChild: ColoredBox(
-                        color: backgroundColor,
-                        child: Center(
-                          child: RotatingIcon(
-                            child: buildIcon(
-                              WorklogStudioAssets.vectors.rotateClockwise24Svg,
-                            )!,
-                          ),
+              Opacity(
+                opacity: widget.type == ButtonType.ghost && widget.isLoading
+                    ? 0
+                    : 1,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.leftIconWidget != null)
+                      _wrapIcon(widget.leftIconWidget!)
+                    else if (widget.leftIcon != null)
+                      buildIcon(widget.leftIcon)!,
+                    if (widget.title != null) ...[
+                      SizedBox(width: context.theme.spacings.sm),
+                      Flexible(
+                        child: Text(
+                          widget.title!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: textStyle.copyWith(color: foregroundColor),
                         ),
                       ),
-                      crossFadeState: widget.isLoading
-                          ? CrossFadeState.showSecond
-                          : CrossFadeState.showFirst,
-                      duration: kThemeAnimationDuration,
+                    ],
+                    if (widget.rightIconWidget != null)
+                      _wrapIcon(widget.rightIconWidget!)
+                    else if (widget.rightIcon != null)
+                      buildIcon(widget.rightIcon)!,
+                  ],
+                ),
+              ),
+              Positioned.fill(
+                child: AnimatedCrossFade(
+                  firstChild: SizedBox.shrink(),
+                  secondChild: ColoredBox(
+                    color: backgroundColor,
+                    child: Center(
+                      child: RotatingIcon(
+                        child: buildIcon(
+                          WorklogStudioAssets.vectors.rotateClockwise24Svg,
+                        )!,
+                      ),
                     ),
                   ),
-                ],
+                  crossFadeState: widget.isLoading
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: kThemeAnimationDuration,
+                ),
               ),
             ],
           ),
