@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "select-app-icon-dev",
+      "type": "process",
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\apps\\worklog_studio\\tool\\windows\\select_app_icon.ps1",
+          "-Flavor",
+          "dev"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/apps/worklog_studio/tool/macos/select_app_icon.sh",
+          "dev"
+        ]
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "select-app-icon-prod",
+      "type": "process",
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\apps\\worklog_studio\\tool\\windows\\select_app_icon.ps1",
+          "-Flavor",
+          "prod"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/apps/worklog_studio/tool/macos/select_app_icon.sh",
+          "prod"
+        ]
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

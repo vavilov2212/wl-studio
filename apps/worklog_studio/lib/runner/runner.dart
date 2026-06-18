@@ -20,6 +20,8 @@ import 'package:worklog_studio/firebase_options.dart';
 import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
+import 'package:worklog_studio/data/backup/file_backup_repository.dart';
+import 'package:worklog_studio/core/services/backup_service.dart';
 
 import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/core/services/idle_monitor/no_op_idle_monitor.dart';
@@ -62,6 +64,7 @@ Future<void> run(List<String> args) async {
   try {
     if (!kIsWeb) {
       await getIt<UserRepository>();
+      await _initBackupService();
       await DatabaseProvider.getDatabase();
     }
   } catch (e, st) {
@@ -85,6 +88,18 @@ Future<void> run(List<String> args) async {
 Future<void> _initDependencies() async {
   _initDotEnv();
   await configureDependencies();
+}
+
+/// Registers [BackupService] and snapshots the previous session's DB file
+/// (if any) before [DatabaseProvider] opens a fresh connection to it.
+Future<void> _initBackupService() async {
+  final backupService = BackupService(
+    repository: FileBackupRepository(),
+    dbFile: await DatabaseProvider.getDbFile(),
+    backupsDir: await DatabaseProvider.getBackupsDir(),
+  );
+  getIt.registerSingleton<BackupService>(backupService);
+  await backupService.backupOnStartup();
 }
 
 void _initRepositories() {

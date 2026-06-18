@@ -29,39 +29,69 @@ class DatabaseProvider {
     }
   }
 
-  static Future<Database> _initDb() async {
-    final flavor = appEnvironment.config.flavor;
-    l.i(
-      'DatabaseProvider: Bootstrapping DB for environment: ${flavor.appTitle}',
-    );
+  /// Closes the active connection, releasing the OS-level file lock.
+  /// Required before overwriting the DB file on disk (e.g. restoring a
+  /// backup) — Windows refuses to replace a file that's still open.
+  /// A later [getDatabase] call will lazily reopen a fresh connection.
+  static Future<void> close() async {
+    if (_db != null) {
+      await _db!.close();
+      _db = null;
+    }
+    _initFuture = null;
+  }
 
-    Directory baseDir;
+  /// Resolves the OS application-support directory, namespaced under the
+  /// active [Flavor.appFolder] so dev and prod never share the same files.
+  static Future<Directory> _resolveBaseDir() async {
+    Directory osDir;
     try {
       if (!kIsWeb &&
           (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
-        baseDir = await getApplicationSupportDirectory();
+        osDir = await getApplicationSupportDirectory();
       } else {
         final fallbackPath = await getDatabasesPath();
-        baseDir = Directory(fallbackPath);
+        osDir = Directory(fallbackPath);
       }
     } catch (e) {
       l.w(
         'DatabaseProvider: Failed to get Application Support Directory. Error: $e',
       );
       final fallbackPath = await getDatabasesPath();
-      baseDir = Directory(fallbackPath);
+      osDir = Directory(fallbackPath);
     }
 
-    l.i('DatabaseProvider: Resolved base directory path: ${baseDir.path}');
+    final flavor = appEnvironment.config.flavor;
+    final baseDir = Directory(join(osDir.path, flavor.appFolder));
 
     if (!kIsWeb && !await baseDir.exists()) {
-      l.i(
-        'DatabaseProvider: Directory does not exist. Creating recursively...',
-      );
       await baseDir.create(recursive: true);
     }
 
-    final path = join(baseDir.path, _dbName);
+    return baseDir;
+  }
+
+  /// The live database file for the active flavor.
+  static Future<File> getDbFile() async =>
+      File(join((await _resolveBaseDir()).path, _dbName));
+
+  /// Where backups for the active flavor's database are stored.
+  static Future<Directory> getBackupsDir() async {
+    final dir = Directory(join((await _resolveBaseDir()).path, 'backups'));
+    if (!kIsWeb && !await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  static Future<Database> _initDb() async {
+    final flavor = appEnvironment.config.flavor;
+    l.i(
+      'DatabaseProvider: Bootstrapping DB for environment: ${flavor.appTitle}',
+    );
+
+    final dbFile = await getDbFile();
+    final path = dbFile.path;
     l.i('DatabaseProvider: Final DB path: $path');
 
     final watch = Stopwatch()..start();

@@ -122,6 +122,10 @@ flutter:
     - assets/app_icon_running.png
     - assets/app_icon_idle.ico
     - assets/app_icon_running.ico
+    - assets/app_icon_idle_dev.png
+    - assets/app_icon_running_dev.png
+    - assets/app_icon_idle_dev.ico
+    - assets/app_icon_running_dev.ico
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

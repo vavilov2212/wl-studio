@@ -86,13 +86,20 @@ fvm flutter test test/core/ test/feature/ --reporter expanded
 Write-Host "All tests passed" -ForegroundColor Green
 
 # ─────────────────────────────────────────────
-# 5. Build
+# 5a. Select app icon (prod for release/patch/minor/major, dev for pre-releases)
+# ─────────────────────────────────────────────
+$iconFlavor = if ($newName -match '-dev\.') { "dev" } else { "prod" }
+Write-Host "Selecting '$iconFlavor' app icon..." -ForegroundColor Yellow
+& "$PSScriptRoot\select_app_icon.ps1" -Flavor $iconFlavor
+
+# ─────────────────────────────────────────────
+# 5b. Build
 # ─────────────────────────────────────────────
 Write-Host "Building Windows..." -ForegroundColor Yellow
 fvm flutter build windows --release
 
 # ─────────────────────────────────────────────
-# 5. Package ZIP
+# 5c. Package ZIP
 # ─────────────────────────────────────────────
 $releaseDir  = "release/windows"
 if (!(Test-Path $releaseDir)) { New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null }

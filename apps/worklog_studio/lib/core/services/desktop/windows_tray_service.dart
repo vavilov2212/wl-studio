@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
@@ -118,9 +119,11 @@ class WindowsTrayService with TrayListener, WindowListener {
 
   Future<void> _initTrayIcon({required bool isRunning}) async {
     try {
+      final isDev = appEnvironment.config.flavor == Flavor.development;
+      final suffix = isDev ? '_dev' : '';
       final iconAsset = isRunning
-          ? 'assets/app_icon_running.ico'
-          : 'assets/app_icon_idle.ico';
+          ? 'assets/app_icon_running$suffix.ico'
+          : 'assets/app_icon_idle$suffix.ico';
       await trayManager.setIcon(iconAsset);
       final tooltip = isRunning ? 'worklog studio — tracking' : 'worklog studio';
       await trayManager.setToolTip(tooltip);
