@@ -230,61 +230,68 @@ class _PrimaryButtonState extends State<PrimaryButton> {
             border: border,
           ),
           padding: innerPadding,
-          alignment: widget.alignment ?? Alignment.center,
+          alignment: widget.alignment,
           height: height,
-          child: Stack(
+          // widthFactor: 1 keeps this wrapper tight to the content's width
+          // (so the button doesn't stretch to fill a table cell/Expanded
+          // parent) while still centering it vertically within `height`.
+          child: Align(
             alignment: Alignment.center,
-            children: [
-              Opacity(
-                opacity: widget.type == ButtonType.ghost && widget.isLoading
-                    ? 0
-                    : 1,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.leftIconWidget != null)
-                      _wrapIcon(widget.leftIconWidget!)
-                    else if (widget.leftIcon != null)
-                      buildIcon(widget.leftIcon)!,
-                    if (widget.title != null) ...[
-                      SizedBox(width: context.theme.spacings.sm),
-                      Flexible(
-                        child: Text(
-                          widget.title!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                          style: textStyle.copyWith(color: foregroundColor),
+            widthFactor: 1,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Opacity(
+                  opacity: widget.type == ButtonType.ghost && widget.isLoading
+                      ? 0
+                      : 1,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.leftIconWidget != null)
+                        _wrapIcon(widget.leftIconWidget!)
+                      else if (widget.leftIcon != null)
+                        buildIcon(widget.leftIcon)!,
+                      if (widget.title != null) ...[
+                        SizedBox(width: context.theme.spacings.sm),
+                        Flexible(
+                          child: Text(
+                            widget.title!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                            style: textStyle.copyWith(color: foregroundColor),
+                          ),
+                        ),
+                      ],
+                      if (widget.rightIconWidget != null)
+                        _wrapIcon(widget.rightIconWidget!)
+                      else if (widget.rightIcon != null)
+                        buildIcon(widget.rightIcon)!,
+                    ],
+                  ),
+                ),
+                Positioned.fill(
+                  child: AnimatedCrossFade(
+                    firstChild: SizedBox.shrink(),
+                    secondChild: ColoredBox(
+                      color: backgroundColor,
+                      child: Center(
+                        child: RotatingIcon(
+                          child: buildIcon(
+                            WorklogStudioAssets.vectors.rotateClockwise24Svg,
+                          )!,
                         ),
                       ),
-                    ],
-                    if (widget.rightIconWidget != null)
-                      _wrapIcon(widget.rightIconWidget!)
-                    else if (widget.rightIcon != null)
-                      buildIcon(widget.rightIcon)!,
-                  ],
-                ),
-              ),
-              Positioned.fill(
-                child: AnimatedCrossFade(
-                  firstChild: SizedBox.shrink(),
-                  secondChild: ColoredBox(
-                    color: backgroundColor,
-                    child: Center(
-                      child: RotatingIcon(
-                        child: buildIcon(
-                          WorklogStudioAssets.vectors.rotateClockwise24Svg,
-                        )!,
-                      ),
                     ),
+                    crossFadeState: widget.isLoading
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
+                    duration: kThemeAnimationDuration,
                   ),
-                  crossFadeState: widget.isLoading
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  duration: kThemeAnimationDuration,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

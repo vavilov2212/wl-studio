@@ -6,6 +6,17 @@
 - **Direct Final Answer**: Provide a single, high-density, accurate final response at the very end. 
 - **Formatting**: The final answer must be structured either as a concise bulleted list or a single focused paragraph. Eliminate all fluff, filler text, meta-commentary, and redundant explanations. Get straight to the point.
 
+## 2. Tool Usage Priority
+For any file exploration, reading, creating, editing, moving, or listing:
+1. **First**, use native tools (`Read`, `Edit`, `Write`, `Glob`, `Grep`).
+2. **If native tools are insufficient**, fall back to the `filesystem` MCP server tools.
+3.  For symbol lookups (go-to-definition, find-references, document outline), **prefer the LSP tool over Grep/text search**. Only fall back to Grep if LSP returns no server/error.
+4. **Only if both are insufficient**, use shell commands (Bash).
+
+Shell commands remain the normal choice for everything that isn't a filesystem operation
+(`fvm`/`melos`/`flutter`/`git` commands, builds, tests, etc.) — this priority order applies
+specifically to file exploration/read/write/move/list operations.
+
 # Worklog Studio Monorepo Configuration & Guidelines
 
 ## 1. Project Architecture & Path Map
@@ -36,17 +47,7 @@ Always use `fvm` as a wrapper for commands. Never run global `flutter` or `dart`
 - **Run Code Generation:** `fvm flutter pub run build_runner build --delete-conflicting-outputs` (Inside specific package/app directory)
 - **Run Tests:** `fvm flutter test test/core/ test/feature/ --reporter expanded` (From `apps\worklog_studio\`) — see `apps\worklog_studio\CLAUDE.md` for the mandatory TDD workflow.
 
-## 5. Tool Usage Priority (File Operations)
-For any file exploration, reading, creating, editing, moving, or listing:
-1. **First**, use native tools (`Read`, `Edit`, `Write`, `Glob`, `Grep`).
-2. **If native tools are insufficient**, fall back to the `filesystem` MCP server tools.
-3. **Only if both are insufficient**, use shell commands (Bash).
-
-Shell commands remain the normal choice for everything that isn't a filesystem operation
-(`fvm`/`melos`/`flutter`/`git` commands, builds, tests, etc.) — this priority order applies
-specifically to file exploration/read/write/move/list operations.
-
-## 6. Active Project Skills Matrix
+## 5. Active Project Skills Matrix
 You have 7 custom Project Skills configured. Analyze the user's prompt and internally align your behavior with the corresponding skill:
 1. `codebase-navigator-pro`: Use for code exploration, logic tracing, and onboarding. Enforces "Grep-First" strategy.
 2. `codegen-sentinel`: Use when editing models or classes with annotations. Enforces the `.freezed.dart` exclusion and reminds about build_runner.
