@@ -1,4 +1,4 @@
-# Convert PNG tray icons to ICO for Windows using .NET System.Drawing.
+# Convert PNG tray/app icons to ICO for Windows using .NET System.Drawing.
 # No external tools required — works on any Windows machine with .NET.
 #
 # Usage (from apps/worklog_studio/):
@@ -7,6 +7,8 @@
 Add-Type -AssemblyName System.Drawing
 
 $assetsDir = Join-Path $PSScriptRoot "..\..\assets"
+$macAppIconDir = Join-Path $PSScriptRoot "..\..\macos\Runner\Assets.xcassets\AppIcon.appiconset"
+$windowsResourcesDir = Join-Path $PSScriptRoot "..\..\windows\runner\resources"
 
 function ConvertTo-Ico {
     param(
@@ -94,5 +96,12 @@ ConvertTo-Ico `
 ConvertTo-Ico `
     -PngPath "$assetsDir\app_icon_running.png" `
     -IcoPath "$assetsDir\app_icon_running.ico"
+
+# App icon (taskbar/exe) — reuse the macOS master art so Windows matches
+# the branded icon instead of Flutter's stock logo.
+ConvertTo-Ico `
+    -PngPath "$macAppIconDir\app_icon_1024.png" `
+    -IcoPath "$windowsResourcesDir\app_icon.ico" `
+    -Sizes @(256, 128, 64, 48, 32, 16)
 
 Write-Host "Done."
