@@ -47,7 +47,10 @@ Always use `fvm` as a wrapper for commands. Never run global `flutter` or `dart`
 - **Run Code Generation:** `fvm flutter pub run build_runner build --delete-conflicting-outputs` (Inside specific package/app directory)
 - **Run Tests:** `fvm flutter test test/core/ test/feature/ --reporter expanded` (From `apps\worklog_studio\`) — see `apps\worklog_studio\CLAUDE.md` for the mandatory TDD workflow.
 
-## 5. Active Project Skills Matrix
+## 5. Git Commit Conventions
+- **Never** add a `Co-Authored-By: Claude` (or any AI-attribution) trailer to commit messages. Commits must list only the human author.
+
+## 6. Active Project Skills Matrix
 You have 7 custom Project Skills configured. Analyze the user's prompt and internally align your behavior with the corresponding skill:
 1. `codebase-navigator-pro`: Use for code exploration, logic tracing, and onboarding. Enforces "Grep-First" strategy.
 2. `codegen-sentinel`: Use when editing models or classes with annotations. Enforces the `.freezed.dart` exclusion and reminds about build_runner.
