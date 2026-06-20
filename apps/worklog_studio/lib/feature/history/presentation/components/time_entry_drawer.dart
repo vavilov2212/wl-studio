@@ -285,8 +285,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         LabeledDivider(label: 'Assignment'),
                         SizedBox(height: theme.spacings.lg),
 
-                        // Project Select
-                        Consumer<ProjectTaskState>(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Project Select
+                            Expanded(
+                              child: Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedProject = state.projects
                                 .where((p) => p.id == _draft.projectId)
@@ -394,10 +398,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               ),
                             );
                           },
-                        ),
-                        SizedBox(height: theme.spacings.lg),
-                        // Task Select
-                        Consumer<ProjectTaskState>(
+                              ),
+                            ),
+                            SizedBox(width: theme.spacings.lg),
+                            // Task Select
+                            Expanded(
+                              child: Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedTask = state.tasks
                                 .where((t) => t.id == _draft.taskId)
@@ -515,6 +521,26 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               ),
                             );
                           },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: theme.spacings.lg),
+                        // Comments
+                        InlineField(
+                          label: 'Comments',
+                          value: _commentController.text,
+                          placeholder: 'Add a comment...',
+                          controller: _commentFieldController,
+                          textController: _commentController,
+                          isTextArea: true,
+                          viewModeMaxLines: 3,
+                          editWidget: TextArea(
+                            label: null,
+                            hintText: 'Add a comment...',
+                            controller: _commentController,
+                            autofocus: true,
+                          ),
                         ),
                       ],
                     ),
@@ -613,24 +639,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   ],
                                 ),
                               ],
-                            ),
-                          ),
-                          SizedBox(height: theme.spacings.x2l),
-                          LabeledDivider(label: 'Notes'),
-                          SizedBox(height: theme.spacings.lg),
-                          // Comments
-                          InlineField(
-                            label: 'Comments',
-                            value: _commentController.text,
-                            placeholder: 'Add a comment...',
-                            controller: _commentFieldController,
-                            textController: _commentController,
-                            isTextArea: true,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a comment...',
-                              controller: _commentController,
-                              autofocus: true,
                             ),
                           ),
                           SizedBox(height: theme.spacings.xl),

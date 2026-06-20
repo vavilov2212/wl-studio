@@ -217,15 +217,16 @@ class ProjectList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Description',
-        flex: 3,
+        flex: 8,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Text(
             item.project.description.isEmpty
                 ? 'No description'
                 : item.project.description,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            softWrap: true,
             style: theme.commonTextStyles.body2.copyWith(
               color: item.project.description.isEmpty
                   ? palette.text.secondary.withValues(alpha: 0.5)

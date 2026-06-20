@@ -436,6 +436,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                             controller: _descriptionFieldController,
                             textController: _descriptionController,
                             isTextArea: true,
+                            viewModeMaxLines: 3,
                             editWidget: TextArea(
                               label: null,
                               hintText: 'Add a description...',

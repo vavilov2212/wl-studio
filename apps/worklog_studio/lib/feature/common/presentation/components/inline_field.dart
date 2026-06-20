@@ -14,6 +14,7 @@ class InlineField extends StatefulWidget {
   final Widget? trailing;
   final bool isEditable;
   final ControlSize size;
+  final int? viewModeMaxLines;
 
   const InlineField({
     super.key,
@@ -28,6 +29,7 @@ class InlineField extends StatefulWidget {
     this.trailing,
     this.isEditable = true,
     this.size = ControlSize.sm,
+    this.viewModeMaxLines,
   });
 
   @override
@@ -140,7 +142,12 @@ class _InlineFieldState extends State<InlineField> {
                     maintainState: true,
                     child: Container(
                       width: double.infinity,
-                      height: widget.size == ControlSize.sm ? tokens.height : null,
+                      height: (!widget.isTextArea && widget.size == ControlSize.sm)
+                          ? tokens.height
+                          : null,
+                      constraints: widget.isTextArea
+                          ? BoxConstraints(minHeight: tokens.height)
+                          : null,
                       padding: EdgeInsets.symmetric(
                         horizontal: tokens.horizontalPadding,
                         vertical: tokens.verticalPadding,
@@ -175,9 +182,13 @@ class _InlineFieldState extends State<InlineField> {
                                     ? FontStyle.italic
                                     : null,
                               ),
-                              maxLines: widget.isTextArea ? null : 1,
+                              maxLines: widget.isTextArea
+                                  ? widget.viewModeMaxLines
+                                  : 1,
                               overflow: widget.isTextArea
-                                  ? null
+                                  ? (widget.viewModeMaxLines != null
+                                        ? TextOverflow.ellipsis
+                                        : null)
                                   : TextOverflow.ellipsis,
                             ),
                           ),

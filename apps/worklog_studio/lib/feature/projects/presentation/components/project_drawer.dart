@@ -246,6 +246,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                             controller: _descriptionFieldController,
                             textController: _descriptionController,
                             isTextArea: true,
+                            viewModeMaxLines: 3,
                             editWidget: TextArea(
                               label: null,
                               hintText: 'Add a description...',

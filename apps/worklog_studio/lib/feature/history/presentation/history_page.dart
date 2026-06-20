@@ -530,15 +530,15 @@ class TimeEntryList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Comment',
-        flex: 2,
+        flex: 8,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           final hasComment = item.entry.comment?.isNotEmpty == true;
           return Text(
             hasComment ? item.entry.comment! : 'No comment',
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            softWrap: false,
+            softWrap: true,
             style: theme.commonTextStyles.caption.copyWith(
               color: hasComment
                   ? palette.text.secondary
