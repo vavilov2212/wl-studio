@@ -137,7 +137,10 @@ class _AppShellState extends State<AppShell> {
           Expanded(
             child: Column(
               children: [
-                const TopAppBar(),
+                TopAppBar(
+                  onOpenProject: _openProject,
+                  onOpenTask: _openTask,
+                ),
                 Expanded(child: _buildActiveScreen()),
               ],
             ),
@@ -149,7 +152,14 @@ class _AppShellState extends State<AppShell> {
 }
 
 class TopAppBar extends StatelessWidget {
-  const TopAppBar({super.key});
+  final ValueChanged<String> onOpenProject;
+  final ValueChanged<String> onOpenTask;
+
+  const TopAppBar({
+    super.key,
+    required this.onOpenProject,
+    required this.onOpenTask,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -162,13 +172,23 @@ class TopAppBar extends StatelessWidget {
         color: palette.background.surface,
         border: Border(bottom: BorderSide(color: palette.border.primary)),
       ),
-      child: const GlobalTimeTrackerPanel(),
+      child: GlobalTimeTrackerPanel(
+        onOpenProject: onOpenProject,
+        onOpenTask: onOpenTask,
+      ),
     );
   }
 }
 
 class GlobalTimeTrackerPanel extends StatefulWidget {
-  const GlobalTimeTrackerPanel({super.key});
+  final ValueChanged<String> onOpenProject;
+  final ValueChanged<String> onOpenTask;
+
+  const GlobalTimeTrackerPanel({
+    super.key,
+    required this.onOpenProject,
+    required this.onOpenTask,
+  });
 
   @override
   State<GlobalTimeTrackerPanel> createState() => _GlobalTimeTrackerPanelState();
@@ -407,6 +427,9 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           textColor: colors.$2,
           size: WsInitialBadgeSize.small,
         ),
+        onAction: () => widget.onOpenProject(p.id),
+        // TODO: l10n
+        actionTooltip: 'Open project',
       );
     }).toList();
 
@@ -521,6 +544,9 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           textColor: colors.$2,
           size: WsInitialBadgeSize.small,
         ),
+        onAction: () => widget.onOpenTask(t.id),
+        // TODO: l10n
+        actionTooltip: 'Open task',
       );
     }).toList();
 

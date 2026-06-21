@@ -22,6 +22,7 @@ import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 
 class TimeEntryDrawer extends StatefulWidget {
   final ResolvedTimeEntry? resolvedEntry;
@@ -393,6 +394,11 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       textColor: colors.$2,
                                       size: WsInitialBadgeSize.small,
                                     ),
+                                    onAction: () => context
+                                        .read<AppNavigationController>()
+                                        .openProject(p.id),
+                                    // TODO: l10n
+                                    actionTooltip: 'Open project',
                                   );
                                 }).toList(),
                               ),
@@ -515,6 +521,11 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                           textColor: colors.$2,
                                           size: WsInitialBadgeSize.small,
                                         ),
+                                        onAction: () => context
+                                            .read<AppNavigationController>()
+                                            .openTask(t.id),
+                                        // TODO: l10n
+                                        actionTooltip: 'Open task',
                                       );
                                     })
                                     .toList(),

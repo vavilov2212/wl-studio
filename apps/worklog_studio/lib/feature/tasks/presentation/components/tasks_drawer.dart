@@ -11,6 +11,7 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 
 class TaskDrawer extends StatefulWidget {
   final Task? task;
@@ -353,6 +354,11 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                               textColor: colors.$2,
                                               size: WsInitialBadgeSize.small,
                                             ),
+                                            onAction: () => context
+                                                .read<AppNavigationController>()
+                                                .openProject(p.id),
+                                            // TODO: l10n
+                                            actionTooltip: 'Open project',
                                           );
                                         }).toList(),
                                       ),
