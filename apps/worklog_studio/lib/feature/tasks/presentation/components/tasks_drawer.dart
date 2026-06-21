@@ -12,6 +12,8 @@ import 'package:worklog_studio/feature/common/presentation/components/entity_met
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/core/services/app_navigation_controller.dart';
+import 'package:worklog_studio/domain/time_entry.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 
 class TaskDrawer extends StatefulWidget {
   final Task? task;
@@ -452,6 +454,54 @@ class _TaskDrawerState extends State<TaskDrawer> {
                           ),
                           if (!_isNew) ...[
                             SizedBox(height: theme.spacings.x2l),
+                            LabeledDivider(label: 'Time Entries'),
+                            SizedBox(height: theme.spacings.lg),
+                            Builder(
+                              builder: (context) {
+                                final timeEntries = context
+                                        .watch<EntityResolver>()
+                                        .getResolvedTask(widget.task!.id)
+                                        ?.timeEntries ??
+                                    const <TimeEntry>[];
+
+                                if (timeEntries.isEmpty) {
+                                  return Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: theme.spacings.xl,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'No time entries logged for this task yet.',
+                                        style: theme.commonTextStyles.body
+                                            .copyWith(color: palette.text.muted),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return Column(
+                                  spacing: theme.spacings.lg,
+                                  children: timeEntries.map((entry) {
+                                    return MasterListCard(
+                                      title: (entry.comment?.isNotEmpty ?? false)
+                                          ? entry.comment!
+                                          : 'No comment',
+                                      metadata: _formatEntryRange(entry),
+                                      trailing: Text(
+                                        _formatExactDuration(
+                                          entry.duration(DateTime.now()),
+                                        ),
+                                        style: theme.commonTextStyles.bodyBold,
+                                      ),
+                                      onTap: () => context
+                                          .read<AppNavigationController>()
+                                          .openHistoryEntry(entry.id),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                            SizedBox(height: theme.spacings.x2l),
                             LabeledDivider(label: 'Activity'),
                             SizedBox(height: theme.spacings.lg),
                             Text(
@@ -477,6 +527,38 @@ class _TaskDrawerState extends State<TaskDrawer> {
               ],
             ),
     );
+  }
+
+  String _formatEntryRange(TimeEntry entry) {
+    final start = entry.startAt;
+    final datePart = '${_monthAbbrev(start.month)} ${start.day}';
+    final startTime = _formatTimeOfDay(start);
+    if (entry.endAt == null) {
+      return '$datePart, $startTime - now';
+    }
+    final endTime = _formatTimeOfDay(entry.endAt!);
+    return '$datePart, $startTime - $endTime';
+  }
+
+  String _formatTimeOfDay(DateTime time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _monthAbbrev(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return months[month - 1];
+  }
+
+  String _formatExactDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   String _getStatusText(TaskStatus status) {
