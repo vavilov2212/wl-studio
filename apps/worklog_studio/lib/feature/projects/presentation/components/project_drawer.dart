@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -9,6 +10,8 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 
 class ProjectDrawer extends StatefulWidget {
   final Project? project;
@@ -296,20 +299,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               fullWidth: true,
                             ),
                             SizedBox(height: theme.spacings.x3l),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Associated Tasks',
-                                  style: theme.commonTextStyles.h3,
-                                ),
-                                Text(
-                                  'VIEW ALL',
-                                  style: theme.commonTextStyles.caption3Bold
-                                      .copyWith(color: palette.accent.primary),
-                                ),
-                              ],
-                            ),
+                            LabeledDivider(label: 'Associated Tasks'),
                             SizedBox(height: theme.spacings.xl),
                             if (projectTasks.isEmpty)
                               Padding(
@@ -329,67 +319,21 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               Column(
                                 spacing: theme.spacings.lg,
                                 children: projectTasks.map((task) {
-                                  return Container(
-                                    padding: EdgeInsets.all(theme.spacings.lg),
-                                    decoration: BoxDecoration(
-                                      color: palette.background.surfaceMuted,
-                                      borderRadius: theme.radiuses.md.circular,
+                                  final duration = context
+                                          .watch<EntityResolver>()
+                                          .getResolvedTask(task.id)
+                                          ?.duration(DateTime.now()) ??
+                                      Duration.zero;
+                                  return MasterListCard(
+                                    title: task.title,
+                                    metadata: getTaskStatusText(task.status),
+                                    trailing: Text(
+                                      _formatExactDuration(duration),
+                                      style: theme.commonTextStyles.bodyBold,
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(
-                                            theme.spacings.sm,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: palette.background.surface,
-                                            borderRadius:
-                                                theme.radiuses.sm.circular,
-                                          ),
-                                          child: Icon(
-                                            Icons.task_alt, // Default icon
-                                            color: palette.accent.primary,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        SizedBox(width: theme.spacings.lg),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                task.title,
-                                                style: theme
-                                                    .commonTextStyles
-                                                    .bodyBold,
-                                              ),
-                                              SizedBox(
-                                                height: theme.spacings.xxs,
-                                              ),
-                                              Text(
-                                                getStatusText(
-                                                  widget.project!.status,
-                                                ),
-                                                style: theme
-                                                    .commonTextStyles
-                                                    .caption
-                                                    .copyWith(
-                                                      color: palette
-                                                          .text
-                                                          .secondary,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          '0:00h', // Default time
-                                          style:
-                                              theme.commonTextStyles.bodyBold,
-                                        ),
-                                      ],
-                                    ),
+                                    onTap: () => context
+                                        .read<AppNavigationController>()
+                                        .openTask(task.id),
                                   );
                                 }).toList(),
                               ),
@@ -430,6 +374,24 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
               ],
             ),
     );
+  }
+
+  String getTaskStatusText(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.open:
+        return 'OPEN';
+      case TaskStatus.done:
+        return 'DONE';
+      case TaskStatus.archived:
+        return 'ARCHIVED';
+    }
+  }
+
+  String _formatExactDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   String getStatusText(ProjectStatus status) {
