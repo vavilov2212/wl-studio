@@ -241,6 +241,9 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
                   Expanded(
                     child: Text(
                       option.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
                       style: tokens.textStyle.copyWith(
                         color: isSelected
                             ? palette.accent.primary
