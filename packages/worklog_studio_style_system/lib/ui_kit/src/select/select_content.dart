@@ -180,6 +180,7 @@ class _SelectOptionRow<T> extends StatefulWidget {
 
 class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
   bool _isHovered = false;
+  bool _isActionHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -191,21 +192,23 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
 
     Widget? actionIcon;
     if (widget.onAction != null) {
-      final icon = InkWell(
-        borderRadius: theme.radiuses.sm.circular,
-        onTap: widget.onAction,
-        child: Padding(
-          padding: EdgeInsets.all(theme.spacings.xxs),
-          child: Icon(
-            option.actionIcon ?? Icons.open_in_new,
-            size: 14,
-            color: palette.text.secondary,
+      final icon = MouseRegion(
+        onEnter: (_) => setState(() => _isActionHovered = true),
+        onExit: (_) => setState(() => _isActionHovered = false),
+        child: InkWell(
+          borderRadius: theme.radiuses.sm.circular,
+          onTap: widget.onAction,
+          child: Padding(
+            padding: EdgeInsets.all(theme.spacings.xxs),
+            child: Icon(
+              option.actionIcon ?? Icons.open_in_new,
+              size: 14,
+              color: palette.text.secondary,
+            ),
           ),
         ),
       );
-      actionIcon = option.actionTooltip != null
-          ? Tooltip(message: option.actionTooltip!, child: icon)
-          : icon;
+      actionIcon = icon;
     }
 
     return MouseRegion(
@@ -262,11 +265,61 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
                   duration: const Duration(milliseconds: 120),
                   child: IgnorePointer(
                     ignoring: !_isHovered,
-                    child: actionIcon,
+                    // Local tooltip bubble drawn directly in this Stack
+                    // rather than via the framework Tooltip widget: Tooltip
+                    // positions itself through an Overlay-hosted
+                    // CompositedTransformFollower, and its target here would
+                    // live inside this popover's own custom OverlayEntry —
+                    // a combination Flutter's rendering pipeline can't
+                    // reliably lay out (reentrant/undeterminable paint
+                    // transform). Staying overlay-free avoids that entirely.
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (option.actionTooltip != null && _isActionHovered) ...[
+                          _ActionTooltipBubble(message: option.actionTooltip!),
+                          SizedBox(width: theme.spacings.xs),
+                        ],
+                        actionIcon,
+                      ],
+                    ),
                   ),
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Minimal, overlay-free tooltip bubble for the action icon. See the
+/// usage site above for why the framework [Tooltip] widget can't be used
+/// here.
+class _ActionTooltipBubble extends StatelessWidget {
+  final String message;
+
+  const _ActionTooltipBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.spacings.sm,
+        vertical: theme.spacings.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: palette.text.primary,
+        borderRadius: theme.radiuses.sm.circular,
+      ),
+      child: Text(
+        message,
+        style: theme.commonTextStyles.caption.copyWith(
+          color: palette.background.surface,
         ),
       ),
     );

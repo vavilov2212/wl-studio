@@ -97,48 +97,35 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
 
     _overlayEntry = OverlayEntry(
       builder: (context) {
-        // Nested Overlay so that overlay-portal-based descendants (e.g.
-        // Tooltip) resolve to this local Overlay instead of reaching back
-        // into the root Overlay while it's mid-layout for this same entry —
-        // without it, hovering a Tooltip inside popover content throws a
-        // reentrant layout exception in _RenderLayoutBuilder.
-        return Overlay(
-          initialEntries: [
-            OverlayEntry(
-              builder: (context) {
-                return Stack(
-                  children: [
-                    // Сам Popover
-                    CompositedTransformFollower(
-                      link: _layerLink,
-                      showWhenUnlinked: false,
-                      targetAnchor: widget.targetAnchor,
-                      followerAnchor: widget.followerAnchor,
-                      offset: widget.offset,
-                      child: Align(
-                        alignment: widget.followerAnchor,
-                        child: SizedBox(
-                          width: effectiveWidth,
-                          child: Material(
-                            type: MaterialType.transparency,
-                            child: TapRegion(
-                              groupId: _internalTapRegionGroupId,
-                              onTapOutside: (_) {
-                                if (widget.onRequestClose != null) {
-                                  widget.onRequestClose!();
-                                } else {
-                                  _controller.hide();
-                                }
-                              },
-                              child: widget.contentBuilder(context),
-                            ),
-                          ),
-                        ),
-                      ),
+        return Stack(
+          children: [
+            // Сам Popover
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              targetAnchor: widget.targetAnchor,
+              followerAnchor: widget.followerAnchor,
+              offset: widget.offset,
+              child: Align(
+                alignment: widget.followerAnchor,
+                child: SizedBox(
+                  width: effectiveWidth,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: TapRegion(
+                      groupId: _internalTapRegionGroupId,
+                      onTapOutside: (_) {
+                        if (widget.onRequestClose != null) {
+                          widget.onRequestClose!();
+                        } else {
+                          _controller.hide();
+                        }
+                      },
+                      child: widget.contentBuilder(context),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ),
             ),
           ],
         );
