@@ -17,7 +17,9 @@ import 'components/project_actions_cell.dart';
 enum ProjectViewMode { cards, table }
 
 class ProjectsScreen extends StatefulWidget {
-  const ProjectsScreen({super.key});
+  final String? initialSelectedProjectId;
+
+  const ProjectsScreen({super.key, this.initialSelectedProjectId});
 
   @override
   State<ProjectsScreen> createState() => _ProjectsScreenState();
@@ -26,6 +28,46 @@ class ProjectsScreen extends StatefulWidget {
 class _ProjectsScreenState extends State<ProjectsScreen> {
   DrawerControllerState<Project> _drawerState = DrawerControllerState.closed();
   ProjectViewMode _viewMode = ProjectViewMode.table;
+  final GlobalKey _selectedRowKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSelectedProjectId != null) {
+      _selectProjectById(widget.initialSelectedProjectId!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProjectsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedProjectId != null &&
+        widget.initialSelectedProjectId != oldWidget.initialSelectedProjectId) {
+      _selectProjectById(widget.initialSelectedProjectId!);
+    }
+  }
+
+  void _selectProjectById(String projectId) {
+    final resolvedProject = context
+        .read<EntityResolver>()
+        .getResolvedProjects()
+        .firstWhereOrNull((p) => p.id == projectId);
+    if (resolvedProject != null) {
+      setState(() {
+        _drawerState = DrawerControllerState.edit(resolvedProject.project);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final rowContext = _selectedRowKey.currentContext;
+        if (rowContext != null) {
+          Scrollable.ensureVisible(
+            rowContext,
+            duration: const Duration(milliseconds: 300),
+            alignment: 0.5,
+          );
+        }
+      });
+    }
+  }
 
   void _handleProjectSelected(Project project) {
     setState(() {
@@ -62,6 +104,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           child: ProjectList(
             projects: resolvedProjects,
             selectedProject: _drawerState.entity,
+            selectedRowKey: _selectedRowKey,
             onProjectSelected: _handleProjectSelected,
             onCreateProject: _handleCreateProject,
             viewMode: _viewMode,
@@ -81,6 +124,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 class ProjectList extends StatelessWidget {
   final List<ResolvedProject> projects;
   final Project? selectedProject;
+  final GlobalKey? selectedRowKey;
   final ValueChanged<Project> onProjectSelected;
   final VoidCallback onCreateProject;
   final ProjectViewMode viewMode;
@@ -90,6 +134,7 @@ class ProjectList extends StatelessWidget {
     super.key,
     required this.projects,
     required this.selectedProject,
+    this.selectedRowKey,
     required this.onProjectSelected,
     required this.onCreateProject,
     required this.viewMode,
@@ -145,6 +190,8 @@ class ProjectList extends StatelessWidget {
                       selectedItem: projects.firstWhereOrNull(
                         (e) => e.id == selectedProject?.id,
                       ),
+                      rowKeyBuilder: (item) =>
+                          item.id == selectedProject?.id ? selectedRowKey : null,
                       onRowTap: (item) => onProjectSelected(item.project),
                       isSelected: (item, selected) => item.id == selected?.id,
                       columns: _getTableColumns(theme),
@@ -154,6 +201,7 @@ class ProjectList extends StatelessWidget {
                       children: projects.map((project) {
                         final isSelected = selectedProject?.id == project.id;
                         return ProjectCard(
+                          key: isSelected ? selectedRowKey : null,
                           project: project,
                           isSelected: isSelected,
                           onTap: () => onProjectSelected(project.project),

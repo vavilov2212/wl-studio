@@ -19,6 +19,7 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'dart:async';
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
@@ -35,11 +36,17 @@ class _AppShellState extends State<AppShell> {
   String? _pendingHistoryEntryId;
   int _historyCreateToken = 0;
   String? _pendingTaskId;
+  String? _pendingProjectId;
   StreamSubscription<String>? _navSub;
 
   @override
   void initState() {
     super.initState();
+    context.read<AppNavigationController>().registerHandlers(
+      openTask: _openTask,
+      openProject: _openProject,
+      openHistoryEntry: _openHistoryEntry,
+    );
     _navSub = DesktopServiceRegistry.instance.navigationStream.listen((route) {
       if (route == 'history') {
         _onRouteSelected(AppRoute.history);
@@ -84,6 +91,13 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _openProject(String projectId) {
+    setState(() {
+      _pendingProjectId = projectId;
+      _currentRoute = AppRoute.projects;
+    });
+  }
+
   Widget _buildActiveScreen() {
     return IndexedStack(
       index: _currentRoute.index,
@@ -100,7 +114,7 @@ class _AppShellState extends State<AppShell> {
           initialSelectedEntryId: _pendingHistoryEntryId,
           createRequestToken: _historyCreateToken,
         ),
-        const ProjectsScreen(),
+        ProjectsScreen(initialSelectedProjectId: _pendingProjectId),
         TasksScreen(initialSelectedTaskId: _pendingTaskId),
         const SettingsScreen(),
       ],

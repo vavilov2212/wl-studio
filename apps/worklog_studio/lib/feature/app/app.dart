@@ -4,6 +4,7 @@ import 'package:l/l.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:flutter/material.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
@@ -62,6 +63,9 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<AppNavigationController>(
+          create: (_) => AppNavigationController(),
+        ),
         BlocProvider<TimeTrackerBloc>(
           create: (_) {
             final clock = SystemClock();
