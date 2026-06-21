@@ -19,9 +19,14 @@ small action icon per row rather than splitting text-vs-row hit testing).
    the navigate-and-open-drawer-and-scroll-into-view behavior the dashboard already has for
    tasks and history entries.
 3. Wiring the action icon, via that controller, on the project/task `Select`s in: the
-   tracking panel (`app_shell.dart`), the work-log welcome layout (`welcome_layout.dart`),
-   the project select nested inside `TaskDrawer` (`tasks_drawer.dart`), and the project/task
+   tracking panel (`app_shell.dart`'s `_buildProjectSelector`/`_buildTaskSelector`), the
+   project select nested inside `TaskDrawer` (`tasks_drawer.dart`), and the project/task
    selects nested inside `TimeEntryDrawer` (`time_entry_drawer.dart`).
+
+   `welcome_layout.dart`'s project/task selects are explicitly excluded: `WorkLogPage`
+   (which renders `WelcomeLayout`) is not mounted anywhere in the app — `work_log_page.dart`
+   has no importers. Wiring it would be dead work; the actually-live tracking panel is
+   `app_shell.dart`'s `InlineField`/`Select` pair.
 
 ### Out of scope
 
@@ -124,15 +129,15 @@ it's nested under `AppShell`.
 For each project/task `SelectOption` built in the following files, set `onAction` to call
 the navigation controller with that option's entity id:
 
-- `app_shell.dart` (tracking panel project + task selects)
-- `welcome_layout.dart` (project + task selects)
-- `tasks_drawer.dart` (project select nested inside `TaskDrawer`)
-- `time_entry_drawer.dart` (project + task selects nested inside `TimeEntryDrawer`)
+- `app_shell.dart` (tracking panel project + task selects) — calls `_openProject`/`_openTask`
+  directly, since these are already methods on `_AppShellState` itself.
+- `tasks_drawer.dart` (project select nested inside `TaskDrawer`) — via
+  `context.read<AppNavigationController>().openProject(option.value)`.
+- `time_entry_drawer.dart` (project + task selects nested inside `TimeEntryDrawer`) — via
+  `context.read<AppNavigationController>().openProject/openTask(option.value)`.
 
-Each call is `context.read<AppNavigationController>().openProject(option.value)` /
-`.openTask(option.value)`. No drawer layout changes; the existing drawer for the target
-entity opens on its own page exactly as the dashboard's "top tasks" / "recent entries"
-cards already do today.
+No drawer layout changes; the existing drawer for the target entity opens on its own page
+exactly as the dashboard's "top tasks" / "recent entries" cards already do today.
 
 ## Testing
 
