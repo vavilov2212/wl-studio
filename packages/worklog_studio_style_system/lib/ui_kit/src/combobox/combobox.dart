@@ -21,6 +21,7 @@ class Combobox extends StatefulWidget {
   final Offset offset;
   final double? width;
   final bool matchTriggerWidth;
+  final double? minWidth;
   final Object? tapRegionGroupId;
 
   const Combobox({
@@ -32,6 +33,7 @@ class Combobox extends StatefulWidget {
     this.offset = const Offset(0, 4),
     this.width,
     this.matchTriggerWidth = false,
+    this.minWidth,
     this.tapRegionGroupId,
   });
 
@@ -112,6 +114,7 @@ class _ComboboxState extends State<Combobox> {
       offset: widget.offset,
       width: widget.width,
       matchTriggerWidth: widget.matchTriggerWidth,
+      minWidth: widget.minWidth,
       tapRegionGroupId: widget.tapRegionGroupId,
       trigger: GestureDetector(
         behavior: HitTestBehavior.translucent,
