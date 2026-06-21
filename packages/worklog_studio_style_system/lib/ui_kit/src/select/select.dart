@@ -240,6 +240,7 @@ class _SelectState<T> extends State<Select<T>> {
             _handleSelect(value);
             close();
           },
+          close: close,
           searchQuery: _searchQuery,
           size: widget.size,
           actionBuilder: widget.actionBuilder != null
