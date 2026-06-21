@@ -198,8 +198,12 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
         child: InkWell(
           borderRadius: theme.radiuses.sm.circular,
           onTap: widget.onAction,
-          child: Padding(
+          child: Container(
             padding: EdgeInsets.all(theme.spacings.xxs),
+            decoration: BoxDecoration(
+              color: palette.background.surfaceMuted,
+              borderRadius: theme.radiuses.sm.circular,
+            ),
             child: Icon(
               option.actionIcon ?? Icons.open_in_new,
               size: 14,
@@ -262,7 +266,7 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
                 right: theme.spacings.xs,
                 child: AnimatedOpacity(
                   opacity: _isHovered ? 1 : 0,
-                  duration: const Duration(milliseconds: 120),
+                  duration: const Duration(milliseconds: 20),
                   child: IgnorePointer(
                     ignoring: !_isHovered,
                     // Local tooltip bubble drawn directly in this Stack
