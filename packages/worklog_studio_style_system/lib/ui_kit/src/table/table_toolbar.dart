@@ -5,12 +5,14 @@ class TableToolbar extends StatelessWidget {
   final bool isFilterExpanded;
   final VoidCallback onFilterTap;
   final int activeFilterCount;
+  final MainAxisAlignment mainAxisAlignment;
 
   const TableToolbar({
     super.key,
     required this.isFilterExpanded,
     required this.onFilterTap,
     this.activeFilterCount = 0,
+    this.mainAxisAlignment =  MainAxisAlignment.end,
   });
 
   @override
@@ -18,6 +20,7 @@ class TableToolbar extends StatelessWidget {
     final theme = context.theme;
 
     return Row(
+      mainAxisAlignment: mainAxisAlignment,
       children: [
         _ToolbarIconButton(
           icon: Icons.filter_list,
