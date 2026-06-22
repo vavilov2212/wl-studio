@@ -61,8 +61,8 @@ class _ToolbarIconButton extends StatelessWidget {
           onTap: enabled ? onTap : null,
           isDisabled: !enabled,
           type: isActive ? ButtonType.secondary : ButtonType.ghost,
-          size: ButtonSize.sm,
-          leftIconWidget: Icon(icon, size: 16),
+          size: ButtonSize.xs,
+          leftIconWidget: Icon(icon),
         ),
         if (badgeCount > 0)
           Positioned(

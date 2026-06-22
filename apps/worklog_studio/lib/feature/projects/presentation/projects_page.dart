@@ -31,7 +31,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   DrawerControllerState<Project> _drawerState = DrawerControllerState.closed();
   ProjectViewMode _viewMode = ProjectViewMode.table;
   ProjectsFilters _filters = const ProjectsFilters();
-  bool _isFilterExpanded = false;
+  bool? _filterExpandedOverride;
+  bool get _isFilterExpanded => _filterExpandedOverride ?? _filters.isActive;
   final GlobalKey _selectedRowKey = GlobalKey();
 
   @override
@@ -117,7 +118,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             onFiltersChanged: (f) => setState(() => _filters = f),
             isFilterExpanded: _isFilterExpanded,
             onFilterExpandedToggle: () =>
-                setState(() => _isFilterExpanded = !_isFilterExpanded),
+                setState(() => _filterExpandedOverride = !_isFilterExpanded),
           ),
         ),
         ProjectDrawer(

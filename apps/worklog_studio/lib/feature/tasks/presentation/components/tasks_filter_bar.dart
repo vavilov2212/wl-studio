@@ -26,6 +26,7 @@ class TasksFilterBar extends StatelessWidget {
     final theme = context.theme;
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         ClearableFilterPill(
           isActive: filters.projectIds.isNotEmpty,

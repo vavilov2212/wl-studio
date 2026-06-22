@@ -31,7 +31,8 @@ class _TasksScreenState extends State<TasksScreen> {
   DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
   TaskViewMode _viewMode = TaskViewMode.table;
   TasksFilters _filters = const TasksFilters();
-  bool _isFilterExpanded = false;
+  bool? _filterExpandedOverride;
+  bool get _isFilterExpanded => _filterExpandedOverride ?? _filters.isActive;
   final GlobalKey _selectedRowKey = GlobalKey();
 
   @override
@@ -117,7 +118,7 @@ class _TasksScreenState extends State<TasksScreen> {
             onFiltersChanged: (f) => setState(() => _filters = f),
             isFilterExpanded: _isFilterExpanded,
             onFilterExpandedToggle: () =>
-                setState(() => _isFilterExpanded = !_isFilterExpanded),
+                setState(() => _filterExpandedOverride = !_isFilterExpanded),
           ),
         ),
         TaskDrawer(

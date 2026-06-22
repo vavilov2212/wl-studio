@@ -54,6 +54,10 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
   EdgeInsetsGeometry get innerPadding {
     return switch (widget.size) {
+      ButtonSize.xs => EdgeInsets.symmetric(
+        vertical: context.theme.spacings.xxs,
+        horizontal: context.theme.spacings.sm,
+      ),
       ButtonSize.sm => EdgeInsets.symmetric(
         vertical: context.theme.spacings.sm,
         horizontal: context.theme.spacings.md,
@@ -71,6 +75,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
   double get height {
     return switch (widget.size) {
+      ButtonSize.xs => 28,
       ButtonSize.sm => 36,
       ButtonSize.md => 40,
       ButtonSize.lg => 44,
@@ -95,6 +100,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
   double get iconDimension {
     return switch (widget.size) {
+      ButtonSize.xs => 12,
       ButtonSize.sm => 14,
       ButtonSize.md => 18,
       ButtonSize.lg => 22,
@@ -103,6 +109,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
   TextStyle get textStyle {
     return switch (widget.size) {
+      ButtonSize.xs => context.theme.commonTextStyles.buttonS,
       ButtonSize.sm => context.theme.commonTextStyles.buttonS,
       ButtonSize.md => context.theme.commonTextStyles.buttonM,
       ButtonSize.lg => context.theme.commonTextStyles.buttonL,
@@ -301,7 +308,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
 enum ButtonType { primary, secondary, danger, success, warning, ghost }
 
-enum ButtonSize { sm, md, lg }
+enum ButtonSize { xs, sm, md, lg }
 
 class RotatingIcon extends StatefulWidget {
   final Widget child;

@@ -39,7 +39,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       DrawerControllerState.closed();
   HistoryViewMode _viewMode = HistoryViewMode.table;
   HistoryFilters _filters = const HistoryFilters();
-  bool _isFilterExpanded = false;
+  bool? _filterExpandedOverride;
+  bool get _isFilterExpanded => _filterExpandedOverride ?? _filters.isActive;
   final GlobalKey _selectedRowKey = GlobalKey();
   late int _handledCreateToken;
 
@@ -133,7 +134,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onFiltersChanged: (f) => setState(() => _filters = f),
               isFilterExpanded: _isFilterExpanded,
               onFilterExpandedToggle: () =>
-                  setState(() => _isFilterExpanded = !_isFilterExpanded),
+                  setState(() => _filterExpandedOverride = !_isFilterExpanded),
             ),
           ),
           TimeEntryDrawer(
