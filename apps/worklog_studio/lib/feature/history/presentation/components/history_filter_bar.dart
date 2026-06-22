@@ -32,19 +32,22 @@ class HistoryFilterBar extends StatelessWidget {
               dateTo: filters.dateTo,
             ),
           ),
-          child: MultiSelect<String>(
-            value: filters.taskIds.toList(),
-            onChanged: (ids) => onChanged(
-              HistoryFilters(
-                taskIds: ids.toSet(),
-                projectIds: filters.projectIds,
-                dateFrom: filters.dateFrom,
-                dateTo: filters.dateTo,
+          child: SizedBox(
+            width: 160,
+            child: MultiSelect<String>(
+              value: filters.taskIds.toList(),
+              onChanged: (ids) => onChanged(
+                HistoryFilters(
+                  taskIds: ids.toSet(),
+                  projectIds: filters.projectIds,
+                  dateFrom: filters.dateFrom,
+                  dateTo: filters.dateTo,
+                ),
               ),
+              options: taskOptions,
+              placeholder: 'Task',
+              searchable: true,
             ),
-            options: taskOptions,
-            placeholder: 'Task',
-            searchable: true,
           ),
         ),
         SizedBox(width: theme.spacings.sm),
@@ -58,19 +61,22 @@ class HistoryFilterBar extends StatelessWidget {
               dateTo: filters.dateTo,
             ),
           ),
-          child: MultiSelect<String>(
-            value: filters.projectIds.toList(),
-            onChanged: (ids) => onChanged(
-              HistoryFilters(
-                taskIds: filters.taskIds,
-                projectIds: ids.toSet(),
-                dateFrom: filters.dateFrom,
-                dateTo: filters.dateTo,
+          child: SizedBox(
+            width: 160,
+            child: MultiSelect<String>(
+              value: filters.projectIds.toList(),
+              onChanged: (ids) => onChanged(
+                HistoryFilters(
+                  taskIds: filters.taskIds,
+                  projectIds: ids.toSet(),
+                  dateFrom: filters.dateFrom,
+                  dateTo: filters.dateTo,
+                ),
               ),
+              options: projectOptions,
+              placeholder: 'Project',
+              searchable: true,
             ),
-            options: projectOptions,
-            placeholder: 'Project',
-            searchable: true,
           ),
         ),
         SizedBox(width: theme.spacings.sm),
@@ -79,19 +85,22 @@ class HistoryFilterBar extends StatelessWidget {
           onClear: () => onChanged(
             HistoryFilters(taskIds: filters.taskIds, projectIds: filters.projectIds),
           ),
-          child: DateRangeButton(
-            value: filters.dateFrom != null
-                ? DateTimeRange(start: filters.dateFrom!, end: filters.dateTo!)
-                : null,
-            onChanged: (range) => onChanged(
-              HistoryFilters(
-                taskIds: filters.taskIds,
-                projectIds: filters.projectIds,
-                dateFrom: range?.start,
-                dateTo: range?.end,
+          child: SizedBox(
+            width: 160,
+            child: DateRangeButton(
+              value: filters.dateFrom != null
+                  ? DateTimeRange(start: filters.dateFrom!, end: filters.dateTo!)
+                  : null,
+              onChanged: (range) => onChanged(
+                HistoryFilters(
+                  taskIds: filters.taskIds,
+                  projectIds: filters.projectIds,
+                  dateFrom: range?.start,
+                  dateTo: range?.end,
+                ),
               ),
+              placeholder: 'Date',
             ),
-            placeholder: 'Date',
           ),
         ),
         if (filters.isActive) ...[

@@ -37,19 +37,22 @@ class TasksFilterBar extends StatelessWidget {
               dateTo: filters.dateTo,
             ),
           ),
-          child: MultiSelect<String>(
-            value: filters.projectIds.toList(),
-            onChanged: (ids) => onChanged(
-              TasksFilters(
-                projectIds: ids.toSet(),
-                statuses: filters.statuses,
-                dateFrom: filters.dateFrom,
-                dateTo: filters.dateTo,
+          child: SizedBox(
+            width: 160,
+            child: MultiSelect<String>(
+              value: filters.projectIds.toList(),
+              onChanged: (ids) => onChanged(
+                TasksFilters(
+                  projectIds: ids.toSet(),
+                  statuses: filters.statuses,
+                  dateFrom: filters.dateFrom,
+                  dateTo: filters.dateTo,
+                ),
               ),
+              options: projectOptions,
+              placeholder: 'Project',
+              searchable: true,
             ),
-            options: projectOptions,
-            placeholder: 'Project',
-            searchable: true,
           ),
         ),
         SizedBox(width: theme.spacings.sm),
@@ -63,18 +66,21 @@ class TasksFilterBar extends StatelessWidget {
               dateTo: filters.dateTo,
             ),
           ),
-          child: MultiSelect<TaskStatus>(
-            value: filters.statuses.toList(),
-            onChanged: (statuses) => onChanged(
-              TasksFilters(
-                projectIds: filters.projectIds,
-                statuses: statuses.toSet(),
-                dateFrom: filters.dateFrom,
-                dateTo: filters.dateTo,
+          child: SizedBox(
+            width: 160,
+            child: MultiSelect<TaskStatus>(
+              value: filters.statuses.toList(),
+              onChanged: (statuses) => onChanged(
+                TasksFilters(
+                  projectIds: filters.projectIds,
+                  statuses: statuses.toSet(),
+                  dateFrom: filters.dateFrom,
+                  dateTo: filters.dateTo,
+                ),
               ),
+              options: _statusOptions,
+              placeholder: 'Status',
             ),
-            options: _statusOptions,
-            placeholder: 'Status',
           ),
         ),
         SizedBox(width: theme.spacings.sm),
@@ -83,19 +89,22 @@ class TasksFilterBar extends StatelessWidget {
           onClear: () => onChanged(
             TasksFilters(projectIds: filters.projectIds, statuses: filters.statuses),
           ),
-          child: DateRangeButton(
-            value: filters.dateFrom != null
-                ? DateTimeRange(start: filters.dateFrom!, end: filters.dateTo!)
-                : null,
-            onChanged: (range) => onChanged(
-              TasksFilters(
-                projectIds: filters.projectIds,
-                statuses: filters.statuses,
-                dateFrom: range?.start,
-                dateTo: range?.end,
+          child: SizedBox(
+            width: 160,
+            child: DateRangeButton(
+              value: filters.dateFrom != null
+                  ? DateTimeRange(start: filters.dateFrom!, end: filters.dateTo!)
+                  : null,
+              onChanged: (range) => onChanged(
+                TasksFilters(
+                  projectIds: filters.projectIds,
+                  statuses: filters.statuses,
+                  dateFrom: range?.start,
+                  dateTo: range?.end,
+                ),
               ),
+              placeholder: 'Date',
             ),
-            placeholder: 'Date',
           ),
         ),
         if (filters.isActive) ...[
