@@ -8,6 +8,7 @@ export 'src/drawer/index.dart';
 export 'src/popover/popover.dart';
 export 'src/select/index.dart';
 export 'src/multi_select/index.dart';
+export 'src/date_range_button/index.dart';
 export 'src/combobox/combobox.dart';
 export 'src/cards/master_list_card.dart';
 export 'src/cards/base_card.dart';
