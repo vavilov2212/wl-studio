@@ -5,6 +5,7 @@ import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/domain/history_filters.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
@@ -15,6 +16,7 @@ import 'package:worklog_studio/feature/common/presentation/components/ws_initial
 import 'components/time_entry_card.dart';
 import 'components/time_entry_drawer.dart';
 import 'components/time_entry_actions_cell.dart';
+import 'components/history_filter_bar.dart';
 
 enum HistoryViewMode { cards, table }
 
@@ -36,6 +38,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   DrawerControllerState<TimeEntry> _drawerState =
       DrawerControllerState.closed();
   HistoryViewMode _viewMode = HistoryViewMode.table;
+  HistoryFilters _filters = const HistoryFilters();
+  bool _isFilterExpanded = false;
   final GlobalKey _selectedRowKey = GlobalKey();
   late int _handledCreateToken;
 
@@ -125,6 +129,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onCreateEntry: _handleCreateEntry,
               viewMode: _viewMode,
               onViewModeChanged: (mode) => setState(() => _viewMode = mode),
+              filters: _filters,
+              onFiltersChanged: (f) => setState(() => _filters = f),
+              isFilterExpanded: _isFilterExpanded,
+              onFilterExpandedToggle: () =>
+                  setState(() => _isFilterExpanded = !_isFilterExpanded),
             ),
           ),
           TimeEntryDrawer(
@@ -150,6 +159,10 @@ class TimeEntryList extends StatelessWidget {
   final VoidCallback onCreateEntry;
   final HistoryViewMode viewMode;
   final ValueChanged<HistoryViewMode> onViewModeChanged;
+  final HistoryFilters filters;
+  final ValueChanged<HistoryFilters> onFiltersChanged;
+  final bool isFilterExpanded;
+  final VoidCallback onFilterExpandedToggle;
 
   const TimeEntryList({
     super.key,
@@ -160,6 +173,10 @@ class TimeEntryList extends StatelessWidget {
     required this.onCreateEntry,
     required this.viewMode,
     required this.onViewModeChanged,
+    required this.filters,
+    required this.onFiltersChanged,
+    required this.isFilterExpanded,
+    required this.onFilterExpandedToggle,
   });
 
   @override
@@ -167,8 +184,10 @@ class TimeEntryList extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
+    final filteredEntries = applyHistoryFilters(entries, filters);
+
     // Sort entries: latest first
-    final sortedEntries = List<ResolvedTimeEntry>.from(entries)
+    final sortedEntries = List<ResolvedTimeEntry>.from(filteredEntries)
       ..sort((a, b) {
         // Active entries always at the top
         if (a.isRunning && !b.isRunning) return -1;
@@ -292,6 +311,34 @@ class TimeEntryList extends StatelessWidget {
               );
             },
           ),
+          SizedBox(height: theme.spacings.lg),
+          TableToolbar(
+            isFilterExpanded: isFilterExpanded,
+            onFilterTap: onFilterExpandedToggle,
+            activeFilterCount: filters.activeCount,
+          ),
+          if (isFilterExpanded) ...[
+            SizedBox(height: theme.spacings.sm),
+            Builder(
+              builder: (context) {
+                final resolver = context.watch<EntityResolver>();
+                final taskOptions = resolver
+                    .getResolvedTasks()
+                    .map((t) => SelectOption(value: t.id, label: t.title))
+                    .toList();
+                final projectOptions = resolver
+                    .getResolvedProjects()
+                    .map((p) => SelectOption(value: p.id, label: p.name))
+                    .toList();
+                return HistoryFilterBar(
+                  filters: filters,
+                  onChanged: onFiltersChanged,
+                  taskOptions: taskOptions,
+                  projectOptions: projectOptions,
+                );
+              },
+            ),
+          ],
           SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
