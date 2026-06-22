@@ -4,11 +4,13 @@ import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
+import 'package:worklog_studio/domain/projects_filters.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/project_card.dart';
 import 'components/project_drawer.dart';
+import 'components/projects_filter_bar.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
@@ -28,6 +30,8 @@ class ProjectsScreen extends StatefulWidget {
 class _ProjectsScreenState extends State<ProjectsScreen> {
   DrawerControllerState<Project> _drawerState = DrawerControllerState.closed();
   ProjectViewMode _viewMode = ProjectViewMode.table;
+  ProjectsFilters _filters = const ProjectsFilters();
+  bool _isFilterExpanded = false;
   final GlobalKey _selectedRowKey = GlobalKey();
 
   @override
@@ -109,6 +113,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             onCreateProject: _handleCreateProject,
             viewMode: _viewMode,
             onViewModeChanged: (mode) => setState(() => _viewMode = mode),
+            filters: _filters,
+            onFiltersChanged: (f) => setState(() => _filters = f),
+            isFilterExpanded: _isFilterExpanded,
+            onFilterExpandedToggle: () =>
+                setState(() => _isFilterExpanded = !_isFilterExpanded),
           ),
         ),
         ProjectDrawer(
@@ -129,6 +138,10 @@ class ProjectList extends StatelessWidget {
   final VoidCallback onCreateProject;
   final ProjectViewMode viewMode;
   final ValueChanged<ProjectViewMode> onViewModeChanged;
+  final ProjectsFilters filters;
+  final ValueChanged<ProjectsFilters> onFiltersChanged;
+  final bool isFilterExpanded;
+  final VoidCallback onFilterExpandedToggle;
 
   const ProjectList({
     super.key,
@@ -139,6 +152,10 @@ class ProjectList extends StatelessWidget {
     required this.onCreateProject,
     required this.viewMode,
     required this.onViewModeChanged,
+    required this.filters,
+    required this.onFiltersChanged,
+    required this.isFilterExpanded,
+    required this.onFilterExpandedToggle,
   });
 
   @override
@@ -181,33 +198,46 @@ class ProjectList extends StatelessWidget {
               ),
             ],
           ),
+          SizedBox(height: theme.spacings.lg),
+          TableToolbar(
+            isFilterExpanded: isFilterExpanded,
+            onFilterTap: onFilterExpandedToggle,
+            activeFilterCount: filters.activeCount,
+          ),
+          if (isFilterExpanded) ...[
+            SizedBox(height: theme.spacings.sm),
+            ProjectsFilterBar(filters: filters, onChanged: onFiltersChanged),
+          ],
           SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
-              child: viewMode == ProjectViewMode.table
-                  ? WsTable<ResolvedProject>(
-                      data: projects,
-                      selectedItem: projects.firstWhereOrNull(
-                        (e) => e.id == selectedProject?.id,
-                      ),
-                      rowKeyBuilder: (item) =>
-                          item.id == selectedProject?.id ? selectedRowKey : null,
-                      onRowTap: (item) => onProjectSelected(item.project),
-                      isSelected: (item, selected) => item.id == selected?.id,
-                      columns: _getTableColumns(theme),
-                    )
-                  : Column(
-                      spacing: theme.spacings.lg,
-                      children: projects.map((project) {
-                        final isSelected = selectedProject?.id == project.id;
-                        return ProjectCard(
-                          key: isSelected ? selectedRowKey : null,
-                          project: project,
-                          isSelected: isSelected,
-                          onTap: () => onProjectSelected(project.project),
-                        );
-                      }).toList(),
-                    ),
+              child: () {
+                final filteredProjects = applyProjectsFilters(projects, filters);
+                return viewMode == ProjectViewMode.table
+                    ? WsTable<ResolvedProject>(
+                        data: filteredProjects,
+                        selectedItem: filteredProjects.firstWhereOrNull(
+                          (e) => e.id == selectedProject?.id,
+                        ),
+                        rowKeyBuilder: (item) =>
+                            item.id == selectedProject?.id ? selectedRowKey : null,
+                        onRowTap: (item) => onProjectSelected(item.project),
+                        isSelected: (item, selected) => item.id == selected?.id,
+                        columns: _getTableColumns(theme),
+                      )
+                    : Column(
+                        spacing: theme.spacings.lg,
+                        children: filteredProjects.map((project) {
+                          final isSelected = selectedProject?.id == project.id;
+                          return ProjectCard(
+                            key: isSelected ? selectedRowKey : null,
+                            project: project,
+                            isSelected: isSelected,
+                            onTap: () => onProjectSelected(project.project),
+                          );
+                        }).toList(),
+                      );
+              }(),
             ),
           ),
         ],
