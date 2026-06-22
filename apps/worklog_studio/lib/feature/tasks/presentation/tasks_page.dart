@@ -4,11 +4,13 @@ import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
+import 'package:worklog_studio/domain/tasks_filters.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
+import 'components/tasks_filter_bar.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
@@ -28,6 +30,8 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
   TaskViewMode _viewMode = TaskViewMode.table;
+  TasksFilters _filters = const TasksFilters();
+  bool _isFilterExpanded = false;
   final GlobalKey _selectedRowKey = GlobalKey();
 
   @override
@@ -109,6 +113,11 @@ class _TasksScreenState extends State<TasksScreen> {
             onCreateTask: _handleCreateTask,
             viewMode: _viewMode,
             onViewModeChanged: (mode) => setState(() => _viewMode = mode),
+            filters: _filters,
+            onFiltersChanged: (f) => setState(() => _filters = f),
+            isFilterExpanded: _isFilterExpanded,
+            onFilterExpandedToggle: () =>
+                setState(() => _isFilterExpanded = !_isFilterExpanded),
           ),
         ),
         TaskDrawer(
@@ -129,6 +138,10 @@ class TaskList extends StatelessWidget {
   final VoidCallback onCreateTask;
   final TaskViewMode viewMode;
   final ValueChanged<TaskViewMode> onViewModeChanged;
+  final TasksFilters filters;
+  final ValueChanged<TasksFilters> onFiltersChanged;
+  final bool isFilterExpanded;
+  final VoidCallback onFilterExpandedToggle;
 
   const TaskList({
     super.key,
@@ -139,6 +152,10 @@ class TaskList extends StatelessWidget {
     required this.onCreateTask,
     required this.viewMode,
     required this.onViewModeChanged,
+    required this.filters,
+    required this.onFiltersChanged,
+    required this.isFilterExpanded,
+    required this.onFilterExpandedToggle,
   });
 
   @override
@@ -181,13 +198,38 @@ class TaskList extends StatelessWidget {
               ),
             ],
           ),
+          SizedBox(height: theme.spacings.lg),
+          TableToolbar(
+            isFilterExpanded: isFilterExpanded,
+            onFilterTap: onFilterExpandedToggle,
+            activeFilterCount: filters.activeCount,
+          ),
+          if (isFilterExpanded) ...[
+            SizedBox(height: theme.spacings.sm),
+            Builder(
+              builder: (context) {
+                final resolver = context.watch<EntityResolver>();
+                final projectOptions = resolver
+                    .getResolvedProjects()
+                    .map((p) => SelectOption(value: p.id, label: p.name))
+                    .toList();
+                return TasksFilterBar(
+                  filters: filters,
+                  onChanged: onFiltersChanged,
+                  projectOptions: projectOptions,
+                );
+              },
+            ),
+          ],
           SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
-              child: viewMode == TaskViewMode.table
+              child: () {
+                final filteredTasks = applyTasksFilters(tasks, filters);
+                return viewMode == TaskViewMode.table
                   ? WsTable<ResolvedTask>(
-                      data: tasks,
-                      selectedItem: tasks.firstWhereOrNull(
+                      data: filteredTasks,
+                      selectedItem: filteredTasks.firstWhereOrNull(
                         (e) => e.id == selectedTask?.id,
                       ),
                       rowKeyBuilder: (item) =>
@@ -198,7 +240,7 @@ class TaskList extends StatelessWidget {
                     )
                   : Column(
                       spacing: theme.spacings.md,
-                      children: tasks.map((task) {
+                      children: filteredTasks.map((task) {
                         final isSelected = selectedTask?.id == task.id;
                         return TaskCard(
                           key: isSelected ? selectedRowKey : null,
@@ -207,7 +249,8 @@ class TaskList extends StatelessWidget {
                           onTap: () => onTaskSelected(task.task),
                         );
                       }).toList(),
-                    ),
+                    );
+              }(),
             ),
           ),
         ],
