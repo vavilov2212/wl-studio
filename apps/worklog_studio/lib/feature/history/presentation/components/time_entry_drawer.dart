@@ -1,9 +1,6 @@
-﻿import 'dart:math' as math;
-
-import 'package:collection/collection.dart';
+﻿import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
-import 'package:vector_svg/vector_svg.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
@@ -688,14 +685,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   }
 
   Widget _selectChevron(ColorsPalette palette) {
-    return Transform.rotate(
-      angle: math.pi / 2,
-      child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
-        width: 18,
-        height: 18,
-        colorFilter: palette.text.muted.filter,
-      ),
-    );
+    return Icon(Icons.keyboard_arrow_down, size: 18, color: palette.text.muted);
   }
 
   String getStatusText(TimeEntryStatus status) {
