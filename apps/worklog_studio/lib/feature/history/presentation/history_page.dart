@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
@@ -7,74 +7,33 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/history_filters.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/state/page_ui_preferences.dart';
+import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
-import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/time_entry_card.dart';
-import 'components/time_entry_drawer.dart';
 import 'components/time_entry_actions_cell.dart';
 import 'components/history_filter_bar.dart';
 
 enum HistoryViewMode { cards, table }
 
 class HistoryScreen extends StatefulWidget {
-  final String? initialSelectedEntryId;
-  final int createRequestToken;
-
-  const HistoryScreen({
-    super.key,
-    this.initialSelectedEntryId,
-    this.createRequestToken = 0,
-  });
+  const HistoryScreen({super.key});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  DrawerControllerState<TimeEntry> _drawerState =
-      DrawerControllerState.closed();
-  HistoryViewMode _viewMode = HistoryViewMode.table;
-  HistoryFilters _filters = const HistoryFilters();
-  bool? _filterExpandedOverride;
-  bool get _isFilterExpanded => _filterExpandedOverride ?? _filters.isActive;
   final GlobalKey _selectedRowKey = GlobalKey();
-  late int _handledCreateToken;
 
   @override
   void initState() {
     super.initState();
-    _handledCreateToken = widget.createRequestToken;
-    if (widget.initialSelectedEntryId != null) {
-      _selectEntryById(widget.initialSelectedEntryId!);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant HistoryScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialSelectedEntryId != null &&
-        widget.initialSelectedEntryId != oldWidget.initialSelectedEntryId) {
-      _selectEntryById(widget.initialSelectedEntryId!);
-    }
-    if (widget.createRequestToken != _handledCreateToken) {
-      _handledCreateToken = widget.createRequestToken;
-      _handleCreateEntry();
-    }
-  }
-
-  void _selectEntryById(String entryId) {
-    final resolvedEntry = context
-        .read<EntityResolver>()
-        .getResolvedTimeEntries()
-        .firstWhereOrNull((e) => e.entry.id == entryId);
-    if (resolvedEntry != null) {
-      setState(() {
-        _drawerState = DrawerControllerState.edit(resolvedEntry.entry);
-      });
+    final drawer = context.read<DrawerHostController>();
+    if (drawer.kind == DrawerEntityKind.timeEntry && drawer.timeEntry != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final rowContext = _selectedRowKey.currentContext;
         if (rowContext != null) {
@@ -88,66 +47,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  void _handleCreateEntry() {
-    setState(() {
-      _drawerState = DrawerControllerState.create();
-    });
-  }
-
   void _handleEntrySelected(TimeEntry entry) {
-    setState(() {
-      if (_drawerState.state == DrawerState.edit &&
-          _drawerState.entity?.id == entry.id) {
-        _drawerState = DrawerControllerState.closed(); // Toggle off
-      } else {
-        _drawerState = DrawerControllerState.edit(entry);
-      }
-    });
+    final drawer = context.read<DrawerHostController>();
+    if (drawer.kind == DrawerEntityKind.timeEntry &&
+        drawer.timeEntry?.id == entry.id) {
+      drawer.close(); // Toggle off
+    } else {
+      drawer.openTimeEntryEdit(entry);
+    }
   }
 
-  void _closePanel() {
-    setState(() {
-      _drawerState = DrawerControllerState.closed();
-    });
+  void _handleCreateEntry() {
+    context.read<DrawerHostController>().openTimeEntryCreate();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ProjectTaskState>();
     final resolvedEntries = context
         .watch<EntityResolver>()
         .getResolvedTimeEntries();
+    final prefs = context.watch<PageUiPreferences>();
+    final drawer = context.watch<DrawerHostController>();
+    final selectedEntry =
+        drawer.kind == DrawerEntityKind.timeEntry ? drawer.timeEntry : null;
+    final isFilterExpanded =
+        prefs.historyFilterExpandedOverride ?? prefs.historyFilters.isActive;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          Expanded(
-            child: TimeEntryList(
-              entries: resolvedEntries,
-              selectedEntry: _drawerState.entity,
-              selectedRowKey: _selectedRowKey,
-              onEntrySelected: _handleEntrySelected,
-              onCreateEntry: _handleCreateEntry,
-              viewMode: _viewMode,
-              onViewModeChanged: (mode) => setState(() => _viewMode = mode),
-              filters: _filters,
-              onFiltersChanged: (f) => setState(() => _filters = f),
-              isFilterExpanded: _isFilterExpanded,
-              onFilterExpandedToggle: () =>
-                  setState(() => _filterExpandedOverride = !_isFilterExpanded),
-            ),
-          ),
-          TimeEntryDrawer(
-            resolvedEntry: _drawerState.entity != null
-                ? resolvedEntries.firstWhereOrNull(
-                    (e) => e.entry.id == _drawerState.entity!.id,
-                  )
-                : null,
-            isOpen: _drawerState.isOpen,
-            onClose: _closePanel,
-          ),
-        ],
-      ),
+    return TimeEntryList(
+      entries: resolvedEntries,
+      selectedEntry: selectedEntry,
+      selectedRowKey: _selectedRowKey,
+      onEntrySelected: _handleEntrySelected,
+      onCreateEntry: _handleCreateEntry,
+      viewMode: prefs.historyViewMode,
+      onViewModeChanged: (mode) =>
+          context.read<PageUiPreferences>().setHistoryViewMode(mode),
+      filters: prefs.historyFilters,
+      onFiltersChanged: (f) =>
+          context.read<PageUiPreferences>().setHistoryFilters(f),
+      isFilterExpanded: isFilterExpanded,
+      onFilterExpandedToggle: () => context
+          .read<PageUiPreferences>()
+          .setHistoryFilterExpandedOverride(!isFilterExpanded),
     );
   }
 }
