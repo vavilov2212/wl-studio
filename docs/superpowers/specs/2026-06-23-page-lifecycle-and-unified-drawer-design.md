@@ -69,18 +69,33 @@ Scaffold(
 )
 ```
 
-**`DrawerHostController`** (new, app-level `ChangeNotifier`, provided at the same level as `PageUiPreferences`): one sealed state replacing the three independent `DrawerControllerState<T>` instances:
+**`DrawerHostController`** (new, app-level `ChangeNotifier`, provided at the same level as `PageUiPreferences`): replaces the three independent `DrawerControllerState<T>` instances with one controller. Note: `DrawerControllerState<T>` is not a simple open/closed flag — it has three states (`closed`, `create`, `edit(entity)`, from `feature/common/presentation/drawer_controller_state.dart`), and the existing drawer widgets (`TimeEntryDrawer`/`TaskDrawer`/`ProjectDrawer`) already treat "open with null entity" as create-mode internally (they build a blank draft when the entity is null). `DrawerHostController` must preserve that three-state shape, just adding *which entity type* on top:
 
 ```dart
-sealed class DrawerHostState {
-  const factory DrawerHostState.closed() = _Closed;
-  const factory DrawerHostState.timeEntry(TimeEntry entry) = _TimeEntry;
-  const factory DrawerHostState.task(Task task) = _Task;
-  const factory DrawerHostState.project(Project project) = _Project;
+enum DrawerEntityKind { none, timeEntry, task, project }
+
+class DrawerHostController extends ChangeNotifier {
+  DrawerEntityKind _kind = DrawerEntityKind.none;
+  DrawerState _mode = DrawerState.closed; // reuses the existing DrawerState enum
+  Object? _entity;
+
+  DrawerEntityKind get kind => _kind;
+  bool get isOpen => _mode != DrawerState.closed;
+  TimeEntry? get timeEntry => _kind == DrawerEntityKind.timeEntry ? _entity as TimeEntry? : null;
+  Task? get task => _kind == DrawerEntityKind.task ? _entity as Task? : null;
+  Project? get project => _kind == DrawerEntityKind.project ? _entity as Project? : null;
+
+  void openTimeEntryEdit(TimeEntry entry) { ... }
+  void openTimeEntryCreate() { ... }
+  void openTaskEdit(Task task) { ... }
+  void openTaskCreate() { ... }
+  void openProjectEdit(Project project) { ... }
+  void openProjectCreate() { ... }
+  void close() { ... }
 }
 ```
 
-Methods: `openTimeEntry(TimeEntry)`, `openTask(Task)`, `openProject(Project)`, `close()`.
+Each `open*Edit`/`open*Create` sets `_kind`, `_mode` (`edit`/`create` respectively), `_entity`, and calls `notifyListeners()`; `close()` resets all three to `none`/`closed`/`null`.
 
 **`AppDrawerHost`** watches `DrawerHostController` and renders whichever of `TimeEntryDrawer`/`TaskDrawer`/`ProjectDrawer` matches the current state (passing `isOpen`/`entity`/`onClose: controller.close`); the drawer widgets' own internals (animation, layout, content) are unchanged. When state is `closed`, it renders the same "closed" representation the existing drawers already support (e.g. zero-width / collapsed), preserving today's open/close transition.
 
