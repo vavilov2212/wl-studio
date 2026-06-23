@@ -31,6 +31,19 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       AppThemeExtension(colorsPalette: darkColorsPalette);
 
   ControlSizeTokens controlSize(ControlSize size) => switch (size) {
+    ControlSize.xs => ControlSizeTokens(
+      height: spacings.x2l,
+      verticalPadding: 0,
+      horizontalPadding: spacings.sm,
+      allPadding: EdgeInsets.symmetric(
+        horizontal: spacings.sm,
+        vertical: spacings.xxs,
+      ),
+      textStyle: commonTextStyles.caption,
+      iconSize: 14,
+      isDense: true,
+      contentPadding: EdgeInsets.zero,
+    ),
     ControlSize.sm => ControlSizeTokens(
       height: spacings.x3l,
       verticalPadding: 0,

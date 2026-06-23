@@ -62,7 +62,7 @@ class _ProjectsFilterBarState extends State<ProjectsFilterBar> {
                     ),
                   ),
                   child: SizedBox(
-                    width: 160,
+                    width: 140,
                     child: MultiSelect<ProjectStatus>(
                       value: filters.statuses.toList(),
                       onChanged: (statuses) => onChanged(
@@ -74,6 +74,7 @@ class _ProjectsFilterBarState extends State<ProjectsFilterBar> {
                       ),
                       options: _statusOptions,
                       placeholder: 'Status',
+                      size: ControlSize.xs,
                     ),
                   ),
                 ),
@@ -83,7 +84,7 @@ class _ProjectsFilterBarState extends State<ProjectsFilterBar> {
                   onClear: () =>
                       onChanged(ProjectsFilters(statuses: filters.statuses)),
                   child: SizedBox(
-                    width: 160,
+                    width: 140,
                     child: DateRangeButton(
                       value: filters.dateFrom != null
                           ? DateTimeRange(
@@ -99,6 +100,7 @@ class _ProjectsFilterBarState extends State<ProjectsFilterBar> {
                         ),
                       ),
                       placeholder: 'Date',
+                      size: ControlSize.xs,
                     ),
                   ),
                 ),

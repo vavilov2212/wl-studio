@@ -325,11 +325,38 @@ class TimeEntryList extends StatelessWidget {
                 final resolver = context.watch<EntityResolver>();
                 final taskOptions = resolver
                     .getResolvedTasks()
-                    .map((t) => SelectOption(value: t.id, label: t.title))
+                    .map((t) {
+                      final colors = BadgeUtils.getBadgeColor(t.id);
+                      return SelectOption(
+                        value: t.id,
+                        label: t.title,
+                        leading: WsInitialBadge(
+                          initials: BadgeUtils.getTaskInitials(
+                            t.title,
+                            t.projectName,
+                          ),
+                          backgroundColor: colors.$1,
+                          textColor: colors.$2,
+                          size: WsInitialBadgeSize.small,
+                        ),
+                      );
+                    })
                     .toList();
                 final projectOptions = resolver
                     .getResolvedProjects()
-                    .map((p) => SelectOption(value: p.id, label: p.name))
+                    .map((p) {
+                      final colors = BadgeUtils.getBadgeColor(p.id);
+                      return SelectOption(
+                        value: p.id,
+                        label: p.name,
+                        leading: WsInitialBadge(
+                          initials: BadgeUtils.getProjectInitials(p.name),
+                          backgroundColor: colors.$1,
+                          textColor: colors.$2,
+                          size: WsInitialBadgeSize.small,
+                        ),
+                      );
+                    })
                     .toList();
                 return HistoryFilterBar(
                   filters: filters,

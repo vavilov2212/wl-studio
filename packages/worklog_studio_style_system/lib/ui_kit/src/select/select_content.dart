@@ -186,7 +186,6 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final tokens = theme.controlSize(widget.size);
     final option = widget.option;
     final isSelected = widget.isSelected;
 
@@ -218,52 +217,22 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: InkWell(
-        onTap: widget.onSelect,
-        child: Stack(
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: tokens.horizontalPadding,
-                vertical: tokens.verticalPadding == 0
-                    ? theme.spacings.sm
-                    : tokens.verticalPadding,
-              ),
-              color: isSelected
-                  ? palette.accent.primary.withValues(alpha: 0.08)
-                  : (_isHovered ? palette.background.surfaceMuted : null),
-              child: Row(
-                children: [
-                  if (option.leading != null) ...[
-                    option.leading!,
-                    SizedBox(width: theme.spacings.sm),
-                  ],
-                  Expanded(
-                    child: Text(
-                      option.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                      style: tokens.textStyle.copyWith(
-                        color: isSelected
-                            ? palette.accent.primary
-                            : palette.text.primary,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  if (isSelected)
-                    Icon(
-                      Icons.check,
-                      size: tokens.iconSize,
-                      color: palette.accent.primary,
-                    ),
-                ],
-              ),
-            ),
-            if (actionIcon != null)
+      child: Stack(
+        children: [
+          SelectOptionRow<T>(
+            option: option,
+            isSelected: isSelected,
+            size: widget.size,
+            onTap: widget.onSelect,
+            trailingIndicator: (selected) => selected
+                ? Icon(
+                    Icons.check,
+                    size: theme.controlSize(widget.size).iconSize,
+                    color: palette.accent.primary,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          if (actionIcon != null)
               Positioned(
                 top: theme.spacings.xs,
                 right: theme.spacings.xs,
@@ -294,8 +263,7 @@ class _SelectOptionRowState<T> extends State<_SelectOptionRow<T>> {
                   ),
                 ),
               ),
-          ],
-        ),
+        ],
       ),
     );
   }

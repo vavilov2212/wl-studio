@@ -212,7 +212,19 @@ class TaskList extends StatelessWidget {
                 final resolver = context.watch<EntityResolver>();
                 final projectOptions = resolver
                     .getResolvedProjects()
-                    .map((p) => SelectOption(value: p.id, label: p.name))
+                    .map((p) {
+                      final colors = BadgeUtils.getBadgeColor(p.id);
+                      return SelectOption(
+                        value: p.id,
+                        label: p.name,
+                        leading: WsInitialBadge(
+                          initials: BadgeUtils.getProjectInitials(p.name),
+                          backgroundColor: colors.$1,
+                          textColor: colors.$2,
+                          size: WsInitialBadgeSize.small,
+                        ),
+                      );
+                    })
                     .toList();
                 return TasksFilterBar(
                   filters: filters,

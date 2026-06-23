@@ -55,93 +55,26 @@ class MultiSelectContent<T> extends StatelessWidget {
               itemBuilder: (context, index) {
                 final option = filteredOptions[index];
                 final isSelected = selectedValues.contains(option.value);
-                return _MultiSelectOptionRow<T>(
+                return SelectOptionRow<T>(
                   option: option,
                   isSelected: isSelected,
                   size: size,
                   onTap: () => onToggle(option.value),
+                  trailingIndicator: (selected) {
+                    final theme = context.theme;
+                    final palette = theme.colorsPalette;
+                    final tokens = theme.controlSize(size);
+                    return Icon(
+                      selected ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: tokens.iconSize,
+                      color: selected
+                          ? palette.accent.primary
+                          : palette.text.muted,
+                    );
+                  },
                 );
               },
             ),
-    );
-  }
-}
-
-class _MultiSelectOptionRow<T> extends StatefulWidget {
-  final SelectOption<T> option;
-  final bool isSelected;
-  final ControlSize size;
-  final VoidCallback onTap;
-
-  const _MultiSelectOptionRow({
-    required this.option,
-    required this.isSelected,
-    required this.size,
-    required this.onTap,
-  });
-
-  @override
-  State<_MultiSelectOptionRow<T>> createState() =>
-      _MultiSelectOptionRowState<T>();
-}
-
-class _MultiSelectOptionRowState<T> extends State<_MultiSelectOptionRow<T>> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-    final tokens = theme.controlSize(widget.size);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: InkWell(
-        onTap: widget.onTap,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: tokens.horizontalPadding,
-            vertical: tokens.verticalPadding == 0
-                ? theme.spacings.sm
-                : tokens.verticalPadding,
-          ),
-          color: _isHovered ? palette.background.surfaceMuted : null,
-          child: Row(
-            children: [
-              Icon(
-                widget.isSelected
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                size: tokens.iconSize,
-                color: widget.isSelected
-                    ? palette.accent.primary
-                    : palette.text.muted,
-              ),
-              SizedBox(width: theme.spacings.sm),
-              if (widget.option.leading != null) ...[
-                widget.option.leading!,
-                SizedBox(width: theme.spacings.sm),
-              ],
-              Expanded(
-                child: Text(
-                  widget.option.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.textStyle.copyWith(
-                    color: widget.isSelected
-                        ? palette.text.primary
-                        : palette.text.secondary,
-                    fontWeight: widget.isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

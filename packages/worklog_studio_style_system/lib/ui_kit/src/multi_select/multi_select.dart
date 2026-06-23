@@ -57,6 +57,13 @@ class _MultiSelectState<T> extends State<MultiSelect<T>> {
     _controller = widget.controller ?? ComboboxController();
     _searchController.addListener(_onSearchChanged);
     _controller.addListener(_handleOpenChange);
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus && !_controller.isOpen) {
+      _controller.open();
+    }
   }
 
   void _onSearchChanged() {
@@ -98,6 +105,7 @@ class _MultiSelectState<T> extends State<MultiSelect<T>> {
       _controller.dispose();
     }
     _searchController.dispose();
+    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
   }

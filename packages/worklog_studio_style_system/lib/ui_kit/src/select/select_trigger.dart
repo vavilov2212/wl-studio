@@ -48,6 +48,9 @@ class SelectTrigger extends StatelessWidget {
                 ? TextField(
                     controller: controller,
                     focusNode: focusNode,
+                    mouseCursor: isOpen
+                        ? SystemMouseCursors.text
+                        : SystemMouseCursors.click,
                     style: tokens.textStyle.copyWith(color: palette.text.primary),
                     decoration: InputDecoration(
                       hintText: isOpen ? 'Search...' : (label ?? placeholder),

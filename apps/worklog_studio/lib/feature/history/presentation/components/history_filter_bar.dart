@@ -60,7 +60,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                     ),
                   ),
                   child: SizedBox(
-                    width: 160,
+                    width: 140,
                     child: MultiSelect<String>(
                       value: filters.taskIds.toList(),
                       onChanged: (ids) => onChanged(
@@ -74,6 +74,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                       options: widget.taskOptions,
                       placeholder: 'Task',
                       searchable: true,
+                      size: ControlSize.xs,
                     ),
                   ),
                 ),
@@ -89,7 +90,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                     ),
                   ),
                   child: SizedBox(
-                    width: 160,
+                    width: 140,
                     child: MultiSelect<String>(
                       value: filters.projectIds.toList(),
                       onChanged: (ids) => onChanged(
@@ -103,6 +104,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                       options: widget.projectOptions,
                       placeholder: 'Project',
                       searchable: true,
+                      size: ControlSize.xs,
                     ),
                   ),
                 ),
@@ -116,7 +118,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                     ),
                   ),
                   child: SizedBox(
-                    width: 160,
+                    width: 140,
                     child: DateRangeButton(
                       value: filters.dateFrom != null
                           ? DateTimeRange(
@@ -133,6 +135,7 @@ class _HistoryFilterBarState extends State<HistoryFilterBar> {
                         ),
                       ),
                       placeholder: 'Date',
+                      size: ControlSize.xs,
                     ),
                   ),
                 ),
