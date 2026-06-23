@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide DrawerControllerState;
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -6,12 +6,12 @@ import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/domain/tasks_filters.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
+import 'package:worklog_studio/state/page_ui_preferences.dart';
+import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/tasks_card.dart';
-import 'components/tasks_drawer.dart';
 import 'components/tasks_filter_bar.dart';
-import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/task_actions_cell.dart';
@@ -19,48 +19,20 @@ import 'components/task_actions_cell.dart';
 enum TaskViewMode { cards, table }
 
 class TasksScreen extends StatefulWidget {
-  final String? initialSelectedTaskId;
-
-  const TasksScreen({super.key, this.initialSelectedTaskId});
+  const TasksScreen({super.key});
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
-  TaskViewMode _viewMode = TaskViewMode.table;
-  TasksFilters _filters = const TasksFilters();
-  bool? _filterExpandedOverride;
-  bool get _isFilterExpanded => _filterExpandedOverride ?? _filters.isActive;
   final GlobalKey _selectedRowKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialSelectedTaskId != null) {
-      _selectTaskById(widget.initialSelectedTaskId!);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant TasksScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialSelectedTaskId != null &&
-        widget.initialSelectedTaskId != oldWidget.initialSelectedTaskId) {
-      _selectTaskById(widget.initialSelectedTaskId!);
-    }
-  }
-
-  void _selectTaskById(String taskId) {
-    final resolvedTask = context
-        .read<EntityResolver>()
-        .getResolvedTasks()
-        .firstWhereOrNull((t) => t.id == taskId);
-    if (resolvedTask != null) {
-      setState(() {
-        _drawerState = DrawerControllerState.edit(resolvedTask.task);
-      });
+    final drawer = context.read<DrawerHostController>();
+    if (drawer.kind == DrawerEntityKind.task && drawer.task != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final rowContext = _selectedRowKey.currentContext;
         if (rowContext != null) {
@@ -75,58 +47,44 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _handleTaskSelected(Task task) {
-    setState(() {
-      if (_drawerState.state == DrawerState.edit &&
-          _drawerState.entity?.id == task.id) {
-        _drawerState = DrawerControllerState.closed();
-      } else {
-        _drawerState = DrawerControllerState.edit(task);
-      }
-    });
+    final drawer = context.read<DrawerHostController>();
+    if (drawer.kind == DrawerEntityKind.task && drawer.task?.id == task.id) {
+      drawer.close();
+    } else {
+      drawer.openTaskEdit(task);
+    }
   }
 
   void _handleCreateTask() {
-    setState(() {
-      _drawerState = DrawerControllerState.create();
-    });
-  }
-
-  void _closePanel() {
-    setState(() {
-      _drawerState = DrawerControllerState.closed();
-    });
+    context.read<DrawerHostController>().openTaskCreate();
   }
 
   @override
   Widget build(BuildContext context) {
-    final resolver = context.watch<EntityResolver>();
-    final resolvedTasks = resolver.getResolvedTasks();
+    final resolvedTasks = context.watch<EntityResolver>().getResolvedTasks();
+    final prefs = context.watch<PageUiPreferences>();
+    final drawer = context.watch<DrawerHostController>();
+    final selectedTask =
+        drawer.kind == DrawerEntityKind.task ? drawer.task : null;
+    final isFilterExpanded =
+        prefs.tasksFilterExpandedOverride ?? prefs.tasksFilters.isActive;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: TaskList(
-            tasks: resolvedTasks,
-            selectedTask: _drawerState.entity,
-            selectedRowKey: _selectedRowKey,
-            onTaskSelected: _handleTaskSelected,
-            onCreateTask: _handleCreateTask,
-            viewMode: _viewMode,
-            onViewModeChanged: (mode) => setState(() => _viewMode = mode),
-            filters: _filters,
-            onFiltersChanged: (f) => setState(() => _filters = f),
-            isFilterExpanded: _isFilterExpanded,
-            onFilterExpandedToggle: () =>
-                setState(() => _filterExpandedOverride = !_isFilterExpanded),
-          ),
-        ),
-        TaskDrawer(
-          task: _drawerState.entity,
-          isOpen: _drawerState.isOpen,
-          onClose: _closePanel,
-        ),
-      ],
+    return TaskList(
+      tasks: resolvedTasks,
+      selectedTask: selectedTask,
+      selectedRowKey: _selectedRowKey,
+      onTaskSelected: _handleTaskSelected,
+      onCreateTask: _handleCreateTask,
+      viewMode: prefs.tasksViewMode,
+      onViewModeChanged: (mode) =>
+          context.read<PageUiPreferences>().setTasksViewMode(mode),
+      filters: prefs.tasksFilters,
+      onFiltersChanged: (f) =>
+          context.read<PageUiPreferences>().setTasksFilters(f),
+      isFilterExpanded: isFilterExpanded,
+      onFilterExpandedToggle: () => context
+          .read<PageUiPreferences>()
+          .setTasksFilterExpandedOverride(!isFilterExpanded),
     );
   }
 }
