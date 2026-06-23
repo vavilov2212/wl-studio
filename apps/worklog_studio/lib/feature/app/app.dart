@@ -18,6 +18,8 @@ import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/state/page_ui_preferences.dart';
+import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
@@ -66,6 +68,8 @@ class MainApp extends StatelessWidget {
         Provider<AppNavigationController>(
           create: (_) => AppNavigationController(),
         ),
+        ChangeNotifierProvider(create: (_) => PageUiPreferences()),
+        ChangeNotifierProvider(create: (_) => DrawerHostController()),
         BlocProvider<TimeTrackerBloc>(
           create: (_) {
             final clock = SystemClock();
