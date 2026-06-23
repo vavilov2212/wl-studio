@@ -85,4 +85,4 @@ Write-Host "Running unit tests..." -ForegroundColor Yellow
 fvm flutter test test/core/ test/feature/ --reporter expanded
 Write-Host "All tests passed" -ForegroundColor Green
 
-Write-Host "Version bumped to $newName. Run publish.ps1 to push — CI builds and releases Windows + macOS." -ForegroundColor Green
+Write-Host "Version bumped to $newName. Run publish.ps1 to push - CI builds and releases Windows + macOS." -ForegroundColor Green
