@@ -7,7 +7,7 @@ import 'package:worklog_studio/feature/common/presentation/drawer_controller_sta
 enum DrawerEntityKind { none, timeEntry, task, project }
 
 /// Single app-level drawer state, replacing the three independent
-/// per-page DrawerControllerState<T> instances. Only one entity (or none)
+/// per-page `DrawerControllerState<T>` instances. Only one entity (or none)
 /// can be open at a time, in one of the three DrawerState modes
 /// (closed/create/edit) the existing drawer widgets already understand.
 class DrawerHostController extends ChangeNotifier {
