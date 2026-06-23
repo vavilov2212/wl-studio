@@ -20,6 +20,9 @@ import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/core/services/app_navigation_controller.dart';
+import 'package:worklog_studio/feature/app/layout/app_drawer_host.dart';
+import 'package:worklog_studio/state/drawer_host_controller.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'dart:async';
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
@@ -33,10 +36,6 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppRoute _currentRoute = AppRoute.dashboard;
-  String? _pendingHistoryEntryId;
-  int _historyCreateToken = 0;
-  String? _pendingTaskId;
-  String? _pendingProjectId;
   StreamSubscription<String>? _navSub;
 
   @override
@@ -64,61 +63,85 @@ class _AppShellState extends State<AppShell> {
     super.dispose();
   }
 
+  /// Plain tab switch — no entity carried over, so the shared drawer closes.
   void _onRouteSelected(AppRoute route) {
+    context.read<DrawerHostController>().close();
     setState(() {
       _currentRoute = route;
     });
   }
 
+  /// Deep-link navigation — resolves the entity and opens the shared drawer
+  /// *before* switching tabs, so the freshly-mounted page already sees it.
   void _openHistoryEntry(String entryId) {
+    final resolved = context
+        .read<EntityResolver>()
+        .getResolvedTimeEntries()
+        .firstWhereOrNull((e) => e.entry.id == entryId);
+    if (resolved != null) {
+      context.read<DrawerHostController>().openTimeEntryEdit(resolved.entry);
+    }
     setState(() {
-      _pendingHistoryEntryId = entryId;
       _currentRoute = AppRoute.history;
     });
   }
 
   void _openHistoryCreateEntry() {
+    context.read<DrawerHostController>().openTimeEntryCreate();
     setState(() {
-      _historyCreateToken++;
       _currentRoute = AppRoute.history;
     });
   }
 
   void _openTask(String taskId) {
+    final resolved = context
+        .read<EntityResolver>()
+        .getResolvedTasks()
+        .firstWhereOrNull((t) => t.id == taskId);
+    if (resolved != null) {
+      context.read<DrawerHostController>().openTaskEdit(resolved.task);
+    }
     setState(() {
-      _pendingTaskId = taskId;
       _currentRoute = AppRoute.tasks;
     });
   }
 
   void _openProject(String projectId) {
+    final resolved = context
+        .read<EntityResolver>()
+        .getResolvedProjects()
+        .firstWhereOrNull((p) => p.id == projectId);
+    if (resolved != null) {
+      context.read<DrawerHostController>().openProjectEdit(resolved.project);
+    }
     setState(() {
-      _pendingProjectId = projectId;
       _currentRoute = AppRoute.projects;
     });
   }
 
+  /// Builds only the active page. Replacing the previous IndexedStack means
+  /// the previous page's widget leaves the tree and Flutter disposes it —
+  /// this is the fix for pages staying resident in memory forever.
   Widget _buildActiveScreen() {
-    return IndexedStack(
-      index: _currentRoute.index,
-      children: [
-        HomePage(
+    switch (_currentRoute) {
+      case AppRoute.dashboard:
+        return HomePage(
           title: 'Dashboard',
           onViewAllTasks: () => _onRouteSelected(AppRoute.tasks),
           onViewAllHistory: () => _onRouteSelected(AppRoute.history),
           onSelectHistoryEntry: _openHistoryEntry,
           onAddTimeEntry: _openHistoryCreateEntry,
           onSelectTask: _openTask,
-        ),
-        HistoryScreen(
-          initialSelectedEntryId: _pendingHistoryEntryId,
-          createRequestToken: _historyCreateToken,
-        ),
-        ProjectsScreen(initialSelectedProjectId: _pendingProjectId),
-        TasksScreen(initialSelectedTaskId: _pendingTaskId),
-        const SettingsScreen(),
-      ],
-    );
+        );
+      case AppRoute.history:
+        return const HistoryScreen();
+      case AppRoute.projects:
+        return const ProjectsScreen();
+      case AppRoute.tasks:
+        return const TasksScreen();
+      case AppRoute.settings:
+        return const SettingsScreen();
+    }
   }
 
   @override
@@ -141,7 +164,15 @@ class _AppShellState extends State<AppShell> {
                   onOpenProject: _openProject,
                   onOpenTask: _openTask,
                 ),
-                Expanded(child: _buildActiveScreen()),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _buildActiveScreen()),
+                      const AppDrawerHost(),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
