@@ -37,6 +37,7 @@ class Select<T> extends StatefulWidget {
   final SelectVariant variant;
   final SelectMode mode;
   final bool matchTriggerWidth;
+  final double? minWidth;
 
   /// Custom trigger builder
   final Widget Function(
@@ -75,6 +76,7 @@ class Select<T> extends StatefulWidget {
     this.variant = SelectVariant.outline,
     this.mode = SelectMode.single,
     this.matchTriggerWidth = true,
+    this.minWidth = 240,
     this.triggerBuilder,
     this.autoOpen = false,
     this.onOpenChange,
@@ -216,6 +218,7 @@ class _SelectState<T> extends State<Select<T>> {
       controller: _controller,
       enabled: widget.enabled,
       matchTriggerWidth: widget.matchTriggerWidth,
+      minWidth: widget.minWidth,
       tapRegionGroupId: widget.tapRegionGroupId,
       triggerBuilder: (context, open, isOpen) {
         if (widget.triggerBuilder != null) {
@@ -240,6 +243,7 @@ class _SelectState<T> extends State<Select<T>> {
             _handleSelect(value);
             close();
           },
+          close: close,
           searchQuery: _searchQuery,
           size: widget.size,
           actionBuilder: widget.actionBuilder != null

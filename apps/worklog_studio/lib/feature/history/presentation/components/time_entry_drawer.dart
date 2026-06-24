@@ -1,9 +1,6 @@
-﻿import 'dart:math' as math;
-
-import 'package:collection/collection.dart';
+﻿import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
-import 'package:vector_svg/vector_svg.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
@@ -22,6 +19,7 @@ import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 
 class TimeEntryDrawer extends StatefulWidget {
   final ResolvedTimeEntry? resolvedEntry;
@@ -285,8 +283,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         LabeledDivider(label: 'Assignment'),
                         SizedBox(height: theme.spacings.lg),
 
-                        // Project Select
-                        Consumer<ProjectTaskState>(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Project Select
+                            Expanded(
+                              child: Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedProject = state.projects
                                 .where((p) => p.id == _draft.projectId)
@@ -389,15 +391,22 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       textColor: colors.$2,
                                       size: WsInitialBadgeSize.small,
                                     ),
+                                    onAction: () => context
+                                        .read<AppNavigationController>()
+                                        .openProject(p.id),
+                                    // TODO: l10n
+                                    actionTooltip: 'Open project',
                                   );
                                 }).toList(),
                               ),
                             );
                           },
-                        ),
-                        SizedBox(height: theme.spacings.lg),
-                        // Task Select
-                        Consumer<ProjectTaskState>(
+                              ),
+                            ),
+                            SizedBox(width: theme.spacings.lg),
+                            // Task Select
+                            Expanded(
+                              child: Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedTask = state.tasks
                                 .where((t) => t.id == _draft.taskId)
@@ -509,12 +518,37 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                           textColor: colors.$2,
                                           size: WsInitialBadgeSize.small,
                                         ),
+                                        onAction: () => context
+                                            .read<AppNavigationController>()
+                                            .openTask(t.id),
+                                        // TODO: l10n
+                                        actionTooltip: 'Open task',
                                       );
                                     })
                                     .toList(),
                               ),
                             );
                           },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: theme.spacings.lg),
+                        // Comments
+                        InlineField(
+                          label: 'Comments',
+                          value: _commentController.text,
+                          placeholder: 'Add a comment...',
+                          controller: _commentFieldController,
+                          textController: _commentController,
+                          isTextArea: true,
+                          viewModeMaxLines: 3,
+                          editWidget: TextArea(
+                            label: null,
+                            hintText: 'Add a comment...',
+                            controller: _commentController,
+                            autofocus: true,
+                          ),
                         ),
                       ],
                     ),
@@ -615,24 +649,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               ],
                             ),
                           ),
-                          SizedBox(height: theme.spacings.x2l),
-                          LabeledDivider(label: 'Notes'),
-                          SizedBox(height: theme.spacings.lg),
-                          // Comments
-                          InlineField(
-                            label: 'Comments',
-                            value: _commentController.text,
-                            placeholder: 'Add a comment...',
-                            controller: _commentFieldController,
-                            textController: _commentController,
-                            isTextArea: true,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a comment...',
-                              controller: _commentController,
-                              autofocus: true,
-                            ),
-                          ),
                           SizedBox(height: theme.spacings.xl),
                         ],
                       ),
@@ -669,14 +685,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   }
 
   Widget _selectChevron(ColorsPalette palette) {
-    return Transform.rotate(
-      angle: math.pi / 2,
-      child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
-        width: 18,
-        height: 18,
-        colorFilter: palette.text.muted.filter,
-      ),
-    );
+    return Icon(Icons.keyboard_arrow_down, size: 18, color: palette.text.muted);
   }
 
   String getStatusText(TimeEntryStatus status) {

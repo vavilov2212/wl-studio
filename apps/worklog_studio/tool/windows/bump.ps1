@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "Starting Windows release build..." -ForegroundColor Cyan
+Write-Host "Bumping version..." -ForegroundColor Cyan
 
 # ─────────────────────────────────────────────
 # CLI info
@@ -17,7 +17,7 @@ Write-Host ""
 
 $Type = $args[0]
 if (-not $Type) {
-    Write-Error "Please specify build type (dev, release, patch, minor, major, X.Y.Z)"
+    Write-Error "Please specify bump type (dev, release, patch, minor, major, X.Y.Z)"
     exit 1
 }
 
@@ -85,62 +85,4 @@ Write-Host "Running unit tests..." -ForegroundColor Yellow
 fvm flutter test test/core/ test/feature/ --reporter expanded
 Write-Host "All tests passed" -ForegroundColor Green
 
-# ─────────────────────────────────────────────
-# 5a. Select app icon (prod for release/patch/minor/major, dev for pre-releases)
-# ─────────────────────────────────────────────
-$iconFlavor = if ($newName -match '-dev\.') { "dev" } else { "prod" }
-Write-Host "Selecting '$iconFlavor' app icon..." -ForegroundColor Yellow
-& "$PSScriptRoot\select_app_icon.ps1" -Flavor $iconFlavor
-
-# ─────────────────────────────────────────────
-# 5b. Build
-# ─────────────────────────────────────────────
-Write-Host "Building Windows..." -ForegroundColor Yellow
-fvm flutter build windows --release
-
-# ─────────────────────────────────────────────
-# 5c. Package ZIP
-# ─────────────────────────────────────────────
-$releaseDir  = "release/windows"
-if (!(Test-Path $releaseDir)) { New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null }
-
-$zipPath     = "$releaseDir/worklog_studio_windows.zip"
-$buildOutput = "build/windows/x64/runner/Release/*"
-
-if (Test-Path $zipPath) { Remove-Item $zipPath }
-Write-Host "Creating ZIP..." -ForegroundColor Yellow
-Compress-Archive -Path $buildOutput -DestinationPath $zipPath
-
-# ─────────────────────────────────────────────
-# 6. Update appcast_windows.xml
-# ─────────────────────────────────────────────
-$fileSize    = (Get-Item $zipPath).Length
-$repoUrl     = (git config --get remote.origin.url).Replace(".git","").Replace("git@github.com:","https://github.com/")
-$downloadUrl = "$repoUrl/releases/download/v$newName/worklog_studio_windows_$newName.zip"
-
-$appcastXml = @"
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-<channel>
-  <title>Worklog Studio Windows Updates</title>
-  <link>$repoUrl</link>
-  <description>Latest updates for Worklog Studio (Windows)</description>
-  <language>en</language>
-  <item>
-    <title>Version $newName</title>
-    <sparkle:releaseNotesLink>$repoUrl/releases/tag/v$newName</sparkle:releaseNotesLink>
-    <pubDate>$([DateTime]::Now.ToString("R"))</pubDate>
-    <enclosure
-      url="$downloadUrl"
-      sparkle:version="$newBuild"
-      sparkle:shortVersionString="$newName"
-      length="$fileSize"
-      type="application/octet-stream"/>
-  </item>
-</channel>
-</rss>
-"@
-
-$appcastXml | Set-Content "release/appcast_windows.xml" -Encoding UTF8
-Write-Host "appcast_windows.xml updated" -ForegroundColor Green
-Write-Host "Build ready: $zipPath" -ForegroundColor Green
+Write-Host "Version bumped to $newName. Run publish.ps1 to push - CI builds and releases Windows + macOS." -ForegroundColor Green

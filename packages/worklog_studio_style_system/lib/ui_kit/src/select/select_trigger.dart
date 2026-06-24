@@ -1,7 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
-import 'package:vector_svg/vector_svg.dart';
 
 class SelectTrigger extends StatelessWidget {
   final String? label;
@@ -48,6 +46,9 @@ class SelectTrigger extends StatelessWidget {
                 ? TextField(
                     controller: controller,
                     focusNode: focusNode,
+                    mouseCursor: isOpen
+                        ? SystemMouseCursors.text
+                        : SystemMouseCursors.click,
                     style: tokens.textStyle.copyWith(color: palette.text.primary),
                     decoration: InputDecoration(
                       hintText: isOpen ? 'Search...' : (label ?? placeholder),
@@ -74,15 +75,53 @@ class SelectTrigger extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
           ),
-          Transform.rotate(
-            angle: math.pi / 2,
-            child: WorklogStudioAssets.vectors.arrowSmallRight24Svg.vector(
-              width: tokens.iconSize,
-              height: tokens.iconSize,
-              colorFilter: palette.text.muted.filter,
-            ),
+          _TriggerChevron(
+            isOpen: isOpen,
+            size: tokens.iconSize,
+            color: palette.text.muted,
+            hoverColor: palette.text.primary,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Trigger chevron: points down when closed, flips to point up when open,
+/// and darkens on hover.
+class _TriggerChevron extends StatefulWidget {
+  final bool isOpen;
+  final double size;
+  final Color color;
+  final Color hoverColor;
+
+  const _TriggerChevron({
+    required this.isOpen,
+    required this.size,
+    required this.color,
+    required this.hoverColor,
+  });
+
+  @override
+  State<_TriggerChevron> createState() => _TriggerChevronState();
+}
+
+class _TriggerChevronState extends State<_TriggerChevron> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 150),
+        child: Icon(
+          widget.isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+          key: ValueKey(widget.isOpen),
+          size: widget.size,
+          color: _isHovered ? widget.hoverColor : widget.color,
+        ),
       ),
     );
   }

@@ -172,7 +172,7 @@ Then try running your script again:
 
 ```powershell
 cd apps\worklog_studio
-.\tool\windows\build.ps1 dev
+.\tool\windows\bump.ps1 dev
 ```
 
 ---
@@ -187,7 +187,7 @@ There's a separate, native switcher script per platform — no cross-platform ru
 
 Switching the icon is automated:
 - **VS Code debugger (F5)**: `.vscode/launch.json` runs a `preLaunchTask` (`select-app-icon-dev`/`select-app-icon-prod` in `.vscode/tasks.json`) before every launch, which picks the right script for your OS automatically.
-- **Packaged builds**: `tool/windows/build.ps1`, `tool/macos/build.sh`, and the CI release workflow already call the matching script based on the version being built.
+- **Packaged builds**: `tool/macos/build.sh` and the CI release workflow already call the matching script based on the version being built. Windows packaging now happens only in CI — the local `tool/windows/bump.ps1` only bumps the version and runs tests, it doesn't build, so there's no local Windows build step to wire this into.
 - **Git commits**: a pre-commit hook (`.githooks/pre-commit`) force-resets the live icon files back to prod before every commit, so a forgotten `-Flavor dev` switch from a local debug session never gets committed by accident. `fvm exec melos bootstrap` wires this up automatically (`git config core.hooksPath .githooks` runs as a post-bootstrap hook, see the `melos:` section in the root `pubspec.yaml`) — no manual step needed.
 
 ### When to run this manually
@@ -201,7 +201,7 @@ Only needed when running `flutter run`/`flutter build` directly from a terminal 
   bash apps/worklog_studio/tool/macos/select_app_icon.sh dev
   ```
 - Pass `prod`/`-Flavor prod` the same way to switch back (or restore after a dev session).
-- `tool/windows/build.ps1` and `tool/macos/build.sh` (and the CI release workflow) already call this automatically based on the version being built — no manual step needed for packaged releases.
+- `tool/macos/build.sh` and the CI release workflow already call this automatically based on the version being built — no manual step needed for packaged releases. Windows packaging happens only in CI now.
 
 ### When to regenerate the icon artwork
 Only needed if the source artwork changes (`assets/branding/app_icon_prod_master.png`). After updating the prod master:

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ControlSize { sm, md, lg }
+enum ControlSize { xs, sm, md, lg }
 
 class ControlSizeTokens {
   final double height;

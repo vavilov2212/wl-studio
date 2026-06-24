@@ -1,23 +1,6 @@
-# Core Directives
-
-## 1. Structural & Output Constraints
-- **No Verbose Reasoning**: Do not output verbose internal monologues, deep analytical paths, or extensive chain-of-thought blocks. Keep the focus entirely on execution.
-- **Minimalist Action Logs**: If you need to report intermediate steps (e.g., searching, reading, or editing files), state the action in exactly one ultra-short phrase or sentence per action (e.g., "Searching for files...", "Updating configuration..."). Do not explain *why* you are doing it or what you expect to happen.
-- **Direct Final Answer**: Provide a single, high-density, accurate final response at the very end. 
-- **Formatting**: The final answer must be structured either as a concise bulleted list or a single focused paragraph. Eliminate all fluff, filler text, meta-commentary, and redundant explanations. Get straight to the point.
-
-## 2. Tool Usage Priority
-For any file exploration, reading, creating, editing, moving, or listing:
-1. **First**, use native tools (`Read`, `Edit`, `Write`, `Glob`, `Grep`).
-2. **If native tools are insufficient**, fall back to the `filesystem` MCP server tools.
-3.  For symbol lookups (go-to-definition, find-references, document outline), **prefer the LSP tool over Grep/text search**. Only fall back to Grep if LSP returns no server/error.
-4. **Only if both are insufficient**, use shell commands (Bash).
-
-Shell commands remain the normal choice for everything that isn't a filesystem operation
-(`fvm`/`melos`/`flutter`/`git` commands, builds, tests, etc.) — this priority order applies
-specifically to file exploration/read/write/move/list operations.
-
 # Worklog Studio Monorepo Configuration & Guidelines
+
+> Output style and tool-priority rules (verbosity, native tools → MCP → LSP → Bash) live in `~/.claude/CLAUDE.md` (global) and apply here too.
 
 ## 1. Project Architecture & Path Map
 This is a Flutter monorepository managed via Melos.

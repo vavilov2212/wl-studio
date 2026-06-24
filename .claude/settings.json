@@ -9,14 +9,9 @@
       "Bash(fvm exec melos clean*)",
       "Bash(fvm flutter test*)",
       "Bash(fvm flutter build*)",
-      "Bash(fvm flutter run*)",
-      "Bash(git status*)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git branch*)"
+      "Bash(fvm flutter run*)"
     ],
     "deny": [
-      "Bash(rm -rf*)",
       "Bash(fvm exec melos clean --deep*)",
       "Bash(flutter*)",
       "Bash(dart*)"

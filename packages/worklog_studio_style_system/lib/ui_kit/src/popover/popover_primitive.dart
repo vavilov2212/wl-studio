@@ -13,6 +13,7 @@ class PopoverPrimitive extends StatefulWidget {
   final double? width; // Если null, ширина равна ширине контента
   final bool
   matchTriggerWidth; // Для Select/Combobox (ширина списка = ширине инпута)
+  final double? minWidth;
   final Alignment targetAnchor;
   final Alignment followerAnchor;
   final Object? tapRegionGroupId;
@@ -26,6 +27,7 @@ class PopoverPrimitive extends StatefulWidget {
     this.offset = const Offset(0, 4), // Небольшой отступ по дефолту
     this.width,
     this.matchTriggerWidth = false,
+    this.minWidth,
     this.targetAnchor = Alignment.bottomLeft,
     this.followerAnchor = Alignment.topLeft,
     this.tapRegionGroupId,
@@ -88,6 +90,10 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
     // Получаем размер триггера, чтобы подогнать ширину (нужно для Select)
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     final triggerWidth = renderBox?.size.width ?? 200.0;
+    final minWidth = widget.minWidth;
+    final effectiveWidth = widget.matchTriggerWidth
+        ? (minWidth != null && minWidth > triggerWidth ? minWidth : triggerWidth)
+        : widget.width;
 
     _overlayEntry = OverlayEntry(
       builder: (context) {
@@ -103,7 +109,7 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
               child: Align(
                 alignment: widget.followerAnchor,
                 child: SizedBox(
-                  width: widget.matchTriggerWidth ? triggerWidth : widget.width,
+                  width: effectiveWidth,
                   child: Material(
                     type: MaterialType.transparency,
                     child: TapRegion(
