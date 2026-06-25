@@ -372,37 +372,3 @@ class _RecentActivitySection extends StatelessWidget {
     return '${hour.toString().padLeft(2, '0')}:$minute $period';
   }
 }
-
-// StatusBadge uses an internal LayoutBuilder to switch between pill/dot
-// rendering, which breaks intrinsic-dimension probing (e.g. IntrinsicHeight
-// in the stats row above). This is a fixed-size stand-in for that one spot.
-class _ActiveBadge extends StatelessWidget {
-  const _ActiveBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.sm,
-        vertical: theme.spacings.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: palette.accent.primaryMuted,
-        borderRadius: theme.radiuses.pill.circular,
-      ),
-      child: Text(
-        'ACTIVE',
-        maxLines: 1,
-        softWrap: false,
-        style: theme.commonTextStyles.caption2Bold.copyWith(
-          color: palette.accent.primary,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
-
