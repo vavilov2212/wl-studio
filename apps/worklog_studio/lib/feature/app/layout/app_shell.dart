@@ -127,11 +127,9 @@ class _AppShellState extends State<AppShell> {
       case AppRoute.dashboard:
         return HomePage(
           title: 'Dashboard',
-          onViewAllTasks: () => _onRouteSelected(AppRoute.tasks),
           onViewAllHistory: () => _onRouteSelected(AppRoute.history),
           onSelectHistoryEntry: _openHistoryEntry,
           onAddTimeEntry: _openHistoryCreateEntry,
-          onSelectTask: _openTask,
         );
       case AppRoute.history:
         return const HistoryScreen();
