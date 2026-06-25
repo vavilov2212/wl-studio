@@ -61,6 +61,10 @@ class DashboardChartAggregator {
     required DateTime now,
   }) {
     final range = _resolveRange(period, anchorDate);
+    // Entries are attributed to the bucket containing their start time, not
+    // split across buckets they overlap (matches the bucketing the deleted
+    // Daily Focus/This Week cards used) — a session crossing a range boundary
+    // counts entirely toward whichever side it started on.
     final inRange = entries.where((e) {
       final day = _dateOnly(e.startAt);
       return !day.isBefore(range.start) && day.isBefore(range.end);
