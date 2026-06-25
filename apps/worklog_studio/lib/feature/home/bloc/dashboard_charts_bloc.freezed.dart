@@ -55,13 +55,14 @@ extension DashboardChartsEventPatterns on DashboardChartsEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( DashboardPeriodChanged value)?  periodChanged,TResult Function( DashboardViewChanged value)?  viewChanged,TResult Function( DashboardPeriodStepped value)?  periodStepped,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( DashboardPeriodChanged value)?  periodChanged,TResult Function( DashboardViewChanged value)?  viewChanged,TResult Function( DashboardPeriodStepped value)?  periodStepped,TResult Function( DashboardCustomRangeSelected value)?  customRangeSelected,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case DashboardPeriodChanged() when periodChanged != null:
 return periodChanged(_that);case DashboardViewChanged() when viewChanged != null:
 return viewChanged(_that);case DashboardPeriodStepped() when periodStepped != null:
-return periodStepped(_that);case _:
+return periodStepped(_that);case DashboardCustomRangeSelected() when customRangeSelected != null:
+return customRangeSelected(_that);case _:
   return orElse();
 
 }
@@ -79,13 +80,14 @@ return periodStepped(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( DashboardPeriodChanged value)  periodChanged,required TResult Function( DashboardViewChanged value)  viewChanged,required TResult Function( DashboardPeriodStepped value)  periodStepped,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( DashboardPeriodChanged value)  periodChanged,required TResult Function( DashboardViewChanged value)  viewChanged,required TResult Function( DashboardPeriodStepped value)  periodStepped,required TResult Function( DashboardCustomRangeSelected value)  customRangeSelected,}){
 final _that = this;
 switch (_that) {
 case DashboardPeriodChanged():
 return periodChanged(_that);case DashboardViewChanged():
 return viewChanged(_that);case DashboardPeriodStepped():
-return periodStepped(_that);}
+return periodStepped(_that);case DashboardCustomRangeSelected():
+return customRangeSelected(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -99,13 +101,14 @@ return periodStepped(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( DashboardPeriodChanged value)?  periodChanged,TResult? Function( DashboardViewChanged value)?  viewChanged,TResult? Function( DashboardPeriodStepped value)?  periodStepped,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( DashboardPeriodChanged value)?  periodChanged,TResult? Function( DashboardViewChanged value)?  viewChanged,TResult? Function( DashboardPeriodStepped value)?  periodStepped,TResult? Function( DashboardCustomRangeSelected value)?  customRangeSelected,}){
 final _that = this;
 switch (_that) {
 case DashboardPeriodChanged() when periodChanged != null:
 return periodChanged(_that);case DashboardViewChanged() when viewChanged != null:
 return viewChanged(_that);case DashboardPeriodStepped() when periodStepped != null:
-return periodStepped(_that);case _:
+return periodStepped(_that);case DashboardCustomRangeSelected() when customRangeSelected != null:
+return customRangeSelected(_that);case _:
   return null;
 
 }
@@ -122,12 +125,13 @@ return periodStepped(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DashboardPeriod period)?  periodChanged,TResult Function( DashboardChartView view)?  viewChanged,TResult Function( int direction)?  periodStepped,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DashboardPeriod period)?  periodChanged,TResult Function( DashboardChartView view)?  viewChanged,TResult Function( int direction)?  periodStepped,TResult Function( DateTime start,  DateTime end)?  customRangeSelected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case DashboardPeriodChanged() when periodChanged != null:
 return periodChanged(_that.period);case DashboardViewChanged() when viewChanged != null:
 return viewChanged(_that.view);case DashboardPeriodStepped() when periodStepped != null:
-return periodStepped(_that.direction);case _:
+return periodStepped(_that.direction);case DashboardCustomRangeSelected() when customRangeSelected != null:
+return customRangeSelected(_that.start,_that.end);case _:
   return orElse();
 
 }
@@ -145,12 +149,13 @@ return periodStepped(_that.direction);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DashboardPeriod period)  periodChanged,required TResult Function( DashboardChartView view)  viewChanged,required TResult Function( int direction)  periodStepped,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DashboardPeriod period)  periodChanged,required TResult Function( DashboardChartView view)  viewChanged,required TResult Function( int direction)  periodStepped,required TResult Function( DateTime start,  DateTime end)  customRangeSelected,}) {final _that = this;
 switch (_that) {
 case DashboardPeriodChanged():
 return periodChanged(_that.period);case DashboardViewChanged():
 return viewChanged(_that.view);case DashboardPeriodStepped():
-return periodStepped(_that.direction);}
+return periodStepped(_that.direction);case DashboardCustomRangeSelected():
+return customRangeSelected(_that.start,_that.end);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -164,12 +169,13 @@ return periodStepped(_that.direction);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DashboardPeriod period)?  periodChanged,TResult? Function( DashboardChartView view)?  viewChanged,TResult? Function( int direction)?  periodStepped,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DashboardPeriod period)?  periodChanged,TResult? Function( DashboardChartView view)?  viewChanged,TResult? Function( int direction)?  periodStepped,TResult? Function( DateTime start,  DateTime end)?  customRangeSelected,}) {final _that = this;
 switch (_that) {
 case DashboardPeriodChanged() when periodChanged != null:
 return periodChanged(_that.period);case DashboardViewChanged() when viewChanged != null:
 return viewChanged(_that.view);case DashboardPeriodStepped() when periodStepped != null:
-return periodStepped(_that.direction);case _:
+return periodStepped(_that.direction);case DashboardCustomRangeSelected() when customRangeSelected != null:
+return customRangeSelected(_that.start,_that.end);case _:
   return null;
 
 }
@@ -376,9 +382,77 @@ as int,
 }
 
 /// @nodoc
+
+
+class DashboardCustomRangeSelected implements DashboardChartsEvent {
+  const DashboardCustomRangeSelected(this.start, this.end);
+  
+
+ final  DateTime start;
+ final  DateTime end;
+
+/// Create a copy of DashboardChartsEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DashboardCustomRangeSelectedCopyWith<DashboardCustomRangeSelected> get copyWith => _$DashboardCustomRangeSelectedCopyWithImpl<DashboardCustomRangeSelected>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardCustomRangeSelected&&(identical(other.start, start) || other.start == start)&&(identical(other.end, end) || other.end == end));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,start,end);
+
+@override
+String toString() {
+  return 'DashboardChartsEvent.customRangeSelected(start: $start, end: $end)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DashboardCustomRangeSelectedCopyWith<$Res> implements $DashboardChartsEventCopyWith<$Res> {
+  factory $DashboardCustomRangeSelectedCopyWith(DashboardCustomRangeSelected value, $Res Function(DashboardCustomRangeSelected) _then) = _$DashboardCustomRangeSelectedCopyWithImpl;
+@useResult
+$Res call({
+ DateTime start, DateTime end
+});
+
+
+
+
+}
+/// @nodoc
+class _$DashboardCustomRangeSelectedCopyWithImpl<$Res>
+    implements $DashboardCustomRangeSelectedCopyWith<$Res> {
+  _$DashboardCustomRangeSelectedCopyWithImpl(this._self, this._then);
+
+  final DashboardCustomRangeSelected _self;
+  final $Res Function(DashboardCustomRangeSelected) _then;
+
+/// Create a copy of DashboardChartsEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? start = null,Object? end = null,}) {
+  return _then(DashboardCustomRangeSelected(
+null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
+as DateTime,null == end ? _self.end : end // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$DashboardChartsState {
 
- DashboardPeriod get period; DateTime get anchorDate; DashboardChartView get view;
+ DashboardPeriod get period; DateTime get anchorDate; DashboardChartView get view; DateTime? get customRangeStart; DateTime? get customRangeEnd;
 /// Create a copy of DashboardChartsState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -389,16 +463,16 @@ $DashboardChartsStateCopyWith<DashboardChartsState> get copyWith => _$DashboardC
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardChartsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardChartsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,period,anchorDate,view);
+int get hashCode => Object.hash(runtimeType,period,anchorDate,view,customRangeStart,customRangeEnd);
 
 @override
 String toString() {
-  return 'DashboardChartsState(period: $period, anchorDate: $anchorDate, view: $view)';
+  return 'DashboardChartsState(period: $period, anchorDate: $anchorDate, view: $view, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
 }
 
 
@@ -409,7 +483,7 @@ abstract mixin class $DashboardChartsStateCopyWith<$Res>  {
   factory $DashboardChartsStateCopyWith(DashboardChartsState value, $Res Function(DashboardChartsState) _then) = _$DashboardChartsStateCopyWithImpl;
 @useResult
 $Res call({
- DashboardPeriod period, DateTime anchorDate, DashboardChartView view
+ DashboardPeriod period, DateTime anchorDate, DashboardChartView view, DateTime? customRangeStart, DateTime? customRangeEnd
 });
 
 
@@ -426,12 +500,14 @@ class _$DashboardChartsStateCopyWithImpl<$Res>
 
 /// Create a copy of DashboardChartsState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
   return _then(_self.copyWith(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as DashboardPeriod,anchorDate: null == anchorDate ? _self.anchorDate : anchorDate // ignore: cast_nullable_to_non_nullable
 as DateTime,view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
-as DashboardChartView,
+as DashboardChartView,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
+as DateTime?,customRangeEnd: freezed == customRangeEnd ? _self.customRangeEnd : customRangeEnd // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -516,10 +592,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DashboardChartsState() when $default != null:
-return $default(_that.period,_that.anchorDate,_that.view);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   return orElse();
 
 }
@@ -537,10 +613,10 @@ return $default(_that.period,_that.anchorDate,_that.view);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)  $default,) {final _that = this;
 switch (_that) {
 case _DashboardChartsState():
-return $default(_that.period,_that.anchorDate,_that.view);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -557,10 +633,10 @@ return $default(_that.period,_that.anchorDate,_that.view);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,) {final _that = this;
 switch (_that) {
 case _DashboardChartsState() when $default != null:
-return $default(_that.period,_that.anchorDate,_that.view);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   return null;
 
 }
@@ -572,12 +648,14 @@ return $default(_that.period,_that.anchorDate,_that.view);case _:
 
 
 class _DashboardChartsState extends DashboardChartsState {
-  const _DashboardChartsState({required this.period, required this.anchorDate, this.view = DashboardChartView.donut}): super._();
+  const _DashboardChartsState({required this.period, required this.anchorDate, this.view = DashboardChartView.donut, this.customRangeStart, this.customRangeEnd}): super._();
   
 
 @override final  DashboardPeriod period;
 @override final  DateTime anchorDate;
 @override@JsonKey() final  DashboardChartView view;
+@override final  DateTime? customRangeStart;
+@override final  DateTime? customRangeEnd;
 
 /// Create a copy of DashboardChartsState
 /// with the given fields replaced by the non-null parameter values.
@@ -589,16 +667,16 @@ _$DashboardChartsStateCopyWith<_DashboardChartsState> get copyWith => __$Dashboa
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardChartsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardChartsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,period,anchorDate,view);
+int get hashCode => Object.hash(runtimeType,period,anchorDate,view,customRangeStart,customRangeEnd);
 
 @override
 String toString() {
-  return 'DashboardChartsState(period: $period, anchorDate: $anchorDate, view: $view)';
+  return 'DashboardChartsState(period: $period, anchorDate: $anchorDate, view: $view, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
 }
 
 
@@ -609,7 +687,7 @@ abstract mixin class _$DashboardChartsStateCopyWith<$Res> implements $DashboardC
   factory _$DashboardChartsStateCopyWith(_DashboardChartsState value, $Res Function(_DashboardChartsState) _then) = __$DashboardChartsStateCopyWithImpl;
 @override @useResult
 $Res call({
- DashboardPeriod period, DateTime anchorDate, DashboardChartView view
+ DashboardPeriod period, DateTime anchorDate, DashboardChartView view, DateTime? customRangeStart, DateTime? customRangeEnd
 });
 
 
@@ -626,12 +704,14 @@ class __$DashboardChartsStateCopyWithImpl<$Res>
 
 /// Create a copy of DashboardChartsState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
   return _then(_DashboardChartsState(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as DashboardPeriod,anchorDate: null == anchorDate ? _self.anchorDate : anchorDate // ignore: cast_nullable_to_non_nullable
 as DateTime,view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
-as DashboardChartView,
+as DashboardChartView,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
+as DateTime?,customRangeEnd: freezed == customRangeEnd ? _self.customRangeEnd : customRangeEnd // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

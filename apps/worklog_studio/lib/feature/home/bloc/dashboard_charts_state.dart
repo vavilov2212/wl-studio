@@ -8,5 +8,7 @@ abstract class DashboardChartsState with _$DashboardChartsState {
     required DashboardPeriod period,
     required DateTime anchorDate,
     @Default(DashboardChartView.donut) DashboardChartView view,
+    DateTime? customRangeStart,
+    DateTime? customRangeEnd,
   }) = _DashboardChartsState;
 }

@@ -80,5 +80,36 @@ void main() {
       expect(prev.anchorDate, DateTime(2024, 1, 1));
       await bloc.close();
     });
+
+    test('customRangeSelected sets period to custom, forces donut view, stores the range', () async {
+      final bloc = DashboardChartsBloc(clock: _FixedClock(DateTime(2024, 1, 17)));
+      await pump(bloc, const DashboardChartsEvent.viewChanged(DashboardChartView.bar));
+      final state = await pump(
+        bloc,
+        DashboardChartsEvent.customRangeSelected(
+          DateTime(2024, 1, 5),
+          DateTime(2024, 1, 12),
+        ),
+      );
+      expect(state.period, DashboardPeriod.custom);
+      expect(state.view, DashboardChartView.donut);
+      expect(state.customRangeStart, DateTime(2024, 1, 5));
+      expect(state.customRangeEnd, DateTime(2024, 1, 12));
+      await bloc.close();
+    });
+
+    test('periodStepped is a no-op when period is custom', () async {
+      final bloc = DashboardChartsBloc(clock: _FixedClock(DateTime(2024, 1, 17)));
+      await pump(
+        bloc,
+        DashboardChartsEvent.customRangeSelected(
+          DateTime(2024, 1, 5),
+          DateTime(2024, 1, 12),
+        ),
+      );
+      final state = await pump(bloc, const DashboardChartsEvent.periodStepped(1));
+      expect(state.anchorDate, DateTime(2024, 1, 17));
+      await bloc.close();
+    });
   });
 }

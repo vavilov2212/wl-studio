@@ -27,6 +27,7 @@ class DashboardChartsBloc extends Bloc<DashboardChartsEvent, DashboardChartsStat
     on<DashboardPeriodChanged>(_onPeriodChanged);
     on<DashboardViewChanged>(_onViewChanged);
     on<DashboardPeriodStepped>(_onPeriodStepped);
+    on<DashboardCustomRangeSelected>(_onCustomRangeSelected);
   }
 
   void _onPeriodChanged(
@@ -55,6 +56,18 @@ class DashboardChartsBloc extends Bloc<DashboardChartsEvent, DashboardChartsStat
     ));
   }
 
+  void _onCustomRangeSelected(
+    DashboardCustomRangeSelected event,
+    Emitter<DashboardChartsState> emit,
+  ) {
+    emit(state.copyWith(
+      period: DashboardPeriod.custom,
+      view: DashboardChartView.donut,
+      customRangeStart: event.start,
+      customRangeEnd: event.end,
+    ));
+  }
+
   static DateTime _truncate(DateTime date, DashboardPeriod period) {
     return period == DashboardPeriod.month
         ? DateTime(date.year, date.month, 1)
@@ -69,6 +82,10 @@ class DashboardChartsBloc extends Bloc<DashboardChartsEvent, DashboardChartsStat
         return anchor.add(Duration(days: 7 * direction));
       case DashboardPeriod.month:
         return DateTime(anchor.year, anchor.month + direction, 1);
+      case DashboardPeriod.custom:
+        // Stepping a custom range isn't supported — there's no fixed unit
+        // to step by, so this is a no-op.
+        return anchor;
     }
   }
 }

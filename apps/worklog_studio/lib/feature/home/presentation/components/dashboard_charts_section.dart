@@ -43,6 +43,8 @@ class _DashboardChartsSectionBody extends StatelessWidget {
               period: chartsState.period,
               anchorDate: chartsState.anchorDate,
               now: DateTime.now(),
+              customRangeStart: chartsState.customRangeStart,
+              customRangeEnd: chartsState.customRangeEnd,
             );
             final isEmpty = data.byProject.isEmpty && data.byTask.isEmpty;
 
@@ -97,46 +99,56 @@ class _ChartsHeader extends StatelessWidget {
                   SelectOption(value: DashboardPeriod.today, label: 'Today'),
                   SelectOption(value: DashboardPeriod.week, label: 'Week'),
                   SelectOption(value: DashboardPeriod.month, label: 'Month'),
+                  SelectOption(value: DashboardPeriod.custom, label: 'Custom...'),
                 ],
                 onChanged: (value) {
-                  if (value != null) {
+                  if (value == null) return;
+                  if (value == DashboardPeriod.custom) {
+                    _pickCustomRange(context, bloc);
+                  } else {
                     bloc.add(DashboardChartsEvent.periodChanged(value));
                   }
                 },
               ),
             ),
             SizedBox(width: theme.spacings.sm),
-            _StepperButton(
-              icon: Icons.chevron_left_rounded,
-              onTap: () => bloc.add(const DashboardChartsEvent.periodStepped(-1)),
-            ),
-            SizedBox(width: theme.spacings.xxs),
+            if (state.period != DashboardPeriod.custom) ...[
+              _StepperButton(
+                icon: Icons.chevron_left_rounded,
+                onTap: () => bloc.add(const DashboardChartsEvent.periodStepped(-1)),
+              ),
+              SizedBox(width: theme.spacings.xxs),
+            ],
             Text(
               rangeLabel,
               style: theme.commonTextStyles.body2.copyWith(color: palette.text.secondary),
             ),
-            SizedBox(width: theme.spacings.xxs),
-            _StepperButton(
-              icon: Icons.chevron_right_rounded,
-              onTap: () => bloc.add(const DashboardChartsEvent.periodStepped(1)),
-            ),
+            if (state.period != DashboardPeriod.custom) ...[
+              SizedBox(width: theme.spacings.xxs),
+              _StepperButton(
+                icon: Icons.chevron_right_rounded,
+                onTap: () => bloc.add(const DashboardChartsEvent.periodStepped(1)),
+              ),
+            ],
           ],
         );
 
-        final viewToggle = SegmentedToggle<DashboardChartView>(
-          value: state.view,
-          options: const [
-            SegmentedToggleOption(
-              value: DashboardChartView.donut,
-              icon: Icons.donut_large_rounded,
-            ),
-            SegmentedToggleOption(
-              value: DashboardChartView.bar,
-              icon: Icons.bar_chart_rounded,
-            ),
-          ],
-          onChanged: (value) => bloc.add(DashboardChartsEvent.viewChanged(value)),
-        );
+        final viewToggle = state.period == DashboardPeriod.custom
+            ? const SizedBox.shrink()
+            : SegmentedToggle<DashboardChartView>(
+                value: state.view,
+                options: const [
+                  SegmentedToggleOption(
+                    value: DashboardChartView.donut,
+                    icon: Icons.donut_large_rounded,
+                  ),
+                  SegmentedToggleOption(
+                    value: DashboardChartView.bar,
+                    icon: Icons.bar_chart_rounded,
+                  ),
+                ],
+                onChanged: (value) => bloc.add(DashboardChartsEvent.viewChanged(value)),
+              );
 
         if (isWide) {
           return Row(
@@ -153,6 +165,18 @@ class _ChartsHeader extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+Future<void> _pickCustomRange(BuildContext context, DashboardChartsBloc bloc) async {
+  final now = DateTime.now();
+  final picked = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(now.year + 1),
+  );
+  if (picked != null) {
+    bloc.add(DashboardChartsEvent.customRangeSelected(picked.start, picked.end));
   }
 }
 
@@ -252,11 +276,12 @@ class _Donut extends StatelessWidget {
           )
         else
           Row(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(
-                width: 140,
-                height: 140,
+                width: 180,
+                height: 180,
                 child: PieChart(
                   PieChartData(
                     sections: slices.map((slice) {
@@ -264,55 +289,56 @@ class _Donut extends StatelessWidget {
                         value: slice.duration.inMinutes.toDouble(),
                         color: _colorFor(slice, palette),
                         showTitle: false,
-                        radius: 28,
+                        radius: 40,
                       );
                     }).toList(),
-                    centerSpaceRadius: 42,
+                    centerSpaceRadius: 45,
                     sectionsSpace: 2,
                   ),
                 ),
               ),
               SizedBox(width: theme.spacings.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: slices.map((slice) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _colorFor(slice, palette),
-                              shape: BoxShape.circle,
-                            ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: slices.map((slice) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _colorFor(slice, palette),
+                            shape: BoxShape.circle,
                           ),
-                          SizedBox(width: theme.spacings.sm),
-                          Expanded(
-                            child: Text(
-                              slice.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.commonTextStyles.caption.copyWith(
-                                color: palette.text.primary,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${_formatHours(slice.duration)} '
-                            '(${(slice.percentOfTotal * 100).round()}%)',
+                        ),
+                        SizedBox(width: theme.spacings.sm),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: Text(
+                            slice.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.commonTextStyles.caption.copyWith(
-                              color: palette.text.muted,
+                              color: palette.text.primary,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                        ),
+                        SizedBox(width: theme.spacings.sm),
+                        Text(
+                          '${_formatHours(slice.duration)} '
+                          '(${(slice.percentOfTotal * 100).round()}%)',
+                          style: theme.commonTextStyles.caption.copyWith(
+                            color: palette.text.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -322,7 +348,7 @@ class _Donut extends StatelessWidget {
 
   Color _colorFor(DashboardSlice slice, ColorsPalette palette) {
     if (slice.id.isEmpty) return palette.text.muted;
-    return BadgeUtils.getBadgeColor(slice.id).$1;
+    return BadgeUtils.getBadgeColor(slice.id).$2;
   }
 
   String _formatHours(Duration duration) {
@@ -388,7 +414,7 @@ class _BarChart extends StatelessWidget {
                 BarChartRodData(
                   toY: hours,
                   color: palette.accent.primary,
-                  width: 18,
+                  width: 32,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ],

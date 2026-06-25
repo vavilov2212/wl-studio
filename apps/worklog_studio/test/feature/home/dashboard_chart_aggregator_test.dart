@@ -158,8 +158,15 @@ void main() {
       expect(data.rangeStart, DateTime(2024, 1, 15));
       expect(data.rangeEnd, DateTime(2024, 1, 22));
       expect(data.rangeLabel, 'Jan 15 → Jan 21');
-      expect(data.bars.map((b) => b.label).toList(),
-          ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+      expect(data.bars.map((b) => b.label).toList(), [
+        'Mon 15',
+        'Tue 16',
+        'Wed 17',
+        'Thu 18',
+        'Fri 19',
+        'Sat 20',
+        'Sun 21',
+      ]);
       expect(data.bars.map((b) => b.duration).toList(), [
         const Duration(hours: 1),
         Duration.zero,
@@ -252,6 +259,48 @@ void main() {
       expect(data.byProject.single.label, 'No Project');
       expect(data.byTask.single.id, '');
       expect(data.byTask.single.label, 'Unassigned Task');
+    });
+
+    test('custom: range is the explicit start/end (inclusive end day), no bars', () {
+      final entries = [
+        _entry(
+          id: 'e1',
+          startAt: DateTime(2024, 1, 10, 9),
+          endAt: DateTime(2024, 1, 10, 10),
+          projectId: 'p1',
+          taskId: 't1',
+        ),
+        _entry(
+          id: 'e2',
+          startAt: DateTime(2024, 1, 20, 9),
+          endAt: DateTime(2024, 1, 20, 10),
+          projectId: 'p1',
+          taskId: 't1',
+        ),
+        // Day after the inclusive end — must not be counted.
+        _entry(
+          id: 'e3',
+          startAt: DateTime(2024, 1, 21, 9),
+          endAt: DateTime(2024, 1, 21, 10),
+          projectId: 'p1',
+          taskId: 't1',
+        ),
+      ];
+
+      final data = DashboardChartAggregator.aggregate(
+        entries: entries,
+        period: DashboardPeriod.custom,
+        anchorDate: DateTime(2024, 1, 17),
+        now: DateTime(2024, 1, 22),
+        customRangeStart: DateTime(2024, 1, 10),
+        customRangeEnd: DateTime(2024, 1, 20),
+      );
+
+      expect(data.rangeStart, DateTime(2024, 1, 10));
+      expect(data.rangeEnd, DateTime(2024, 1, 21));
+      expect(data.rangeLabel, 'Jan 10 → Jan 20');
+      expect(data.bars, isEmpty);
+      expect(data.byProject.single.duration, const Duration(hours: 2));
     });
 
     test('running entry duration is computed against the supplied now', () {

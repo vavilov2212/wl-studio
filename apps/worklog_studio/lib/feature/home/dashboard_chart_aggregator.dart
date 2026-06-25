@@ -1,6 +1,6 @@
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 
-enum DashboardPeriod { today, week, month }
+enum DashboardPeriod { today, week, month, custom }
 
 class DashboardSlice {
   final String id;
@@ -59,8 +59,15 @@ class DashboardChartAggregator {
     required DashboardPeriod period,
     required DateTime anchorDate,
     required DateTime now,
+    DateTime? customRangeStart,
+    DateTime? customRangeEnd,
   }) {
-    final range = _resolveRange(period, anchorDate);
+    final range = _resolveRange(
+      period,
+      anchorDate,
+      customRangeStart: customRangeStart,
+      customRangeEnd: customRangeEnd,
+    );
     // Entries are attributed to the bucket containing their start time, not
     // split across buckets they overlap (matches the bucketing the deleted
     // Daily Focus/This Week cards used) — a session crossing a range boundary
@@ -96,7 +103,12 @@ class DashboardChartAggregator {
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  static _Range _resolveRange(DashboardPeriod period, DateTime anchorDate) {
+  static _Range _resolveRange(
+    DashboardPeriod period,
+    DateTime anchorDate, {
+    DateTime? customRangeStart,
+    DateTime? customRangeEnd,
+  }) {
     final anchor = _dateOnly(anchorDate);
     switch (period) {
       case DashboardPeriod.today:
@@ -108,6 +120,10 @@ class DashboardChartAggregator {
         final monthStart = DateTime(anchor.year, anchor.month, 1);
         final monthEnd = DateTime(anchor.year, anchor.month + 1, 1);
         return _Range(monthStart, monthEnd);
+      case DashboardPeriod.custom:
+        final start = _dateOnly(customRangeStart!);
+        final end = _dateOnly(customRangeEnd!).add(const Duration(days: 1));
+        return _Range(start, end);
     }
   }
 
@@ -116,6 +132,7 @@ class DashboardChartAggregator {
       case DashboardPeriod.today:
         return '${_monthNames[range.start.month - 1]} ${range.start.day}';
       case DashboardPeriod.week:
+      case DashboardPeriod.custom:
         final lastDay = range.end.subtract(const Duration(days: 1));
         return '${_monthNames[range.start.month - 1]} ${range.start.day} → '
             '${_monthNames[lastDay.month - 1]} ${lastDay.day}';
@@ -163,6 +180,10 @@ class DashboardChartAggregator {
         return _weeklyBuckets(range, inRange, now);
       case DashboardPeriod.month:
         return _monthlyBuckets(range, inRange, now);
+      case DashboardPeriod.custom:
+        // Custom ranges are donut-only in the UI (variable day counts don't
+        // map to a fixed bucket layout) — bars are simply unused.
+        return [];
     }
   }
 
@@ -202,10 +223,13 @@ class DashboardChartAggregator {
       if (dayIndex < 0 || dayIndex > 6) continue;
       totals[dayIndex] += entry.duration(now);
     }
-    return List.generate(
-      7,
-      (i) => DashboardBucket(label: _weekdayLabels[i], duration: totals[i]),
-    );
+    return List.generate(7, (i) {
+      final date = range.start.add(Duration(days: i));
+      return DashboardBucket(
+        label: '${_weekdayLabels[i]} ${date.day}',
+        duration: totals[i],
+      );
+    });
   }
 
   static List<DashboardBucket> _monthlyBuckets(
