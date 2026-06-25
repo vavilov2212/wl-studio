@@ -51,9 +51,26 @@ class DashboardChartsBloc extends Bloc<DashboardChartsEvent, DashboardChartsStat
     DashboardPeriodStepped event,
     Emitter<DashboardChartsState> emit,
   ) {
+    if (event.direction > 0 &&
+        !canStepForward(state.period, state.anchorDate, _clock.now())) {
+      return;
+    }
     emit(state.copyWith(
       anchorDate: _stepAnchor(state.period, state.anchorDate, event.direction),
     ));
+  }
+
+  /// Whether stepping forward from [anchorDate] would still land on a period
+  /// that has started as of [now] — periods entirely in the future aren't
+  /// steppable to, since there's no time data to show for them. Custom
+  /// ranges can never step (handled separately by the UI hiding steppers).
+  static bool canStepForward(
+    DashboardPeriod period,
+    DateTime anchorDate,
+    DateTime now,
+  ) {
+    if (period == DashboardPeriod.custom) return false;
+    return _truncate(anchorDate, period).isBefore(_truncate(now, period));
   }
 
   void _onCustomRangeSelected(

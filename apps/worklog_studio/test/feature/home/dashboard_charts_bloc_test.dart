@@ -74,10 +74,11 @@ void main() {
     test('periodStepped on month period moves by a calendar month, snapped to day 1', () async {
       final bloc = DashboardChartsBloc(clock: _FixedClock(DateTime(2024, 1, 17)));
       await pump(bloc, const DashboardChartsEvent.periodChanged(DashboardPeriod.month));
-      final next = await pump(bloc, const DashboardChartsEvent.periodStepped(1));
-      expect(next.anchorDate, DateTime(2024, 2, 1));
       final prev = await pump(bloc, const DashboardChartsEvent.periodStepped(-1));
-      expect(prev.anchorDate, DateTime(2024, 1, 1));
+      expect(prev.anchorDate, DateTime(2023, 12, 1));
+      // Forward is allowed back up to (but not past) the current month.
+      final next = await pump(bloc, const DashboardChartsEvent.periodStepped(1));
+      expect(next.anchorDate, DateTime(2024, 1, 1));
       await bloc.close();
     });
 
@@ -96,6 +97,50 @@ void main() {
       expect(state.customRangeStart, DateTime(2024, 1, 5));
       expect(state.customRangeEnd, DateTime(2024, 1, 12));
       await bloc.close();
+    });
+
+    test('periodStepped forward is a no-op once the period reaches "now"', () async {
+      final bloc = DashboardChartsBloc(clock: _FixedClock(DateTime(2024, 1, 17)));
+      // Already on the current week (anchored at "now") — stepping forward
+      // would move into a future week with no data.
+      final state = await pump(bloc, const DashboardChartsEvent.periodStepped(1));
+      expect(state.anchorDate, DateTime(2024, 1, 17));
+      await bloc.close();
+    });
+
+    test('periodStepped forward is allowed when the period is in the past', () async {
+      final bloc = DashboardChartsBloc(clock: _FixedClock(DateTime(2024, 1, 17)));
+      await pump(bloc, const DashboardChartsEvent.periodStepped(-1));
+      final state = await pump(bloc, const DashboardChartsEvent.periodStepped(1));
+      expect(state.anchorDate, DateTime(2024, 1, 17));
+      await bloc.close();
+    });
+
+    test('canStepForward is false once anchored at the period containing now', () {
+      expect(
+        DashboardChartsBloc.canStepForward(
+          DashboardPeriod.week,
+          DateTime(2024, 1, 17),
+          DateTime(2024, 1, 17),
+        ),
+        isFalse,
+      );
+      expect(
+        DashboardChartsBloc.canStepForward(
+          DashboardPeriod.week,
+          DateTime(2024, 1, 10),
+          DateTime(2024, 1, 17),
+        ),
+        isTrue,
+      );
+      expect(
+        DashboardChartsBloc.canStepForward(
+          DashboardPeriod.custom,
+          DateTime(2024, 1, 10),
+          DateTime(2024, 1, 17),
+        ),
+        isFalse,
+      );
     });
 
     test('periodStepped is a no-op when period is custom', () async {

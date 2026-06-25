@@ -119,14 +119,22 @@ class _ChartsHeader extends StatelessWidget {
               ),
               SizedBox(width: theme.spacings.xxs),
             ],
-            Text(
-              rangeLabel,
-              style: theme.commonTextStyles.body2.copyWith(color: palette.text.secondary),
-            ),
+            if (state.period == DashboardPeriod.custom)
+              _CustomRangeLabel(state: state, rangeLabel: rangeLabel, bloc: bloc)
+            else
+              Text(
+                rangeLabel,
+                style: theme.commonTextStyles.body2.copyWith(color: palette.text.secondary),
+              ),
             if (state.period != DashboardPeriod.custom) ...[
               SizedBox(width: theme.spacings.xxs),
               _StepperButton(
                 icon: Icons.chevron_right_rounded,
+                enabled: DashboardChartsBloc.canStepForward(
+                  state.period,
+                  state.anchorDate,
+                  DateTime.now(),
+                ),
                 onTap: () => bloc.add(const DashboardChartsEvent.periodStepped(1)),
               ),
             ],
@@ -168,38 +176,103 @@ class _ChartsHeader extends StatelessWidget {
   }
 }
 
-Future<void> _pickCustomRange(BuildContext context, DashboardChartsBloc bloc) async {
+Future<void> _pickCustomRange(
+  BuildContext context,
+  DashboardChartsBloc bloc, {
+  DateTimeRange? initialRange,
+}) async {
   final now = DateTime.now();
   final picked = await showDateRangePicker(
     context: context,
     firstDate: DateTime(2000),
-    lastDate: DateTime(now.year + 1),
+    lastDate: now,
+    initialDateRange: initialRange,
   );
   if (picked != null) {
     bloc.add(DashboardChartsEvent.customRangeSelected(picked.start, picked.end));
   }
 }
 
-class _StepperButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+class _CustomRangeLabel extends StatelessWidget {
+  final DashboardChartsState state;
+  final String rangeLabel;
+  final DashboardChartsBloc bloc;
 
-  const _StepperButton({required this.icon, required this.onTap});
+  const _CustomRangeLabel({
+    required this.state,
+    required this.rangeLabel,
+    required this.bloc,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final start = state.customRangeStart;
+    final end = state.customRangeEnd;
 
     return Material(
       color: Colors.transparent,
       borderRadius: theme.radiuses.sm.circular,
       child: InkWell(
-        onTap: onTap,
+        borderRadius: theme.radiuses.sm.circular,
+        onTap: () => _pickCustomRange(
+          context,
+          bloc,
+          initialRange: start != null && end != null
+              ? DateTimeRange(start: start, end: end)
+              : null,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: theme.spacings.xxs,
+            vertical: theme.spacings.xxs,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                rangeLabel,
+                style: theme.commonTextStyles.body2.copyWith(
+                  color: palette.text.secondary,
+                ),
+              ),
+              SizedBox(width: theme.spacings.xxs),
+              Icon(Icons.edit_calendar_rounded, size: 14, color: palette.text.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  const _StepperButton({
+    required this.icon,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+    final color = enabled ? palette.text.secondary : palette.text.muted;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: theme.radiuses.sm.circular,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
         borderRadius: theme.radiuses.sm.circular,
         child: Padding(
           padding: EdgeInsets.all(theme.spacings.xxs),
-          child: Icon(icon, size: 18, color: palette.text.secondary),
+          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );
