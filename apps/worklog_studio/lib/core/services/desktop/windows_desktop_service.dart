@@ -114,18 +114,26 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   Future<void> showPopover() async {
-    final frame = await _computeFrame();
-    if (_popoverWindowId == null) {
-      final window = await DesktopMultiWindow.createWindow(jsonEncode({}));
-      _popoverWindowId = window.windowId;
-      await window.setFrame(frame);
-      await window.show();
-    } else {
-      final controller = WindowController.fromWindowId(_popoverWindowId!);
-      await controller.setFrame(frame);
-      await controller.show();
+    final wasNewWindow = _popoverWindowId == null;
+    try {
+      final frame = await _computeFrame();
+      if (_popoverWindowId == null) {
+        final window = await DesktopMultiWindow.createWindow(jsonEncode({}));
+        _popoverWindowId = window.windowId;
+        await window.setFrame(frame);
+        await window.show();
+      } else {
+        final controller = WindowController.fromWindowId(_popoverWindowId!);
+        await controller.setFrame(frame);
+        await controller.show();
+      }
+      _isPopoverVisible = true;
+    } catch (e) {
+      debugPrint('WindowsDesktopService: error showing popover - $e');
+      if (wasNewWindow) {
+        _popoverWindowId = null;
+      }
     }
-    _isPopoverVisible = true;
   }
 
   @override
@@ -133,6 +141,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     if (_popoverWindowId != null) {
       try {
         await WindowController.fromWindowId(_popoverWindowId!).hide();
+        _followerReady = false;
       } catch (e) {
         debugPrint('WindowsDesktopService: error hiding popover - $e');
       }
