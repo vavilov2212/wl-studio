@@ -114,6 +114,18 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   Future<void> showPopover() async {
+    // The popover's native window has a titlebar close button (the
+    // desktop_multi_window plugin exposes no way to suppress or intercept
+    // it on Windows), so the user can destroy the underlying window/engine
+    // at any time outside our control. Validate our cached window id
+    // against the plugin's own live-window list before deciding whether to
+    // reuse it or create a fresh one - reusing a destroyed id is a silent
+    // no-op on the native side, which would otherwise leave the popover
+    // permanently unopenable.
+    if (_popoverWindowId != null && !await _isPopoverWindowAlive()) {
+      _popoverWindowId = null;
+    }
+
     final wasNewWindow = _popoverWindowId == null;
     try {
       final frame = await _computeFrame();
@@ -133,6 +145,16 @@ class WindowsDesktopService implements IDesktopPlatformService {
       if (wasNewWindow) {
         _popoverWindowId = null;
       }
+    }
+  }
+
+  Future<bool> _isPopoverWindowAlive() async {
+    try {
+      final aliveIds = await DesktopMultiWindow.getAllSubWindowIds();
+      return aliveIds.contains(_popoverWindowId);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: error checking popover liveness - $e');
+      return false;
     }
   }
 
