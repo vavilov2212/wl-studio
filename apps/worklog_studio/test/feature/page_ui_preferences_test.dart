@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/domain/history_filters.dart';
+import 'package:worklog_studio/domain/history_sort.dart';
 import 'package:worklog_studio/domain/projects_filters.dart';
+import 'package:worklog_studio/domain/projects_sort.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 import 'package:worklog_studio/domain/tasks_filters.dart';
+import 'package:worklog_studio/domain/tasks_sort.dart';
 import 'package:worklog_studio/feature/history/presentation/history_page.dart';
 import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
 import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
@@ -122,6 +126,79 @@ void main() {
       expect(prefs.tasksFilters.projectIds, isEmpty);
       expect(prefs.projectsViewMode, ProjectViewMode.table);
       expect(prefs.projectsFilters.activeCount, 0);
+    });
+
+    test('defaults to date-desc, name-asc, name-asc sort with no expanded override', () {
+      final prefs = PageUiPreferences();
+
+      expect(prefs.historySortField, HistorySortField.date);
+      expect(prefs.historySortDirection, SortDirection.desc);
+      expect(prefs.historySortExpandedOverride, isNull);
+
+      expect(prefs.tasksSortField, TasksSortField.name);
+      expect(prefs.tasksSortDirection, SortDirection.asc);
+      expect(prefs.tasksSortExpandedOverride, isNull);
+
+      expect(prefs.projectsSortField, ProjectsSortField.name);
+      expect(prefs.projectsSortDirection, SortDirection.asc);
+      expect(prefs.projectsSortExpandedOverride, isNull);
+    });
+
+    test('setHistorySortField/Direction/ExpandedOverride update and notify', () {
+      final prefs = PageUiPreferences();
+      var notified = false;
+      prefs.addListener(() => notified = true);
+
+      prefs.setHistorySortField(HistorySortField.duration);
+      prefs.setHistorySortDirection(SortDirection.asc);
+      prefs.setHistorySortExpandedOverride(true);
+
+      expect(prefs.historySortField, HistorySortField.duration);
+      expect(prefs.historySortDirection, SortDirection.asc);
+      expect(prefs.historySortExpandedOverride, isTrue);
+      expect(notified, isTrue);
+    });
+
+    test('setTasksSortField/Direction/ExpandedOverride update and notify', () {
+      final prefs = PageUiPreferences();
+      var notified = false;
+      prefs.addListener(() => notified = true);
+
+      prefs.setTasksSortField(TasksSortField.timeTracked);
+      prefs.setTasksSortDirection(SortDirection.desc);
+      prefs.setTasksSortExpandedOverride(true);
+
+      expect(prefs.tasksSortField, TasksSortField.timeTracked);
+      expect(prefs.tasksSortDirection, SortDirection.desc);
+      expect(prefs.tasksSortExpandedOverride, isTrue);
+      expect(notified, isTrue);
+    });
+
+    test('setProjectsSortField/Direction/ExpandedOverride update and notify', () {
+      final prefs = PageUiPreferences();
+      var notified = false;
+      prefs.addListener(() => notified = true);
+
+      prefs.setProjectsSortField(ProjectsSortField.timeTracked);
+      prefs.setProjectsSortDirection(SortDirection.desc);
+      prefs.setProjectsSortExpandedOverride(true);
+
+      expect(prefs.projectsSortField, ProjectsSortField.timeTracked);
+      expect(prefs.projectsSortDirection, SortDirection.desc);
+      expect(prefs.projectsSortExpandedOverride, isTrue);
+      expect(notified, isTrue);
+    });
+
+    test('updating History sort does not affect Tasks/Projects sort', () {
+      final prefs = PageUiPreferences();
+
+      prefs.setHistorySortField(HistorySortField.duration);
+      prefs.setHistorySortDirection(SortDirection.asc);
+
+      expect(prefs.tasksSortField, TasksSortField.name);
+      expect(prefs.tasksSortDirection, SortDirection.asc);
+      expect(prefs.projectsSortField, ProjectsSortField.name);
+      expect(prefs.projectsSortDirection, SortDirection.asc);
     });
   });
 }
