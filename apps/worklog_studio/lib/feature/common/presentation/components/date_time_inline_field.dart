@@ -415,48 +415,35 @@ class _DateTimeInlineFieldState extends State<DateTimeInlineField> {
     return DateFormat('MMM d, HH:mm:ss').format(date);
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: widget.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+  void _onDatePicked(DateTime picked) {
+    final newDate = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      widget.value.hour,
+      widget.value.minute,
+      widget.value.second,
+      widget.value.millisecond,
+      widget.value.microsecond,
     );
-    if (picked != null) {
-      final newDate = DateTime(
-        picked.year,
-        picked.month,
-        picked.day,
-        widget.value.hour,
-        widget.value.minute,
-        widget.value.second,
-        widget.value.millisecond,
-        widget.value.microsecond,
-      );
-      if (newDate != widget.value) {
-        widget.onChanged(newDate);
-      }
+    if (newDate != widget.value) {
+      widget.onChanged(newDate);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final calendarButton = IconButton(
-      icon: const Icon(Icons.calendar_today, size: 16),
-      color: theme.colorsPalette.text.secondary,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-      onPressed: widget.isEditable ? _pickDate : null,
-    );
-
     return InlineField(
       label: widget.label,
       value: _formatDisplayValue(widget.value),
       controller: widget.controller,
       isEditable: widget.isEditable,
       size: widget.size,
-      trailing: calendarButton,
+      trailing: _CalendarPickerButton(
+        value: widget.value,
+        enabled: widget.isEditable,
+        onPicked: _onDatePicked,
+      ),
       editWidget: PrimaryInput(
         label: null,
         controller: _textController,
@@ -464,8 +451,71 @@ class _DateTimeInlineFieldState extends State<DateTimeInlineField> {
         hintText: 'yyyy.MM.dd HH:mm:ss',
         autofocus: true,
         inputFormatters: [DateTimeMaskFormatter()],
-        suffixWidget: calendarButton,
+        suffixWidget: _CalendarPickerButton(
+          value: widget.value,
+          enabled: widget.isEditable,
+          onPicked: _onDatePicked,
+        ),
         size: widget.size,
+      ),
+    );
+  }
+}
+
+class _CalendarPickerButton extends StatefulWidget {
+  final DateTime value;
+  final bool enabled;
+  final ValueChanged<DateTime> onPicked;
+
+  const _CalendarPickerButton({
+    required this.value,
+    required this.enabled,
+    required this.onPicked,
+  });
+
+  @override
+  State<_CalendarPickerButton> createState() => _CalendarPickerButtonState();
+}
+
+class _CalendarPickerButtonState extends State<_CalendarPickerButton> {
+  final PopoverController _popoverController = PopoverController();
+
+  @override
+  void dispose() {
+    _popoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return PopoverPrimitive(
+      controller: _popoverController,
+      onRequestClose: _popoverController.hide,
+      contentBuilder: (context) => Container(
+        decoration: BoxDecoration(
+          color: palette.background.surface,
+          borderRadius: theme.radiuses.md.circular,
+          border: Border.all(color: palette.border.primary),
+          boxShadow: [theme.shadows.md],
+        ),
+        padding: EdgeInsets.all(theme.spacings.sm),
+        child: CalendarPicker(
+          selectedDate: widget.value,
+          onDateSelected: (date) {
+            widget.onPicked(date);
+            _popoverController.hide();
+          },
+        ),
+      ),
+      trigger: IconButton(
+        icon: const Icon(Icons.calendar_today, size: 16),
+        color: palette.text.secondary,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+        onPressed: widget.enabled ? _popoverController.toggle : null,
       ),
     );
   }

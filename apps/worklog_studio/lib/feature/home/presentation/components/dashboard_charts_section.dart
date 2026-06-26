@@ -181,16 +181,42 @@ Future<void> _pickCustomRange(
   DashboardChartsBloc bloc, {
   DateTimeRange? initialRange,
 }) async {
-  final now = DateTime.now();
-  final picked = await showDateRangePicker(
+  final theme = context.theme;
+  final palette = theme.colorsPalette;
+
+  await showDialog<void>(
     context: context,
-    firstDate: DateTime(2000),
-    lastDate: now,
-    initialDateRange: initialRange,
+    barrierColor: Colors.black.withValues(alpha: 0.2),
+    builder: (dialogContext) {
+      return Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: palette.background.surface,
+              borderRadius: theme.radiuses.md.circular,
+              border: Border.all(color: palette.border.primary),
+              boxShadow: [theme.shadows.md],
+            ),
+            padding: EdgeInsets.all(theme.spacings.sm),
+            child: CalendarPicker(
+              selectedRange: initialRange,
+              lastDate: DateTime.now(),
+              onRangeSelected: (range) {
+                bloc.add(
+                  DashboardChartsEvent.customRangeSelected(
+                    range.start,
+                    range.end,
+                  ),
+                );
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+          ),
+        ),
+      );
+    },
   );
-  if (picked != null) {
-    bloc.add(DashboardChartsEvent.customRangeSelected(picked.start, picked.end));
-  }
 }
 
 class _CustomRangeLabel extends StatelessWidget {

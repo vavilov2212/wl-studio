@@ -25,9 +25,23 @@ class DateRangeButton extends StatefulWidget {
 
 class _DateRangeButtonState extends State<DateRangeButton> {
   final ComboboxController _controller = ComboboxController();
+  bool _showCustomCalendar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onComboboxChange);
+  }
+
+  void _onComboboxChange() {
+    if (!_controller.isOpen && _showCustomCalendar) {
+      setState(() => _showCustomCalendar = false);
+    }
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onComboboxChange);
     _controller.dispose();
     super.dispose();
   }
@@ -52,18 +66,10 @@ class _DateRangeButtonState extends State<DateRangeButton> {
     return DateTimeRange(start: monthStart, end: today);
   }
 
-  Future<void> _pickCustomRange(BuildContext context, VoidCallback close) async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(now.year + 1),
-      initialDateRange: widget.value,
-    );
+  void _handleCustomRangePicked(DateTimeRange range, VoidCallback close) {
+    widget.onChanged(range);
+    setState(() => _showCustomCalendar = false);
     close();
-    if (picked != null) {
-      widget.onChanged(picked);
-    }
   }
 
   String? get _label {
@@ -101,48 +107,60 @@ class _DateRangeButtonState extends State<DateRangeButton> {
             border: Border.all(color: palette.border.primary),
             boxShadow: [theme.shadows.md],
           ),
-          padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _PresetRow(
-                label: 'Today',
-                onTap: () {
-                  widget.onChanged(_todayRange());
-                  close();
-                },
-              ),
-              _PresetRow(
-                label: 'This week',
-                onTap: () {
-                  widget.onChanged(_thisWeekRange());
-                  close();
-                },
-              ),
-              _PresetRow(
-                label: 'This month',
-                onTap: () {
-                  widget.onChanged(_thisMonthRange());
-                  close();
-                },
-              ),
-              _PresetRow(
-                label: 'All time',
-                onTap: () {
-                  widget.onChanged(null);
-                  close();
-                },
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
-                child: Divider(height: 1, color: palette.border.primary),
-              ),
-              _PresetRow(
-                label: 'Custom range...',
-                onTap: () => _pickCustomRange(context, close),
-              ),
-            ],
+          padding: EdgeInsets.symmetric(
+            vertical: theme.spacings.xxs,
+            horizontal: _showCustomCalendar ? theme.spacings.sm : 0,
           ),
+          child: _showCustomCalendar
+              ? CalendarPicker(
+                  selectedRange: widget.value,
+                  onRangeSelected: (range) =>
+                      _handleCustomRangePicked(range, close),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _PresetRow(
+                      label: 'Today',
+                      onTap: () {
+                        widget.onChanged(_todayRange());
+                        close();
+                      },
+                    ),
+                    _PresetRow(
+                      label: 'This week',
+                      onTap: () {
+                        widget.onChanged(_thisWeekRange());
+                        close();
+                      },
+                    ),
+                    _PresetRow(
+                      label: 'This month',
+                      onTap: () {
+                        widget.onChanged(_thisMonthRange());
+                        close();
+                      },
+                    ),
+                    _PresetRow(
+                      label: 'All time',
+                      onTap: () {
+                        widget.onChanged(null);
+                        close();
+                      },
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.sm,
+                      ),
+                      child: Divider(height: 1, color: palette.border.primary),
+                    ),
+                    _PresetRow(
+                      label: 'Custom range...',
+                      onTap: () =>
+                          setState(() => _showCustomCalendar = true),
+                    ),
+                  ],
+                ),
         );
       },
     );
