@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
@@ -21,6 +23,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
   factory WindowsDesktopService() => _instance;
 
   final _navigationStreamController = StreamController<String>.broadcast();
+
+  int? _ownWindowId;
+
+  /// Exposed for unit tests only - production code never reads this from
+  /// outside the class.
+  @visibleForTesting
+  int? get ownWindowIdForTesting => _ownWindowId;
 
   // ── IDesktopPlatformService ───────────────────────────────────────────────
 
@@ -60,9 +69,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   void dispatchAction(dynamic action) {}
 
-  /// Windows always runs as the main window — returns `'main'` immediately.
+  /// Returns `'tray'` when [args] indicate this process is a
+  /// `desktop_multi_window` secondary engine, storing the parsed window id
+  /// for [initFollower] to use later. Returns `'main'` otherwise.
   @override
-  Future<String> resolveStartupRole() async => 'main';
+  Future<String> resolveStartupRole(List<String> args) async {
+    if (args.firstOrNull == 'multi_window' && args.length >= 2) {
+      _ownWindowId = int.tryParse(args[1]);
+      return 'tray';
+    }
+    return 'main';
+  }
 
   @override
   void dispose() {

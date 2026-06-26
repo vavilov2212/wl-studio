@@ -72,7 +72,7 @@ Future<void> run(List<String> args) async {
   }
 
   // Role detection is now owned by the platform service itself.
-  final role = await DesktopServiceRegistry.instance.resolveStartupRole();
+  final role = await DesktopServiceRegistry.instance.resolveStartupRole(args);
   debugPrint('Successfully resolved engine role: $role');
 
   final isPopover = role == 'tray';
