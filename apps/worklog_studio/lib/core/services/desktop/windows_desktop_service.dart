@@ -34,7 +34,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
   final _navigationStreamController = StreamController<String>.broadcast();
 
   TimeTrackerBloc? _leaderBloc;
-  EntityResolver? _resolver;
   ProjectTaskState? _projectTaskState;
   StreamSubscription<TimeTrackerBlocState>? _blocSubscription;
 
@@ -62,7 +61,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
     ProjectTaskState projectTaskState,
   ) async {
     _leaderBloc = bloc;
-    _resolver = resolver;
     _projectTaskState = projectTaskState;
 
     await WindowsTrayService().init(
