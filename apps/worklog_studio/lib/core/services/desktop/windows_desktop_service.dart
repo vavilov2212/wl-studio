@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
 
 import 'package:collection/collection.dart';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
+import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
+import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
+import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
@@ -11,23 +17,36 @@ import 'package:worklog_studio/state/project_task_state.dart';
 
 /// Windows implementation of [IDesktopPlatformService].
 ///
-/// Delegates all tray icon and window lifecycle work to [WindowsTrayService],
-/// which already owns that logic cleanly. This class is a thin adapter that
-/// satisfies the shared interface so that call sites remain platform-agnostic.
+/// Owns a secondary `desktop_multi_window` engine that hosts the mini
+/// tracker popover, mirroring the role [MacOSDesktopService] plays for its
+/// native NSPanel popover - but using the `desktop_multi_window` plugin's
+/// own inter-window channel instead of a hand-rolled native `MethodChannel`.
 ///
-/// This file contains **zero macOS-specific code**.
+/// This file contains zero macOS-specific code.
 class WindowsDesktopService implements IDesktopPlatformService {
   WindowsDesktopService._();
 
   static final WindowsDesktopService _instance = WindowsDesktopService._();
   factory WindowsDesktopService() => _instance;
 
+  static const _popoverSize = Size(360, 520);
+
   final _navigationStreamController = StreamController<String>.broadcast();
 
-  int? _ownWindowId;
+  TimeTrackerBloc? _leaderBloc;
+  EntityResolver? _resolver;
+  ProjectTaskState? _projectTaskState;
+  StreamSubscription<TimeTrackerBlocState>? _blocSubscription;
 
-  /// Exposed for unit tests only - production code never reads this from
-  /// outside the class.
+  MiniTrackerCubit? _followerCubit;
+
+  int? _ownWindowId;
+  int? _popoverWindowId;
+  bool _isPopoverVisible = false;
+  bool _isPopover = false;
+  bool _followerReady = false;
+
+  /// Exposed for unit tests only.
   @visibleForTesting
   int? get ownWindowIdForTesting => _ownWindowId;
 
@@ -42,36 +61,107 @@ class WindowsDesktopService implements IDesktopPlatformService {
     EntityResolver resolver,
     ProjectTaskState projectTaskState,
   ) async {
-    await WindowsTrayService().init(bloc, resolver, projectTaskState);
+    _leaderBloc = bloc;
+    _resolver = resolver;
+    _projectTaskState = projectTaskState;
+
+    await WindowsTrayService().init(
+      bloc,
+      resolver,
+      projectTaskState,
+      onTrayClick: togglePopover,
+    );
+
+    _blocSubscription = bloc.stream.listen((state) {
+      _broadcastSnapshotIfReady(state);
+    });
+
+    projectTaskState.addListener(() {
+      if (_leaderBloc != null) {
+        _broadcastSnapshotIfReady(_leaderBloc!.state);
+      }
+    });
+
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      await _handleIncomingIpcMessage(call.method, call.arguments);
+      return null;
+    });
   }
 
-  /// Windows does not have a secondary popover engine — no-op.
   @override
-  Future<void> initFollower(MiniTrackerCubit cubit) async {}
+  Future<void> initFollower(MiniTrackerCubit cubit) async {
+    _isPopover = true;
+    _followerCubit = cubit;
 
-  /// Windows does not use a popover panel — no-op.
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      await _handleIncomingIpcMessage(call.method, call.arguments);
+      return null;
+    });
+
+    try {
+      await DesktopMultiWindow.invokeMethod(0, 'miniReady', null);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: handshake miniReady failed - $e');
+    }
+  }
+
   @override
-  Future<void> togglePopover() async {}
+  Future<void> togglePopover() async {
+    if (_isPopoverVisible) {
+      await hidePopover();
+    } else {
+      await showPopover();
+    }
+  }
 
-  /// Windows does not use a popover panel — no-op.
   @override
-  Future<void> showPopover() async {}
+  Future<void> showPopover() async {
+    final frame = await _computeFrame();
+    if (_popoverWindowId == null) {
+      final window = await DesktopMultiWindow.createWindow(jsonEncode({}));
+      _popoverWindowId = window.windowId;
+      await window.setFrame(frame);
+      await window.show();
+    } else {
+      final controller = WindowController.fromWindowId(_popoverWindowId!);
+      await controller.setFrame(frame);
+      await controller.show();
+    }
+    _isPopoverVisible = true;
+  }
 
-  /// Windows does not use a popover panel — no-op.
   @override
-  Future<void> hidePopover() async {}
+  Future<void> hidePopover() async {
+    if (_popoverWindowId != null) {
+      try {
+        await WindowController.fromWindowId(_popoverWindowId!).hide();
+      } catch (e) {
+        debugPrint('WindowsDesktopService: error hiding popover - $e');
+      }
+    }
+    _isPopoverVisible = false;
+  }
 
-  /// Windows has no IPC channel between two Flutter engines — no-op.
   @override
-  void openMainWindowFromTray({String? route}) {}
+  void openMainWindowFromTray({String? route}) {
+    if (!_isPopover) return;
+    try {
+      DesktopMultiWindow.invokeMethod(0, 'openMainWindow', {'route': route});
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to open main window - $e');
+    }
+  }
 
-  /// Windows has no follower process that dispatches actions — no-op.
   @override
-  void dispatchAction(dynamic action) {}
+  void dispatchAction(covariant dynamic action) {
+    if (!_isPopover || action is! TimerAction) return;
+    try {
+      DesktopMultiWindow.invokeMethod(0, 'dispatchAction', action.toJson());
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to dispatch action - $e');
+    }
+  }
 
-  /// Returns `'tray'` when [args] indicate this process is a
-  /// `desktop_multi_window` secondary engine, storing the parsed window id
-  /// for [initFollower] to use later. Returns `'main'` otherwise.
   @override
   Future<String> resolveStartupRole(List<String> args) async {
     if (args.firstOrNull == 'multi_window' && args.length >= 2) {
@@ -83,7 +173,133 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   void dispose() {
+    _blocSubscription?.cancel();
     WindowsTrayService().dispose();
     _navigationStreamController.close();
   }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  Future<Rect> _computeFrame() async {
+    final trayBounds =
+        await trayManager.getBounds() ?? const Rect.fromLTWH(0, 0, 32, 32);
+    return computePopoverFrame(
+      trayBounds: trayBounds,
+      popoverSize: _popoverSize,
+    );
+  }
+
+  Future<void> _handleIncomingIpcMessage(
+    String? method,
+    dynamic arguments,
+  ) async {
+    try {
+      switch (method) {
+        case 'miniReady':
+          _followerReady = true;
+          if (_leaderBloc != null) {
+            await _broadcastSnapshotIfReady(_leaderBloc!.state);
+          }
+
+        case 'openMainWindow':
+          await WindowsTrayService().restoreWindow();
+          if (arguments is Map) {
+            final route = arguments['route'] as String?;
+            if (route != null) {
+              _navigationStreamController.add(route);
+            }
+          }
+
+        case 'miniClosed':
+          _followerReady = false;
+
+        case 'dispatchAction':
+          if (arguments != null) {
+            final actionMap = Map<String, dynamic>.from(arguments as Map);
+            final action = TimerAction.fromJson(actionMap);
+            _handleFollowerAction(action);
+          }
+
+        case 'broadcastSnapshot':
+          if (arguments != null) {
+            final snapshotMap = Map<String, dynamic>.from(
+              jsonDecode(arguments as String),
+            );
+            final snapshot = TimerSnapshot.fromJson(snapshotMap);
+            _followerCubit?.updateFromSnapshot(snapshot);
+          }
+      }
+    } catch (e) {
+      debugPrint('WindowsDesktopService: IPC message handling failed - $e');
+    }
+  }
+
+  void _handleFollowerAction(TimerAction action) {
+    if (_leaderBloc == null) return;
+
+    final isCurrentlyRunning = _leaderBloc!.state.isRunning;
+
+    if (action.type == TimerActionType.start) {
+      if (isCurrentlyRunning) {
+        _leaderBloc!.add(TimeTrackerStopped());
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _leaderBloc!.add(
+            TimeTrackerStarted(
+              projectId: action.projectId,
+              taskId: action.taskId,
+              comment: action.comment,
+            ),
+          );
+        });
+      } else {
+        _leaderBloc!.add(
+          TimeTrackerStarted(
+            projectId: action.projectId,
+            taskId: action.taskId,
+            comment: action.comment,
+          ),
+        );
+      }
+    } else if (action.type == TimerActionType.stop) {
+      if (isCurrentlyRunning) {
+        _leaderBloc!.add(TimeTrackerStopped());
+      }
+    }
+  }
+
+  Future<void> _broadcastSnapshotIfReady(TimeTrackerBlocState state) async {
+    if (!_followerReady || _popoverWindowId == null) return;
+
+    final snapshot = TimerSnapshot(
+      isRunning: state.isRunning,
+      activeEntry: state.activeEntryOrNull,
+      entries: state.allEntries,
+      tasks: _projectTaskState?.tasks ?? [],
+      projects: _projectTaskState?.projects ?? [],
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    try {
+      final jsonStr = jsonEncode(snapshot.toJson());
+      await DesktopMultiWindow.invokeMethod(
+        _popoverWindowId!,
+        'broadcastSnapshot',
+        jsonStr,
+      );
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to broadcast snapshot - $e');
+    }
+  }
+
+  // ── Test seams ─────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  void setLeaderBlocForTesting(TimeTrackerBloc bloc) => _leaderBloc = bloc;
+
+  @visibleForTesting
+  Future<void> handleIncomingIpcMessageForTesting(
+    String method,
+    dynamic arguments,
+  ) =>
+      _handleIncomingIpcMessage(method, arguments);
 }
