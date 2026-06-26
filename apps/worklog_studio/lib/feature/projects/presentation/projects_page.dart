@@ -5,6 +5,8 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
 import 'package:worklog_studio/domain/projects_filters.dart';
+import 'package:worklog_studio/domain/projects_sort.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/page_ui_preferences.dart';
 import 'package:worklog_studio/state/drawer_host_controller.dart';
@@ -12,6 +14,7 @@ import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart'
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/project_card.dart';
 import 'components/projects_filter_bar.dart';
+import 'components/projects_sort_bar.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/project_actions_cell.dart';
@@ -71,6 +74,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         drawer.kind == DrawerEntityKind.project ? drawer.project : null;
     final isFilterExpanded =
         prefs.projectsFilterExpandedOverride ?? prefs.projectsFilters.isActive;
+    final isSortExpanded = prefs.projectsSortExpandedOverride ?? false;
 
     return ProjectList(
       projects: resolvedProjects,
@@ -88,6 +92,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       onFilterExpandedToggle: () => context
           .read<PageUiPreferences>()
           .setProjectsFilterExpandedOverride(!isFilterExpanded),
+      sortField: prefs.projectsSortField,
+      sortDirection: prefs.projectsSortDirection,
+      onSortFieldChanged: (field) =>
+          context.read<PageUiPreferences>().setProjectsSortField(field),
+      onSortDirectionChanged: (direction) =>
+          context.read<PageUiPreferences>().setProjectsSortDirection(direction),
+      isSortExpanded: isSortExpanded,
+      onSortExpandedToggle: () => context
+          .read<PageUiPreferences>()
+          .setProjectsSortExpandedOverride(!isSortExpanded),
     );
   }
 }
@@ -104,6 +118,12 @@ class ProjectList extends StatelessWidget {
   final ValueChanged<ProjectsFilters> onFiltersChanged;
   final bool isFilterExpanded;
   final VoidCallback onFilterExpandedToggle;
+  final ProjectsSortField sortField;
+  final SortDirection sortDirection;
+  final ValueChanged<ProjectsSortField> onSortFieldChanged;
+  final ValueChanged<SortDirection> onSortDirectionChanged;
+  final bool isSortExpanded;
+  final VoidCallback onSortExpandedToggle;
 
   const ProjectList({
     super.key,
@@ -118,6 +138,12 @@ class ProjectList extends StatelessWidget {
     required this.onFiltersChanged,
     required this.isFilterExpanded,
     required this.onFilterExpandedToggle,
+    required this.sortField,
+    required this.sortDirection,
+    required this.onSortFieldChanged,
+    required this.onSortDirectionChanged,
+    required this.isSortExpanded,
+    required this.onSortExpandedToggle,
   });
 
   @override
@@ -165,16 +191,31 @@ class ProjectList extends StatelessWidget {
             isFilterExpanded: isFilterExpanded,
             onFilterTap: onFilterExpandedToggle,
             activeFilterCount: filters.activeCount,
+            isSortExpanded: isSortExpanded,
+            onSortTap: onSortExpandedToggle,
           ),
           if (isFilterExpanded) ...[
             SizedBox(height: theme.spacings.sm),
             ProjectsFilterBar(filters: filters, onChanged: onFiltersChanged),
           ],
+          if (isSortExpanded) ...[
+            SizedBox(height: theme.spacings.sm),
+            ProjectsSortBar(
+              field: sortField,
+              direction: sortDirection,
+              onFieldChanged: onSortFieldChanged,
+              onDirectionChanged: onSortDirectionChanged,
+            ),
+          ],
           SizedBox(height: theme.spacings.x2l),
           Expanded(
             child: SingleChildScrollView(
               child: () {
-                final filteredProjects = applyProjectsFilters(projects, filters);
+                final filteredProjects = applyProjectsSort(
+                  applyProjectsFilters(projects, filters),
+                  sortField,
+                  sortDirection,
+                );
                 return viewMode == ProjectViewMode.table
                     ? WsTable<ResolvedProject>(
                         data: filteredProjects,
