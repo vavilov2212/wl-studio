@@ -1,15 +1,21 @@
-# Floating Comment Tracker (Global Hotkey Popup) — Design
+# Floating Comment Tracker (Global Hotkey Popup) - Design
 
 ## Scope
 
-Windows only for this iteration. macOS support (popover + IPC wiring) is deferred until the
-author has a Mac to test on. The design keeps macOS unaffected and ready for a follow-up spec.
+Windows only for this iteration. macOS support (popover + IPC wiring for the new hotkeys) is
+deferred until the author has a Mac to test on. The design keeps macOS unaffected and ready for a
+follow-up spec.
+
+This spec depends on `2026-06-26-windows-popover-infrastructure-design.md`: it assumes a real
+Windows popover window/engine (built via `desktop_multi_window`, opened today by a tray click)
+already exists and hosts `MiniPanel`. This spec layers hotkeys, comment editing, and a periodic
+reminder on top of that popover - it does not introduce a separate "mini mode main window" hack.
 
 ## Problem
 
 The user frequently switches tasks without updating the comment on the currently running time
-entry. They want a fast way — independent of which app currently has focus, and even while the
-main window is hidden to the tray — to glance at and edit the active entry's comment, switch
+entry. They want a fast way, independent of which app currently has focus, and even while the
+main window is hidden to the tray, to glance at and edit the active entry's comment, switch
 task/project, or stop the timer, plus an optional periodic nudge ("are you still working on
 this?") so they don't forget to update it.
 
@@ -18,30 +24,28 @@ this?") so they don't forget to update it.
 ### Hotkeys
 
 A new `HotkeyService` (`lib/core/services/desktop/hotkey_service.dart`) wraps the
-`hotkey_manager` package (pure Dart plugin, no custom native code required on Windows) and
-registers two global hotkeys at startup, from `WindowsDesktopService.initLeader`:
+`hotkey_manager` package (pure Dart plugin, no custom native code required) and registers three
+global hotkeys at startup, from `WindowsDesktopService.initLeader`:
 
-- **Open hotkey** (default `Ctrl+Shift+M`): calls `showPopover()` and focuses the comment field.
-- **Accept hotkey** (default `Ctrl+Shift+Enter`): saves the current comment and calls
-  `hidePopover()`. Registered as a *global* hotkey (not just a widget-level shortcut) so it works
-  even if the popup didn't grab OS focus.
+- **Toggle hotkey** (default `Ctrl+Shift+M`): calls `togglePopover()` - opens the popover and
+  focuses the comment field if it's closed, closes it (without saving any in-progress edit) if
+  it's already open. This is the single hotkey for "show me the thing."
+- **Accept hotkey** (default `Ctrl+Shift+Enter`): saves the current comment (if changed) and
+  closes the popover.
+- **Dismiss hotkey** (default `Ctrl+Shift+Escape`): closes the popover without saving any edit in
+  progress, leaving the comment as it was.
 
-Both hotkeys are configurable from Settings (see below) and stay registered for as long as the
-process is alive (i.e., while running in the tray — not after a full quit, which is acceptable).
+All three are global hotkeys (not just widget-level shortcuts), so accept/dismiss work even if
+the popover window didn't grab OS focus. They're configurable from Settings (see below) and stay
+registered for as long as the process is alive (i.e., while running in the tray, not after a full
+quit, which is acceptable).
 
-### Windows "mini mode" popup
+### Popover reuse
 
-Windows has no multi-window/native popover infrastructure today (`WindowsDesktopService` no-ops
-all `IDesktopPlatformService` popover methods). Rather than build one, `showPopover()`/
-`hidePopover()` repurpose the existing main window:
-
-1. On open: snapshot current window size/position/route, call `window_manager`'s
-   `setAsFrameless()`, `setSize(360, 520)`, `setAlwaysOnTop(true)`, reposition near the cursor or
-   tray icon, and swap the displayed route to the mini-tracker view.
-2. On close (via accept hotkey, Esc, or losing focus): restore the previous frame/size/position
-   and route.
-
-This is Dart-only — no changes to `windows/runner/*`.
+`showPopover()`/`hidePopover()`/`togglePopover()` call straight into the Windows popover
+infrastructure from the companion spec (create-if-needed, position near tray, show/hide, keep the
+engine warm between opens). No window-state snapshotting/restoring is needed since the popover is
+a distinct window from the main one.
 
 ### Shared mini-tracker UI
 
@@ -50,16 +54,18 @@ on the active-session card, following the existing `InlineField`/`TextArea` patt
 `time_entry_drawer.dart` (edits call `_service.updateActive(comment: text)` /
 `TimeTrackerEntryUpdated`). The project/task switcher and recent-activity list already exist in
 `MiniPanel` and need no changes. Because this is plain shared Flutter code, it will render
-correctly inside the macOS popover once that platform is wired up later — only the macOS-side
-hotkey/IPC trigger is deferred, not the UI.
+correctly inside the macOS popover once that platform's hotkey/IPC wiring is added later.
+
+The comment field tracks unsaved edits locally; accept commits them, dismiss (or toggle-close)
+discards them and reverts the field to the persisted comment.
 
 ### Periodic reminder
 
 A new `ReminderService` (`lib/core/services/reminder_service.dart`), pure Dart, runs a
 `Timer.periodic` at the configured interval, active only while a time entry is running. On fire,
-it invokes the same `showPopover()` path as the open hotkey, pre-focused on the comment field. If
-untouched for ~20 seconds it auto-closes and restores the previous window state; the running
-timer is never auto-paused.
+it invokes the same `showPopover()` path as the toggle hotkey, pre-focused on the comment field.
+If untouched for about 20 seconds it auto-closes (discarding any unsaved edit, same as dismiss);
+the running timer is never auto-paused.
 
 ### Settings persistence
 
@@ -69,25 +75,25 @@ as `time_entries`, plus a `SettingsRepository` (`getString`/`setString` or typed
 keys:
 
 - `reminder_interval_minutes` (off / 1 / 2 / 5 / 10 / 30)
-- `open_hotkey` (serialized `HotKey`)
-- `accept_hotkey` (serialized `HotKey`)
+- `toggle_hotkey`, `accept_hotkey`, `dismiss_hotkey` (each a serialized `HotKey`)
 
 `settings_screen.dart` gets a new section built from existing design-system components (interval
-picker, two hotkey recorders) — no new design-system primitives required.
+picker, three hotkey recorders). No new design-system primitives required.
 
 ### Data flow
 
-`TimeTrackerBloc` remains the single source of truth; mini mode reads it directly (no IPC needed
-since it's the same engine/window). Comment edits and task/project switches dispatch through the
-existing `TimeTrackerBloc` events used by `MiniPanel` today — no new persistence path.
+`TimeTrackerBloc` (leader) remains the single source of truth. The popover engine reads it via the
+multi-window IPC channel from the companion spec (`TimerSnapshot`/`TimerAction`), exactly as
+`MiniPanel` already does today for start/stop/task-switch. Comment edits dispatch through the same
+channel as a new `TimerAction` variant (`updateComment`), so no new persistence path is
+introduced.
 
 ## Out of scope (this iteration)
 
 - macOS popover/IPC wiring for the new hotkeys and reminder (deferred to a follow-up spec once
   testable).
-- Per-OS hotkey customization beyond the two defaults described above is supported via settings,
-  but no UI for *adding more than two* hotkeys.
-- Auto-pausing the timer if the reminder is repeatedly ignored (explicitly rejected — nudge only).
+- Hotkey customization UI beyond recording the three defaults described above.
+- Auto-pausing the timer if the reminder is repeatedly ignored (explicitly rejected, nudge only).
 
 ## Testing
 
@@ -96,6 +102,9 @@ existing `TimeTrackerBloc` events used by `MiniPanel` today — no new persisten
   `apps/worklog_studio/CLAUDE.md`.
 - `SettingsRepository`: unit test under `test/core/` against an in-memory SQLite DB, mirroring the
   existing repository test pattern.
-- Mini-mode window transition (frameless/resize/reposition/restore) is UI/window-manager
-  orchestration — exempt from the mandatory test rule, but should be manually verified on Windows
-  (open via hotkey, edit comment, switch task, accept-close, reminder auto-dismiss).
+- The new `updateComment` `TimerAction` round-trip (follower dispatches, leader applies, snapshot
+  reflects it back) gets a unit test under `test/feature/`, mirroring how start/stop actions are
+  tested today.
+- Hotkey-to-popover-to-accept/dismiss end-to-end behavior is OS-level orchestration, exempt from
+  the mandatory test rule, but should be manually verified on Windows: toggle open/closed, edit
+  comment and accept, edit comment and dismiss (reverts), reminder auto-dismiss after ~20s.
