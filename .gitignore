@@ -56,3 +56,6 @@ app.*.map.json
 
 # Claude Code — machine-local project overrides (API keys, personal hooks)
 .claude/settings.local.json
+
+# Git worktrees used for isolated agent work
+.worktrees/
