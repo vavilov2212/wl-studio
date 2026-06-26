@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide DrawerHeader;
+import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -125,6 +125,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
     return ResizableDrawer(
       isOpen: widget.isOpen,
       onClose: widget.onClose,
+      backgroundColor: palette.background.canvas,
       header: DrawerHeader(
         onClose: widget.onClose,
         onDelete: _isNew
@@ -222,18 +223,240 @@ class _TaskDrawerState extends State<TaskDrawer> {
                           ),
                         ],
 
-                        // Title Input
-                        InlineField(
-                          label: 'Task title',
-                          value: _titleController.text,
-                          placeholder: 'Enter task title...',
-                          controller: _titleFieldController,
-                          textController: _titleController,
-                          editWidget: PrimaryInput(
-                            label: null,
-                            hintText: 'Enter task title...',
-                            controller: _titleController,
-                            autofocus: true,
+                        LabeledDivider(label: 'Assignment'),
+                        SizedBox(height: theme.spacings.lg),
+                        BaseCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Title Input
+                              InlineField(
+                                label: 'Task title',
+                                value: _titleController.text,
+                                placeholder: 'Enter task title...',
+                                controller: _titleFieldController,
+                                textController: _titleController,
+                                editWidget: PrimaryInput(
+                                  label: null,
+                                  hintText: 'Enter task title...',
+                                  controller: _titleController,
+                                  autofocus: true,
+                                ),
+                              ),
+                              SizedBox(height: theme.spacings.lg),
+                              // Notes
+                              InlineField(
+                                label: 'Notes',
+                                value: _descriptionController.text,
+                                placeholder: 'Add a description...',
+                                controller: _descriptionFieldController,
+                                textController: _descriptionController,
+                                isTextArea: true,
+                                viewModeMaxLines: 3,
+                                editWidget: TextArea(
+                                  label: null,
+                                  hintText: 'Add a description...',
+                                  controller: _descriptionController,
+                                  autofocus: true,
+                                ),
+                              ),
+                              SizedBox(height: theme.spacings.lg),
+                              // Details Grid
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Consumer<ProjectTaskState>(
+                                      builder: (context, state, child) {
+                                        final selectedProject = state.projects
+                                            .where(
+                                              (p) => p.id == _draft.projectId,
+                                            )
+                                            .firstOrNull;
+
+                                        Widget? leadingProjectWidget;
+                                        if (selectedProject != null) {
+                                          final initials =
+                                              BadgeUtils.getProjectInitials(
+                                                selectedProject.name,
+                                              );
+                                          final colors =
+                                              BadgeUtils.getBadgeColor(
+                                                selectedProject.id,
+                                              );
+                                          leadingProjectWidget = WsInitialBadge(
+                                            initials: initials,
+                                            backgroundColor: colors.$1,
+                                            textColor: colors.$2,
+                                            size: WsInitialBadgeSize.small,
+                                          );
+                                        }
+
+                                        return InlineField(
+                                          label: 'Project',
+                                          value: selectedProject?.name ?? '',
+                                          placeholder: 'Select Project',
+                                          leading: leadingProjectWidget,
+                                          controller: _projectFieldController,
+                                          editWidget: Select<String>(
+                                            autoOpen: true,
+                                            searchable: true,
+                                            tapRegionGroupId:
+                                                _projectFieldController
+                                                    .tapRegionGroupId,
+                                            onOpenChange: (isOpen) {
+                                              if (!isOpen) {
+                                                _projectFieldController
+                                                    .handleEditorClose();
+                                              }
+                                            },
+                                            value: _draft.projectId,
+                                            placeholder: 'Select Project',
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _draft = _draft.copyWith(
+                                                  projectId: value,
+                                                );
+                                              });
+                                              _projectFieldController
+                                                  .handleEditorCommit();
+                                            },
+                                            actionBuilder: (context, query, close) {
+                                              final exactMatchExists = state
+                                                  .projects
+                                                  .any(
+                                                    (p) =>
+                                                        p.name.toLowerCase() ==
+                                                        query.toLowerCase(),
+                                                  );
+                                              if (exactMatchExists &&
+                                                  query.isNotEmpty) {
+                                                return const SizedBox.shrink();
+                                              }
+
+                                              return SelectCreateAction(
+                                                label: query.isEmpty
+                                                    ? 'Create new project'
+                                                    : 'Create project "$query"',
+                                                onTap: () async {
+                                                  final newProject = await state
+                                                      .createProject(
+                                                        query.isEmpty
+                                                            ? 'New project'
+                                                            : query,
+                                                        '',
+                                                      );
+                                                  setState(() {
+                                                    _draft = _draft.copyWith(
+                                                      projectId: newProject.id,
+                                                    );
+                                                  });
+                                                  _projectFieldController
+                                                      .handleEditorCommit();
+                                                  close();
+                                                },
+                                              );
+                                            },
+                                            options: state.projects.map((p) {
+                                              final initials =
+                                                  BadgeUtils.getProjectInitials(
+                                                    p.name,
+                                                  );
+                                              final colors =
+                                                  BadgeUtils.getBadgeColor(
+                                                    p.id,
+                                                  );
+                                              return SelectOption(
+                                                value: p.id,
+                                                label: p.name,
+                                                leading: WsInitialBadge(
+                                                  initials: initials,
+                                                  backgroundColor: colors.$1,
+                                                  textColor: colors.$2,
+                                                  size:
+                                                      WsInitialBadgeSize.small,
+                                                ),
+                                                onAction: () => context
+                                                    .read<
+                                                      AppNavigationController
+                                                    >()
+                                                    .openProject(p.id),
+                                                // TODO: l10n
+                                                actionTooltip: 'Open project',
+                                              );
+                                            }).toList(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: theme.spacings.lg),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'PRIORITY',
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.warning_amber_rounded,
+                                            size: 16,
+                                            color: palette.text.secondary,
+                                          ),
+                                          SizedBox(width: theme.spacings.sm),
+                                          Text(
+                                            'Medium',
+                                            style: theme.commonTextStyles.body
+                                                .copyWith(
+                                                  color: palette.text.primary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (!_isNew) ...[
+                                SizedBox(height: theme.spacings.xl),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _DetailItem(
+                                        label: 'ASSIGNEE',
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 12,
+                                              backgroundColor:
+                                                  palette.border.primary,
+                                              child: Icon(
+                                                Icons.person,
+                                                size: 16,
+                                                color: palette.text.secondary,
+                                              ),
+                                            ),
+                                            SizedBox(width: theme.spacings.sm),
+                                            Text(
+                                              'Unassigned',
+                                              style: theme
+                                                  .commonTextStyles
+                                                  .bodyBold,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _DetailItem(
+                                        label: 'DUE DATE',
+                                        child: Text(
+                                          _formatDate(widget.task!.createdAt),
+                                          style: theme.commonTextStyles.body,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
@@ -246,219 +469,14 @@ class _TaskDrawerState extends State<TaskDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: theme.spacings.x2l),
-                          LabeledDivider(label: 'Details'),
-                          SizedBox(height: theme.spacings.lg),
-                          // Details Grid
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Consumer<ProjectTaskState>(
-                                  builder: (context, state, child) {
-                                    final selectedProject = state.projects
-                                        .where((p) => p.id == _draft.projectId)
-                                        .firstOrNull;
-
-                                    Widget? leadingProjectWidget;
-                                    if (selectedProject != null) {
-                                      final initials =
-                                          BadgeUtils.getProjectInitials(
-                                            selectedProject.name,
-                                          );
-                                      final colors = BadgeUtils.getBadgeColor(
-                                        selectedProject.id,
-                                      );
-                                      leadingProjectWidget = WsInitialBadge(
-                                        initials: initials,
-                                        backgroundColor: colors.$1,
-                                        textColor: colors.$2,
-                                        size: WsInitialBadgeSize.small,
-                                      );
-                                    }
-
-                                    return InlineField(
-                                      label: 'Project',
-                                      value: selectedProject?.name ?? '',
-                                      placeholder: 'Select Project',
-                                      leading: leadingProjectWidget,
-                                      controller: _projectFieldController,
-                                      editWidget: Select<String>(
-                                        autoOpen: true,
-                                        searchable: true,
-                                        tapRegionGroupId:
-                                            _projectFieldController
-                                                .tapRegionGroupId,
-                                        onOpenChange: (isOpen) {
-                                          if (!isOpen) {
-                                            _projectFieldController
-                                                .handleEditorClose();
-                                          }
-                                        },
-                                        value: _draft.projectId,
-                                        placeholder: 'Select Project',
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _draft = _draft.copyWith(
-                                              projectId: value,
-                                            );
-                                          });
-                                          _projectFieldController
-                                              .handleEditorCommit();
-                                        },
-                                        actionBuilder: (context, query, close) {
-                                          final exactMatchExists = state
-                                              .projects
-                                              .any(
-                                                (p) =>
-                                                    p.name.toLowerCase() ==
-                                                    query.toLowerCase(),
-                                              );
-                                          if (exactMatchExists &&
-                                              query.isNotEmpty)
-                                            return const SizedBox.shrink();
-
-                                          return SelectCreateAction(
-                                            label: query.isEmpty
-                                                ? 'Create new project'
-                                                : 'Create project "$query"',
-                                            onTap: () async {
-                                              final newProject = await state
-                                                  .createProject(
-                                                    query.isEmpty
-                                                        ? 'New project'
-                                                        : query,
-                                                    '',
-                                                  );
-                                              setState(() {
-                                                _draft = _draft.copyWith(
-                                                  projectId: newProject.id,
-                                                );
-                                              });
-                                              _projectFieldController
-                                                  .handleEditorCommit();
-                                              close();
-                                            },
-                                          );
-                                        },
-                                        options: state.projects.map((p) {
-                                          final initials =
-                                              BadgeUtils.getProjectInitials(
-                                                p.name,
-                                              );
-                                          final colors =
-                                              BadgeUtils.getBadgeColor(p.id);
-                                          return SelectOption(
-                                            value: p.id,
-                                            label: p.name,
-                                            leading: WsInitialBadge(
-                                              initials: initials,
-                                              backgroundColor: colors.$1,
-                                              textColor: colors.$2,
-                                              size: WsInitialBadgeSize.small,
-                                            ),
-                                            onAction: () => context
-                                                .read<AppNavigationController>()
-                                                .openProject(p.id),
-                                            // TODO: l10n
-                                            actionTooltip: 'Open project',
-                                          );
-                                        }).toList(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.lg),
-                              Expanded(
-                                child: _DetailItem(
-                                  label: 'PRIORITY',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.warning_amber_rounded,
-                                        size: 16,
-                                        color: palette.text.secondary,
-                                      ),
-                                      SizedBox(width: theme.spacings.sm),
-                                      Text(
-                                        'Medium',
-                                        style: theme.commonTextStyles.body
-                                            .copyWith(
-                                              color: palette.text.primary,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: theme.spacings.xl),
-                          if (!_isNew) ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _DetailItem(
-                                    label: 'ASSIGNEE',
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 12,
-                                          backgroundColor:
-                                              palette.border.primary,
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 16,
-                                            color: palette.text.secondary,
-                                          ),
-                                        ),
-                                        SizedBox(width: theme.spacings.sm),
-                                        Text(
-                                          'Unassigned',
-                                          style:
-                                              theme.commonTextStyles.bodyBold,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _DetailItem(
-                                    label: 'DUE DATE',
-                                    child: Text(
-                                      _formatDate(widget.task!.createdAt),
-                                      style: theme.commonTextStyles.body,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: theme.spacings.x2l),
-                          ],
-                          LabeledDivider(label: 'Notes'),
-                          SizedBox(height: theme.spacings.lg),
-                          InlineField(
-                            label: 'Notes',
-                            value: _descriptionController.text,
-                            placeholder: 'Add a description...',
-                            controller: _descriptionFieldController,
-                            textController: _descriptionController,
-                            isTextArea: true,
-                            viewModeMaxLines: 3,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a description...',
-                              controller: _descriptionController,
-                              autofocus: true,
-                            ),
-                          ),
                           if (!_isNew) ...[
                             SizedBox(height: theme.spacings.x2l),
                             LabeledDivider(label: 'Time Entries'),
                             SizedBox(height: theme.spacings.lg),
                             Builder(
                               builder: (context) {
-                                final timeEntries = context
+                                final timeEntries =
+                                    context
                                         .watch<EntityResolver>()
                                         .getResolvedTask(widget.task!.id)
                                         ?.timeEntries ??
@@ -473,7 +491,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                       child: Text(
                                         'No time entries logged for this task yet.',
                                         style: theme.commonTextStyles.body
-                                            .copyWith(color: palette.text.muted),
+                                            .copyWith(
+                                              color: palette.text.muted,
+                                            ),
                                       ),
                                     ),
                                   );
@@ -483,7 +503,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                   spacing: theme.spacings.lg,
                                   children: timeEntries.map((entry) {
                                     return MasterListCard(
-                                      title: (entry.comment?.isNotEmpty ?? false)
+                                      title:
+                                          (entry.comment?.isNotEmpty ?? false)
                                           ? entry.comment!
                                           : 'No comment',
                                       metadata: _formatEntryRange(entry),
@@ -548,8 +569,18 @@ class _TaskDrawerState extends State<TaskDrawer> {
 
   String _monthAbbrev(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[month - 1];
   }

@@ -17,6 +17,7 @@ class ResizableDrawer extends StatefulWidget {
   final double minWidth;
   final double maxWidth;
   final double defaultWidth;
+  final Color? backgroundColor;
 
   const ResizableDrawer({
     super.key,
@@ -31,6 +32,7 @@ class ResizableDrawer extends StatefulWidget {
     this.minWidth = 320.0,
     this.maxWidth = 920.0,
     this.defaultWidth = 620.0,
+    this.backgroundColor,
   });
 
   @override
@@ -79,7 +81,7 @@ class _ResizableDrawerState extends State<ResizableDrawer> {
         }
       },
       decoration: BoxDecoration(
-        color: palette.background.surface,
+        color: widget.backgroundColor ?? palette.background.surface,
         border: Border(
           left: BorderSide(color: palette.border.primary, width: 1),
         ),
