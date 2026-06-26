@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
@@ -71,8 +71,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
         .getResolvedTimeEntries();
     final prefs = context.watch<PageUiPreferences>();
     final drawer = context.watch<DrawerHostController>();
-    final selectedEntry =
-        drawer.kind == DrawerEntityKind.timeEntry ? drawer.timeEntry : null;
+    final selectedEntry = drawer.kind == DrawerEntityKind.timeEntry
+        ? drawer.timeEntry
+        : null;
     final isFilterExpanded =
         prefs.historyFilterExpandedOverride ?? prefs.historyFilters.isActive;
     final isSortExpanded = prefs.historySortExpandedOverride ?? false;
@@ -153,7 +154,11 @@ class TimeEntryList extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     final filteredEntries = applyHistoryFilters(entries, filters);
-    final sortedEntries = applyHistorySort(filteredEntries, sortField, sortDirection);
+    final sortedEntries = applyHistorySort(
+      filteredEntries,
+      sortField,
+      sortDirection,
+    );
     final isGroupedByDate = sortField == HistorySortField.date;
 
     // Group by date (only meaningful when sorted by date; otherwise rendered flat)
@@ -171,10 +176,11 @@ class TimeEntryList extends StatelessWidget {
     }
 
     final sortedDates = isGroupedByDate
-        ? (groupedEntries.keys.toList()
-            ..sort((a, b) => sortDirection == SortDirection.desc
+        ? (groupedEntries.keys.toList()..sort(
+            (a, b) => sortDirection == SortDirection.desc
                 ? b.compareTo(a)
-                : a.compareTo(b)))
+                : a.compareTo(b),
+          ))
         : <DateTime>[];
 
     return Padding(
@@ -245,9 +251,7 @@ class TimeEntryList extends StatelessWidget {
                 Duration.zero,
                 (p, e) => p + e.entry.duration(now),
               );
-              final unassigned = entries
-                  .where((e) => e.task == null)
-                  .length;
+              final unassigned = entries.where((e) => e.task == null).length;
 
               String fmtDur(Duration d) =>
                   '${d.inHours}h ${d.inMinutes.remainder(60)}m';
@@ -297,41 +301,35 @@ class TimeEntryList extends StatelessWidget {
             Builder(
               builder: (context) {
                 final resolver = context.watch<EntityResolver>();
-                final taskOptions = resolver
-                    .getResolvedTasks()
-                    .map((t) {
-                      final colors = BadgeUtils.getBadgeColor(t.id);
-                      return SelectOption(
-                        value: t.id,
-                        label: t.title,
-                        leading: WsInitialBadge(
-                          initials: BadgeUtils.getTaskInitials(
-                            t.title,
-                            t.projectName,
-                          ),
-                          backgroundColor: colors.$1,
-                          textColor: colors.$2,
-                          size: WsInitialBadgeSize.small,
-                        ),
-                      );
-                    })
-                    .toList();
-                final projectOptions = resolver
-                    .getResolvedProjects()
-                    .map((p) {
-                      final colors = BadgeUtils.getBadgeColor(p.id);
-                      return SelectOption(
-                        value: p.id,
-                        label: p.name,
-                        leading: WsInitialBadge(
-                          initials: BadgeUtils.getProjectInitials(p.name),
-                          backgroundColor: colors.$1,
-                          textColor: colors.$2,
-                          size: WsInitialBadgeSize.small,
-                        ),
-                      );
-                    })
-                    .toList();
+                final taskOptions = resolver.getResolvedTasks().map((t) {
+                  final colors = BadgeUtils.getBadgeColor(t.id);
+                  return SelectOption(
+                    value: t.id,
+                    label: t.title,
+                    leading: WsInitialBadge(
+                      initials: BadgeUtils.getTaskInitials(
+                        t.title,
+                        t.projectName,
+                      ),
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                      size: WsInitialBadgeSize.small,
+                    ),
+                  );
+                }).toList();
+                final projectOptions = resolver.getResolvedProjects().map((p) {
+                  final colors = BadgeUtils.getBadgeColor(p.id);
+                  return SelectOption(
+                    value: p.id,
+                    label: p.name,
+                    leading: WsInitialBadge(
+                      initials: BadgeUtils.getProjectInitials(p.name),
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                      size: WsInitialBadgeSize.small,
+                    ),
+                  );
+                }).toList();
                 return HistoryFilterBar(
                   filters: filters,
                   onChanged: onFiltersChanged,
@@ -349,105 +347,101 @@ class TimeEntryList extends StatelessWidget {
                 children: [
                   if (isGroupedByDate)
                     ...sortedDates.map((date) {
-                    final dailyEntries = groupedEntries[date]!;
-                    final totalDuration = dailyEntries.fold<Duration>(
-                      Duration.zero,
-                      (prev, resolvedEntry) =>
-                          prev + resolvedEntry.entry.duration(DateTime.now()),
-                    );
+                      final dailyEntries = groupedEntries[date]!;
+                      final totalDuration = dailyEntries.fold<Duration>(
+                        Duration.zero,
+                        (prev, resolvedEntry) =>
+                            prev + resolvedEntry.entry.duration(DateTime.now()),
+                      );
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(
-                            left: theme.spacings.xxs,
-                            bottom: theme.spacings.sm,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: theme.spacings.md,
-                                  vertical: theme.spacings.xxs,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: theme.spacings.xxs,
+                              bottom: theme.spacings.sm,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: theme.spacings.md,
+                                    vertical: theme.spacings.xxs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette.background.surface,
+                                    border: Border.all(
+                                      color: palette.border.primary,
+                                    ),
+                                    borderRadius: theme.radiuses.pill.circular,
+                                  ),
+                                  child: Text(
+                                    _formatDateHeader(date),
+                                    style: theme.commonTextStyles.labelSmall
+                                        .copyWith(color: palette.text.primary),
+                                  ),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: palette.background.surface,
-                                  border: Border.all(
+                                SizedBox(width: theme.spacings.sm),
+                                Icon(
+                                  Icons.history_outlined,
+                                  color: palette.text.muted,
+                                  size: 14,
+                                ),
+                                SizedBox(width: theme.spacings.xxs),
+                                Text(
+                                  _formatDuration(totalDuration),
+                                  style: theme.commonTextStyles.labelSmall
+                                      .copyWith(color: palette.text.muted),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                Expanded(
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
                                     color: palette.border.primary,
                                   ),
-                                  borderRadius:
-                                      theme.radiuses.pill.circular,
                                 ),
-                                child: Text(
-                                  _formatDateHeader(date),
-                                  style: theme.commonTextStyles.labelSmall
-                                      .copyWith(
-                                        color: palette.text.primary,
-                                      ),
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.sm),
-                              Icon(
-                                Icons.history_outlined,
-                                color: palette.text.muted,
-                                size: 14,
-                              ),
-                              SizedBox(width: theme.spacings.xxs),
-                              Text(
-                                _formatDuration(totalDuration),
-                                style: theme.commonTextStyles.labelSmall
-                                    .copyWith(
-                                      color: palette.text.muted,
-                                    ),
-                              ),
-                              SizedBox(width: theme.spacings.sm),
-                              Expanded(
-                                child: Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: palette.border.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (viewMode == HistoryViewMode.cards)
-                          Column(
-                            spacing: theme.spacings.md,
-                            children: dailyEntries.map((resolvedEntry) {
-                              final entry = resolvedEntry.entry;
-                              final isSelected = selectedEntry?.id == entry.id;
-
-                              return TimeEntryCard(
-                                key: isSelected ? selectedRowKey : null,
-                                resolvedEntry: resolvedEntry,
-                                isSelected: isSelected,
-                                onTap: () => onEntrySelected(entry),
-                              );
-                            }).toList(),
-                          )
-                        else
-                          WsTable<ResolvedTimeEntry>(
-                            showHeader: true,
-                            data: dailyEntries,
-                            selectedItem: dailyEntries.firstWhereOrNull(
-                              (e) => e.entry.id == selectedEntry?.id,
+                              ],
                             ),
-                            rowKeyBuilder: (item) =>
-                                item.entry.id == selectedEntry?.id
-                                    ? selectedRowKey
-                                    : null,
-                            onRowTap: (item) => onEntrySelected(item.entry),
-                            isSelected: (item, selected) =>
-                                item.entry.id == selected?.entry.id,
-                            columns: _getTableColumns(theme),
                           ),
-                        SizedBox(height: theme.spacings.xl),
-                      ],
-                    );
-                  })
+                          if (viewMode == HistoryViewMode.cards)
+                            Column(
+                              spacing: theme.spacings.md,
+                              children: dailyEntries.map((resolvedEntry) {
+                                final entry = resolvedEntry.entry;
+                                final isSelected =
+                                    selectedEntry?.id == entry.id;
+
+                                return TimeEntryCard(
+                                  key: isSelected ? selectedRowKey : null,
+                                  resolvedEntry: resolvedEntry,
+                                  isSelected: isSelected,
+                                  onTap: () => onEntrySelected(entry),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            WsTable<ResolvedTimeEntry>(
+                              showHeader: true,
+                              data: dailyEntries,
+                              selectedItem: dailyEntries.firstWhereOrNull(
+                                (e) => e.entry.id == selectedEntry?.id,
+                              ),
+                              rowKeyBuilder: (item) =>
+                                  item.entry.id == selectedEntry?.id
+                                  ? selectedRowKey
+                                  : null,
+                              onRowTap: (item) => onEntrySelected(item.entry),
+                              isSelected: (item, selected) =>
+                                  item.entry.id == selected?.entry.id,
+                              columns: _getTableColumns(theme),
+                            ),
+                          SizedBox(height: theme.spacings.xl),
+                        ],
+                      );
+                    })
                   else if (viewMode == HistoryViewMode.cards)
                     Column(
                       spacing: theme.spacings.md,
@@ -470,7 +464,9 @@ class TimeEntryList extends StatelessWidget {
                         (e) => e.entry.id == selectedEntry?.id,
                       ),
                       rowKeyBuilder: (item) =>
-                          item.entry.id == selectedEntry?.id ? selectedRowKey : null,
+                          item.entry.id == selectedEntry?.id
+                          ? selectedRowKey
+                          : null,
                       onRowTap: (item) => onEntrySelected(item.entry),
                       isSelected: (item, selected) =>
                           item.entry.id == selected?.entry.id,
@@ -618,9 +614,7 @@ class TimeEntryList extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             softWrap: true,
             style: theme.commonTextStyles.caption.copyWith(
-              color: hasComment
-                  ? palette.text.secondary
-                  : palette.text.muted,
+              color: hasComment ? palette.text.secondary : palette.text.muted,
               fontStyle: hasComment ? null : FontStyle.italic,
             ),
           );
@@ -678,9 +672,7 @@ class TimeEntryList extends StatelessWidget {
         alignment: Alignment.centerRight,
         fixedWidth: 48,
         builder: (context, item, isHovered) {
-          return TimeEntryActionsCell(
-            resolvedEntry: item,
-          );
+          return TimeEntryActionsCell(resolvedEntry: item);
         },
       ),
     ];
@@ -709,8 +701,18 @@ class TimeEntryList extends StatelessWidget {
     final targetDate = DateTime(date.year, date.month, date.day);
 
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final dateString = '${months[date.month - 1]} ${date.day}';
 
@@ -734,11 +736,7 @@ class _KpiChip extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _KpiChip({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _KpiChip({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -777,4 +775,3 @@ class _KpiChip extends StatelessWidget {
     );
   }
 }
-
