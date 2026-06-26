@@ -5,6 +5,8 @@ class TableToolbar extends StatelessWidget {
   final bool isFilterExpanded;
   final VoidCallback onFilterTap;
   final int activeFilterCount;
+  final bool isSortExpanded;
+  final VoidCallback? onSortTap;
   final MainAxisAlignment mainAxisAlignment;
 
   const TableToolbar({
@@ -12,6 +14,8 @@ class TableToolbar extends StatelessWidget {
     required this.isFilterExpanded,
     required this.onFilterTap,
     this.activeFilterCount = 0,
+    this.isSortExpanded = false,
+    this.onSortTap,
     this.mainAxisAlignment =  MainAxisAlignment.end,
   });
 
@@ -29,7 +33,12 @@ class TableToolbar extends StatelessWidget {
           onTap: onFilterTap,
         ),
         SizedBox(width: theme.spacings.sm),
-        const _ToolbarIconButton(icon: Icons.sort, enabled: false),
+        _ToolbarIconButton(
+          icon: Icons.sort,
+          enabled: onSortTap != null,
+          isActive: isSortExpanded,
+          onTap: onSortTap,
+        ),
         SizedBox(width: theme.spacings.sm),
         const _ToolbarIconButton(icon: Icons.settings_outlined, enabled: false),
       ],
