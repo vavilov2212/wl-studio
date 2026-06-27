@@ -1,10 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:worklog_studio/core/services/backup_service.dart';
+import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/reveal_in_file_manager.dart';
+import 'package:worklog_studio/core/services/settings_keys.dart';
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
+import 'package:worklog_studio/data/sqlite/sqlite_settings_repository.dart';
 import 'package:worklog_studio/domain/backup.dart';
 import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
 
@@ -19,11 +25,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isBackingUp = false;
   String? _dbDirPath;
   String? _backupsDirPath;
+  final _settingsRepository = SqliteSettingsRepository();
+  int? _reminderIntervalMinutes;
 
   @override
   void initState() {
     super.initState();
     _loadDirPaths();
+    _loadReminderInterval();
   }
 
   Future<void> _loadDirPaths() async {
@@ -36,9 +45,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _loadReminderInterval() async {
+    final minutes = await _settingsRepository.getInt(SettingsKeys.reminderIntervalMinutes);
+    if (!mounted) return;
+    setState(() => _reminderIntervalMinutes = minutes);
+  }
+
+  Future<void> _setReminderInterval(int? minutes) async {
+    if (minutes == null) {
+      await _settingsRepository.setString(SettingsKeys.reminderIntervalMinutes, '0');
+    } else {
+      await _settingsRepository.setInt(SettingsKeys.reminderIntervalMinutes, minutes);
+    }
+    if (!mounted) return;
+    setState(() => _reminderIntervalMinutes = minutes);
+  }
+
   BackupService? get _backupService {
     try {
       return GetIt.I<BackupService>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  HotkeyService? get _hotkeyService {
+    try {
+      return GetIt.I<HotkeyService>();
     } catch (_) {
       return null;
     }
@@ -182,6 +215,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+          SizedBox(height: theme.spacings.x2l),
+          Text('Floating comment tracker', style: theme.commonTextStyles.title), // TODO: l10n
+          SizedBox(height: theme.spacings.md),
+          Row(
+            children: [
+              Text('Reminder interval: ', style: theme.commonTextStyles.body), // TODO: l10n
+              SizedBox(width: theme.spacings.sm),
+              DropdownButton<int?>(
+                value: _reminderIntervalMinutes == 0 ? null : _reminderIntervalMinutes,
+                hint: const Text('Off'), // TODO: l10n
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('Off')), // TODO: l10n
+                  DropdownMenuItem(value: 1, child: Text('1 minute')), // TODO: l10n
+                  DropdownMenuItem(value: 2, child: Text('2 minutes')), // TODO: l10n
+                  DropdownMenuItem(value: 5, child: Text('5 minutes')), // TODO: l10n
+                  DropdownMenuItem(value: 10, child: Text('10 minutes')), // TODO: l10n
+                  DropdownMenuItem(value: 30, child: Text('30 minutes')), // TODO: l10n
+                ],
+                onChanged: _setReminderInterval,
+              ),
+            ],
+          ),
+          SizedBox(height: theme.spacings.md),
+          _HotkeyRecorderRow(
+            label: 'Toggle popover', // TODO: l10n
+            settingKey: SettingsKeys.toggleHotkey,
+            repository: _settingsRepository,
+            hotkeyService: _hotkeyService,
+          ),
+          SizedBox(height: theme.spacings.sm),
+          _HotkeyRecorderRow(
+            label: 'Accept comment', // TODO: l10n
+            settingKey: SettingsKeys.acceptHotkey,
+            repository: _settingsRepository,
+            hotkeyService: _hotkeyService,
+          ),
+          SizedBox(height: theme.spacings.sm),
+          _HotkeyRecorderRow(
+            label: 'Dismiss comment', // TODO: l10n
+            settingKey: SettingsKeys.dismissHotkey,
+            repository: _settingsRepository,
+            hotkeyService: _hotkeyService,
+          ),
         ],
       ),
     );
@@ -222,6 +298,59 @@ class _DirectoryPathRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A label + `HotKeyRecorder` that persists the recorded combo through
+/// [HotkeyService.saveHotkey] (which re-registers all three hotkeys
+/// immediately) and falls back to writing straight through [repository]
+/// when the service isn't available (e.g. running on a non-Windows target).
+class _HotkeyRecorderRow extends StatefulWidget {
+  final String label;
+  final String settingKey;
+  final SqliteSettingsRepository repository;
+  final HotkeyService? hotkeyService;
+
+  const _HotkeyRecorderRow({
+    required this.label,
+    required this.settingKey,
+    required this.repository,
+    required this.hotkeyService,
+  });
+
+  @override
+  State<_HotkeyRecorderRow> createState() => _HotkeyRecorderRowState();
+}
+
+class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
+  Future<void> _onRecorded(HotKey hotKey) async {
+    final service = widget.hotkeyService;
+    if (service != null) {
+      await service.saveHotkey(widget.settingKey, hotKey);
+    } else {
+      await widget.repository.setString(
+        widget.settingKey,
+        jsonEncode(hotKey.toJson()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return Row(
+      children: [
+        SizedBox(
+          width: 160,
+          child: Text(widget.label, style: theme.commonTextStyles.body),
+        ),
+        SizedBox(width: theme.spacings.sm),
+        SizedBox(
+          width: 220,
+          child: HotKeyRecorder(onHotKeyRecorded: _onRecorded),
+        ),
+      ],
     );
   }
 }
