@@ -621,6 +621,10 @@ class _MiniPanelState extends State<MiniPanel> {
           opacity: _isVisible ? 1.0 : 0.0,
           child: Container(
             margin: const EdgeInsets.all(0),
+            // Without an explicit width this shrink-wraps to its widest
+            // child instead of filling the popover window, leaving the
+            // remainder of the window unpainted.
+            width: double.infinity,
             decoration: BoxDecoration(
               color: Color(0xFFf8fafc),
               borderRadius: BorderRadius.circular(theme.spacings.md),
