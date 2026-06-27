@@ -5,9 +5,14 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get_it/get_it.dart';
 import 'package:tray_manager/tray_manager.dart';
+import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
+import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
+import 'package:worklog_studio/core/services/reminder_service.dart';
+import 'package:worklog_studio/data/sqlite/sqlite_settings_repository.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
@@ -44,6 +49,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
   bool _isPopoverVisible = false;
   bool _isPopover = false;
   bool _followerReady = false;
+
+  final _settingsRepository = SqliteSettingsRepository();
+  HotkeyService? _hotkeyService;
+  ReminderService? _reminderService;
 
   /// Exposed for unit tests only.
   @visibleForTesting
@@ -84,6 +93,31 @@ class WindowsDesktopService implements IDesktopPlatformService {
       await _handleIncomingIpcMessage(call.method, call.arguments);
       return null;
     });
+
+    _hotkeyService = HotkeyService(
+      registrar: HotkeyManagerRegistrar(),
+      getSetting: _settingsRepository.getString,
+      setSetting: _settingsRepository.setString,
+      onToggle: togglePopover,
+      onAccept: acceptCurrentComment,
+      onDismiss: dismissCurrentComment,
+    );
+    await _hotkeyService!.init();
+    if (GetIt.I.isRegistered<HotkeyService>()) {
+      GetIt.I.unregister<HotkeyService>();
+    }
+    GetIt.I.registerSingleton<HotkeyService>(_hotkeyService!);
+
+    _reminderService = ReminderService(
+      bloc: bloc,
+      getSetting: _settingsRepository.getString,
+      onFire: () async {
+        await showPopover();
+        await requestFocusComment();
+      },
+      onAutoDismiss: dismissCurrentComment,
+    );
+    await _reminderService!.init();
   }
 
   @override
@@ -117,6 +151,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       await hidePopover();
     } else {
       await showPopover();
+      await requestFocusComment();
     }
   }
 
@@ -254,6 +289,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   void dispose() {
+    _hotkeyService?.dispose();
+    _reminderService?.dispose();
     _blocSubscription?.cancel();
     WindowsTrayService().dispose();
     _navigationStreamController.close();
