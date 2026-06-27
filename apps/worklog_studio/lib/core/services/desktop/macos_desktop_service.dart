@@ -170,7 +170,7 @@ class MacOSDesktopService implements IDesktopPlatformService {
   }
 
   @override
-  Future<String> resolveStartupRole() async {
+  Future<String> resolveStartupRole(List<String> args) async {
     try {
       final engineInfo = await _channel
           .invokeMapMethod<String, dynamic>('getEngineInfo')

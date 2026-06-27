@@ -24,6 +24,7 @@ class WindowsTrayService with TrayListener, WindowListener {
   TimeTrackerBloc? _bloc;
   EntityResolver? _resolver;
   StreamSubscription<TimeTrackerBlocState>? _blocSub;
+  Future<void> Function()? _onTrayClick;
 
   bool _isInitialized = false;
   bool _firstMinimize = true;
@@ -33,14 +34,16 @@ class WindowsTrayService with TrayListener, WindowListener {
   Future<void> init(
     TimeTrackerBloc bloc,
     EntityResolver resolver,
-    ProjectTaskState projectTaskState,
-  ) async {
+    ProjectTaskState projectTaskState, {
+    Future<void> Function()? onTrayClick,
+  }) async {
     if (!Platform.isWindows) return;
     if (_isInitialized) return;
     _isInitialized = true;
 
     _bloc = bloc;
     _resolver = resolver;
+    _onTrayClick = onTrayClick;
 
     // --- window_manager setup ---
     await windowManager.ensureInitialized();
@@ -88,8 +91,13 @@ class WindowsTrayService with TrayListener, WindowListener {
 
   @override
   void onTrayIconMouseDown() async {
-    // Left-click: restore window to foreground.
-    await _restoreWindow();
+    // Left-click: open the popover if a hook is wired (Windows mini panel),
+    // otherwise fall back to restoring the main window.
+    if (_onTrayClick != null) {
+      await _onTrayClick!();
+    } else {
+      await restoreWindow();
+    }
   }
 
   @override
@@ -104,7 +112,7 @@ class WindowsTrayService with TrayListener, WindowListener {
       case 'stop_tracking':
         _bloc?.add(TimeTrackerStopped());
       case 'open':
-        _restoreWindow();
+        restoreWindow();
       case 'quit':
         _quit();
     }
@@ -173,7 +181,7 @@ class WindowsTrayService with TrayListener, WindowListener {
     await trayManager.setContextMenu(Menu(items: items));
   }
 
-  Future<void> _restoreWindow() async {
+  Future<void> restoreWindow() async {
     final isVisible = await windowManager.isVisible();
     if (!isVisible) {
       await windowManager.show();

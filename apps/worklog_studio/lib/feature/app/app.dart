@@ -48,7 +48,12 @@ class MiniApp extends StatelessWidget {
         theme: appEnvironment.config.lightTheme,
         darkTheme: appEnvironment.config.lightTheme,
         home: const Scaffold(
-          backgroundColor: Colors.transparent,
+          // The Windows popover (desktop_multi_window) has no layered/DWM
+          // transparency support, unlike macOS's NSPanel popover - a
+          // transparent Scaffold renders as solid black there instead of
+          // see-through. Use MiniPanel's own card color so both platforms
+          // render the same opaque background.
+          backgroundColor: Color(0xFFf8fafc),
           body: MiniPanel(),
         ),
       ),

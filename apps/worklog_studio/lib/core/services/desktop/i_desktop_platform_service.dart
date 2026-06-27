@@ -70,11 +70,13 @@ abstract interface class IDesktopPlatformService {
 
   // ── Startup role detection ────────────────────────────────────────────────
 
-  /// Resolve the startup role of this process.
+  /// Resolve the startup role of this process from its raw startup [args].
   ///
-  /// Returns `'tray'` when the process was launched as the macOS popover
-  /// engine; `'main'` otherwise.  Always returns `'main'` on Windows.
-  Future<String> resolveStartupRole();
+  /// Returns `'tray'` when this process is a secondary popover engine
+  /// (the macOS popover, or a Windows `desktop_multi_window` sub-window);
+  /// `'main'` otherwise. Implementations that have no secondary-engine
+  /// concept ignore [args] and always return `'main'`.
+  Future<String> resolveStartupRole(List<String> args);
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
