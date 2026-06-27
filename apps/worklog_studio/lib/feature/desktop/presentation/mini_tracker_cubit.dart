@@ -7,7 +7,12 @@ import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 
-enum MiniPanelCommand { focusComment, acceptComment, dismissComment }
+enum MiniPanelCommand {
+  focusComment,
+  acceptComment,
+  dismissComment,
+  autoDismissComment,
+}
 
 class MiniTrackerState {
   final bool isRunning;

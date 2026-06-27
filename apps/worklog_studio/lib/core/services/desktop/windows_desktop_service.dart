@@ -115,9 +115,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
         await showPopover();
         await requestFocusComment();
       },
-      onAutoDismiss: dismissCurrentComment,
+      onAutoDismiss: autoDismissCurrentComment,
     );
     await _reminderService!.init();
+    if (GetIt.I.isRegistered<ReminderService>()) {
+      GetIt.I.unregister<ReminderService>();
+    }
+    GetIt.I.registerSingleton<ReminderService>(_reminderService!);
   }
 
   @override
@@ -249,6 +253,15 @@ class WindowsDesktopService implements IDesktopPlatformService {
     await hidePopover();
   }
 
+  /// Tells the follower the reminder popover timed out automatically (as
+  /// opposed to a user-initiated dismiss). Unlike [dismissCurrentComment],
+  /// this preserves any unsaved comment edit by committing it instead of
+  /// discarding it - see [MiniPanelCommand.autoDismissComment].
+  Future<void> autoDismissCurrentComment() async {
+    await _invokeFollower('autoDismissComment', null);
+    await hidePopover();
+  }
+
   Future<void> _invokeFollower(String method, dynamic arguments) async {
     if (_popoverWindowId == null) return;
     try {
@@ -343,6 +356,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
         case 'dismissComment':
           _followerCubit?.emitCommand(MiniPanelCommand.dismissComment);
+
+        case 'autoDismissComment':
+          _followerCubit?.emitCommand(MiniPanelCommand.autoDismissComment);
 
         case 'dispatchAction':
           if (arguments != null) {

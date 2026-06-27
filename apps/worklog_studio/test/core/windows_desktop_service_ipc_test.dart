@@ -150,5 +150,16 @@ void main() {
       expect(received, [MiniPanelCommand.dismissComment]);
       await sub.cancel();
     });
+
+    test('autoDismissComment forwards to the follower cubit as a command', () async {
+      final received = <MiniPanelCommand>[];
+      final sub = followerCubit.commands.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting('autoDismissComment', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [MiniPanelCommand.autoDismissComment]);
+      await sub.cancel();
+    });
   });
 }

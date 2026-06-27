@@ -65,7 +65,7 @@ class _MiniPanelState extends State<MiniPanel> {
     if (!mounted) return;
     if (!_commentFieldController.isEditing) {
       final cubit = context.read<MiniTrackerCubit>();
-      if (cubit.state.activeEntry?.comment != _commentController.text) {
+      if ((cubit.state.activeEntry?.comment ?? '') != _commentController.text) {
         cubit.updateComment(_commentController.text);
       }
     }
@@ -86,6 +86,18 @@ class _MiniPanelState extends State<MiniPanel> {
             context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
         _commentController.text = persisted;
         _commentFieldController.handleEditorCancel();
+      case MiniPanelCommand.autoDismissComment:
+        final persisted =
+            context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
+        if (_commentController.text != persisted) {
+          // There's an unsaved edit - an automatic timeout should not
+          // silently discard it the way a user-initiated dismiss does, so
+          // commit it instead.
+          _commentFieldController.handleEditorCommit(_commentController.text);
+        } else {
+          _commentController.text = persisted;
+          _commentFieldController.handleEditorCancel();
+        }
     }
   }
 
