@@ -1024,7 +1024,7 @@ void main() {
       await service.init();
 
       final toggleHotKey = registrar.registered.firstWhere(
-        (h) => h.key == LogicalKeyboardKey.keyM,
+        (h) => h.key == PhysicalKeyboardKey.keyM,
       );
       registrar.handlers[toggleHotKey]!();
 
@@ -1037,7 +1037,7 @@ void main() {
       await service.init();
 
       final acceptHotKey = registrar.registered.firstWhere(
-        (h) => h.key == LogicalKeyboardKey.enter,
+        (h) => h.key == PhysicalKeyboardKey.enter,
       );
       registrar.handlers[acceptHotKey]!();
 
@@ -1048,7 +1048,7 @@ void main() {
       await service.init();
 
       final dismissHotKey = registrar.registered.firstWhere(
-        (h) => h.key == LogicalKeyboardKey.escape,
+        (h) => h.key == PhysicalKeyboardKey.escape,
       );
       registrar.handlers[dismissHotKey]!();
 
@@ -1057,7 +1057,7 @@ void main() {
 
     test('uses a stored custom toggle hotkey instead of the default', () async {
       final custom = HotKey(
-        key: LogicalKeyboardKey.keyT,
+        key: PhysicalKeyboardKey.keyT,
         modifiers: [HotKeyModifier.control, HotKeyModifier.shift],
       );
       store[SettingsKeys.toggleHotkey] = jsonEncode(custom.toJson());
@@ -1065,7 +1065,7 @@ void main() {
       await service.init();
 
       final toggleHotKey = registrar.registered.firstWhere(
-        (h) => h.key == LogicalKeyboardKey.keyT,
+        (h) => h.key == PhysicalKeyboardKey.keyT,
       );
       registrar.handlers[toggleHotKey]!();
       expect(toggleCalls, 1);
@@ -1078,14 +1078,14 @@ void main() {
       registrar.registered.clear();
 
       final custom = HotKey(
-        key: LogicalKeyboardKey.keyT,
+        key: PhysicalKeyboardKey.keyT,
         modifiers: [HotKeyModifier.control, HotKeyModifier.shift],
       );
       await service.saveHotkey(SettingsKeys.toggleHotkey, custom);
 
       expect(store[SettingsKeys.toggleHotkey], jsonEncode(custom.toJson()));
       expect(registrar.registered, hasLength(3));
-      expect(registrar.registered.any((h) => h.key == LogicalKeyboardKey.keyT), isTrue);
+      expect(registrar.registered.any((h) => h.key == PhysicalKeyboardKey.keyT), isTrue);
     });
   });
 
@@ -1174,15 +1174,15 @@ class HotkeyService {
 
     final toggle = await _resolveHotKey(
       SettingsKeys.toggleHotkey,
-      _defaultHotKey(LogicalKeyboardKey.keyM),
+      _defaultHotKey(PhysicalKeyboardKey.keyM),
     );
     final accept = await _resolveHotKey(
       SettingsKeys.acceptHotkey,
-      _defaultHotKey(LogicalKeyboardKey.enter),
+      _defaultHotKey(PhysicalKeyboardKey.enter),
     );
     final dismiss = await _resolveHotKey(
       SettingsKeys.dismissHotkey,
-      _defaultHotKey(LogicalKeyboardKey.escape),
+      _defaultHotKey(PhysicalKeyboardKey.escape),
     );
 
     await _registrar.register(toggle, onPressed: () => _onToggle());
