@@ -70,5 +70,36 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(bloc.state.isRunning, isFalse);
     });
+
+    test('dispatchAction(updateComment) updates the running entry comment', () async {
+      await service.handleIncomingIpcMessageForTesting('dispatchAction', {
+        'type': 'start',
+        'projectId': 'p1',
+        'taskId': 't1',
+        'comment': 'original',
+      });
+      await bloc.stream.firstWhere((s) => s.isRunning);
+
+      await service.handleIncomingIpcMessageForTesting('dispatchAction', {
+        'type': 'updateComment',
+        'comment': 'updated comment',
+      });
+      await bloc.stream.firstWhere(
+        (s) => s.activeEntryOrNull?.comment == 'updated comment',
+      );
+
+      expect(bloc.state.activeEntryOrNull?.comment, 'updated comment');
+      expect(bloc.state.isRunning, isTrue);
+    });
+
+    test('dispatchAction(updateComment) is a no-op when nothing is running', () async {
+      await service.handleIncomingIpcMessageForTesting('dispatchAction', {
+        'type': 'updateComment',
+        'comment': 'ignored',
+      });
+
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.isRunning, isFalse);
+    });
   });
 }

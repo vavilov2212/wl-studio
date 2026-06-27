@@ -304,6 +304,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
       if (isCurrentlyRunning) {
         _leaderBloc!.add(TimeTrackerStopped());
       }
+    } else if (action.type == TimerActionType.updateComment) {
+      if (isCurrentlyRunning) {
+        _leaderBloc!.add(TimeTrackerActiveEntryUpdated(comment: action.comment));
+      }
     }
   }
 

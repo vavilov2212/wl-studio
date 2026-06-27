@@ -140,7 +140,7 @@ class TimerSnapshot {
   }
 }
 
-enum TimerActionType { start, stop }
+enum TimerActionType { start, stop, updateComment }
 
 class TimerAction {
   final TimerActionType type;
@@ -152,7 +152,11 @@ class TimerAction {
 
   Map<String, dynamic> toJson() {
     return {
-      'type': type == TimerActionType.start ? 'start' : 'stop',
+      'type': switch (type) {
+        TimerActionType.start => 'start',
+        TimerActionType.stop => 'stop',
+        TimerActionType.updateComment => 'updateComment',
+      },
       'projectId': projectId,
       'taskId': taskId,
       'comment': comment,
@@ -161,9 +165,11 @@ class TimerAction {
 
   static TimerAction fromJson(Map<String, dynamic> json) {
     return TimerAction(
-      type: json['type'] == 'start'
-          ? TimerActionType.start
-          : TimerActionType.stop,
+      type: switch (json['type']) {
+        'start' => TimerActionType.start,
+        'updateComment' => TimerActionType.updateComment,
+        _ => TimerActionType.stop,
+      },
       projectId: json['projectId'],
       taskId: json['taskId'],
       comment: json['comment'],
