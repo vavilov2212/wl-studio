@@ -105,6 +105,14 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   Future<void> togglePopover() async {
+    // _isPopoverVisible only ever gets corrected by our own hidePopover()
+    // call. If the user destroyed the popover via its native close button
+    // instead, _isPopoverVisible is left stuck at true even though nothing
+    // is on screen - reconcile against the plugin's live-window list before
+    // deciding which branch to take, or the first click after a close-via-X
+    // would silently call hidePopover() on an already-dead window (a no-op)
+    // instead of actually reopening it.
+    await _reconcilePopoverState();
     if (_isPopoverVisible) {
       await hidePopover();
     } else {
@@ -114,17 +122,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   Future<void> showPopover() async {
-    // The popover's native window has a titlebar close button (the
-    // desktop_multi_window plugin exposes no way to suppress or intercept
-    // it on Windows), so the user can destroy the underlying window/engine
-    // at any time outside our control. Validate our cached window id
-    // against the plugin's own live-window list before deciding whether to
-    // reuse it or create a fresh one - reusing a destroyed id is a silent
-    // no-op on the native side, which would otherwise leave the popover
-    // permanently unopenable.
-    if (_popoverWindowId != null && !await _isPopoverWindowAlive()) {
-      _popoverWindowId = null;
-    }
+    // See togglePopover()'s comment: the popover's native window has a
+    // titlebar close button that the desktop_multi_window plugin gives no
+    // way to suppress or intercept on Windows, so the user can destroy the
+    // underlying window/engine at any time outside our control. Reusing a
+    // destroyed window id is a silent no-op on the native side, which would
+    // otherwise leave the popover permanently unopenable.
+    await _reconcilePopoverState();
 
     final wasNewWindow = _popoverWindowId == null;
     try {
@@ -145,6 +149,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
       if (wasNewWindow) {
         _popoverWindowId = null;
       }
+    }
+  }
+
+  Future<void> _reconcilePopoverState() async {
+    if (_popoverWindowId != null && !await _isPopoverWindowAlive()) {
+      _popoverWindowId = null;
+      _isPopoverVisible = false;
     }
   }
 
