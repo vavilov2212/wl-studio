@@ -14,6 +14,7 @@ class TextArea extends StatefulWidget {
   final bool showCounter;
   final ControlSize size;
   final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
 
   const TextArea({
     required this.hintText,
@@ -28,6 +29,7 @@ class TextArea extends StatefulWidget {
     this.maxLength = 3000,
     this.size = ControlSize.sm,
     this.onChanged,
+    this.focusNode,
     super.key,
   });
 
@@ -41,17 +43,21 @@ class _TextAreaState extends State<TextArea> {
   bool _hasFocus = false;
   double? _manualHeight;
   bool _isResizing = false;
-  late final FocusNode _focusNode;
+  FocusNode? _ownedFocusNode;
+
+  FocusNode get _focusNode => widget.focusNode ?? _ownedFocusNode!;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
+    if (widget.focusNode == null) {
+      _ownedFocusNode = FocusNode();
+    }
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    _ownedFocusNode?.dispose();
     super.dispose();
   }
 
