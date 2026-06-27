@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:worklog_studio/core/services/backup_service.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/reveal_in_file_manager.dart';
+import 'package:worklog_studio/core/services/reminder_service.dart';
 import 'package:worklog_studio/core/services/settings_keys.dart';
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
@@ -59,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (!mounted) return;
     setState(() => _reminderIntervalMinutes = minutes);
+    await _reminderService?.reloadInterval();
   }
 
   BackupService? get _backupService {
@@ -72,6 +74,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   HotkeyService? get _hotkeyService {
     try {
       return GetIt.I<HotkeyService>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  ReminderService? get _reminderService {
+    try {
+      return GetIt.I<ReminderService>();
     } catch (_) {
       return null;
     }

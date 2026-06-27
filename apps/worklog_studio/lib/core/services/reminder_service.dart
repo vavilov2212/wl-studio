@@ -93,6 +93,16 @@ class ReminderService {
     );
   }
 
+  /// Re-reads the configured interval and restarts the periodic timer with
+  /// it, but only if a session is currently running. If a setting change
+  /// happens while idle, the next session start already reads the fresh
+  /// value via [_onBlocState], so there's nothing to do here.
+  Future<void> reloadInterval() async {
+    if (_wasRunning) {
+      await _startReminderTimer();
+    }
+  }
+
   void _cancelTimers() {
     _reminderTimer?.cancel();
     _reminderTimer = null;

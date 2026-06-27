@@ -164,4 +164,35 @@ void main() {
       expect(periodicTimers.single.cancelled, isTrue);
     });
   });
+
+  group('ReminderService.reloadInterval', () {
+    test('while running, restarts the timer with the newly configured interval', () async {
+      store[SettingsKeys.reminderIntervalMinutes] = '5';
+      bloc.add(const TimeTrackerStarted(projectId: 'p1', taskId: 't1'));
+      await bloc.stream.firstWhere((s) => s.isRunning);
+      await service.init();
+      expect(periodicDurations, [const Duration(minutes: 5)]);
+      expect(periodicTimers.single.cancelled, isFalse);
+
+      store[SettingsKeys.reminderIntervalMinutes] = '10';
+      await service.reloadInterval();
+
+      expect(periodicTimers.first.cancelled, isTrue);
+      expect(periodicDurations, [
+        const Duration(minutes: 5),
+        const Duration(minutes: 10),
+      ]);
+    });
+
+    test('does nothing when nothing is running', () async {
+      store[SettingsKeys.reminderIntervalMinutes] = '5';
+      await service.init();
+      expect(periodicDurations, isEmpty);
+
+      store[SettingsKeys.reminderIntervalMinutes] = '10';
+      await service.reloadInterval();
+
+      expect(periodicDurations, isEmpty);
+    });
+  });
 }
