@@ -1170,8 +1170,6 @@ class HotkeyService {
   }
 
   Future<void> _registerAll() async {
-    await _registrar.unregisterAll();
-
     final toggle = await _resolveHotKey(
       SettingsKeys.toggleHotkey,
       _defaultHotKey(PhysicalKeyboardKey.keyM),
@@ -1190,10 +1188,14 @@ class HotkeyService {
     await _registrar.register(dismiss, onPressed: () => _onDismiss());
   }
 
-  /// Persists [hotKey] under [settingKey] and re-registers all three
-  /// hotkeys so the change takes effect immediately.
+  /// Persists [hotKey] under [settingKey], then unregisters everything and
+  /// re-registers all three hotkeys so the change takes effect immediately.
+  /// `init()` never needs to unregister first - nothing is registered yet on
+  /// a fresh service - so the unregister-before-re-register step lives here,
+  /// not inside `_registerAll()` (which `init()` also calls).
   Future<void> saveHotkey(String settingKey, HotKey hotKey) async {
     await _setSetting(settingKey, jsonEncode(hotKey.toJson()));
+    await _registrar.unregisterAll();
     await _registerAll();
   }
 
