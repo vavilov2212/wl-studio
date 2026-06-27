@@ -1247,6 +1247,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/reminder_service.dart';
 import 'package:worklog_studio/core/services/settings_keys.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
+import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
 import '../helpers/test_fakes.dart';
@@ -1386,6 +1387,11 @@ void main() {
 
       bloc.add(const TimeTrackerStarted(projectId: 'p1', taskId: 't1'));
       await bloc.stream.firstWhere((s) => s.isRunning);
+      // ReminderService's own bloc-state listener awaits getSetting(...)
+      // before starting the timer, so it resolves on a later microtask than
+      // this firstWhere - without this delay the assertion below can run
+      // before the listener's deferred work completes.
+      await Future<void>.delayed(Duration.zero);
 
       expect(periodicDurations, [const Duration(minutes: 5)]);
     });
