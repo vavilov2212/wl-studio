@@ -182,6 +182,47 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _isPopoverVisible = false;
   }
 
+  bool _pendingFocusComment = false;
+
+  /// Asks the follower (popover) engine to put the comment field into edit
+  /// mode and request keyboard focus. If the popover isn't ready yet (e.g.
+  /// it was just created and hasn't sent `miniReady`), the request is
+  /// deferred and replayed once `miniReady` arrives - see
+  /// [_handleIncomingIpcMessage]'s `'miniReady'` case.
+  Future<void> requestFocusComment() async {
+    if (_followerReady && _popoverWindowId != null) {
+      await _invokeFollower('focusComment', null);
+    } else {
+      _pendingFocusComment = true;
+    }
+  }
+
+  /// Tells the follower to commit its current comment edit (if any), then
+  /// hides the popover. The actual `TimerAction.updateComment` dispatch (if
+  /// the comment changed) arrives asynchronously afterward over the existing
+  /// `dispatchAction` channel - the popover engine stays alive while hidden,
+  /// so this is safe even though we don't wait for it here.
+  Future<void> acceptCurrentComment() async {
+    await _invokeFollower('acceptComment', null);
+    await hidePopover();
+  }
+
+  /// Tells the follower to discard its current comment edit (reverting the
+  /// field to the last persisted value), then hides the popover.
+  Future<void> dismissCurrentComment() async {
+    await _invokeFollower('dismissComment', null);
+    await hidePopover();
+  }
+
+  Future<void> _invokeFollower(String method, dynamic arguments) async {
+    if (_popoverWindowId == null) return;
+    try {
+      await DesktopMultiWindow.invokeMethod(_popoverWindowId!, method, arguments);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to invoke follower "$method" - $e');
+    }
+  }
+
   @override
   void openMainWindowFromTray({String? route}) {
     if (!_isPopover) return;
@@ -240,6 +281,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
           if (_leaderBloc != null) {
             await _broadcastSnapshotIfReady(_leaderBloc!.state);
           }
+          if (_pendingFocusComment) {
+            _pendingFocusComment = false;
+            await _invokeFollower('focusComment', null);
+          }
 
         case 'openMainWindow':
           await WindowsTrayService().restoreWindow();
@@ -252,6 +297,15 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
         case 'miniClosed':
           _followerReady = false;
+
+        case 'focusComment':
+          _followerCubit?.emitCommand(MiniPanelCommand.focusComment);
+
+        case 'acceptComment':
+          _followerCubit?.emitCommand(MiniPanelCommand.acceptComment);
+
+        case 'dismissComment':
+          _followerCubit?.emitCommand(MiniPanelCommand.dismissComment);
 
         case 'dispatchAction':
           if (arguments != null) {
@@ -339,6 +393,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @visibleForTesting
   void setLeaderBlocForTesting(TimeTrackerBloc bloc) => _leaderBloc = bloc;
+
+  @visibleForTesting
+  void setFollowerCubitForTesting(MiniTrackerCubit cubit) =>
+      _followerCubit = cubit;
 
   @visibleForTesting
   Future<void> handleIncomingIpcMessageForTesting(

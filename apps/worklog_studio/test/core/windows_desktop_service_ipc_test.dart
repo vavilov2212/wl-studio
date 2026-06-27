@@ -2,6 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/windows_desktop_service.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
+import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
 import '../helpers/test_fakes.dart';
@@ -100,6 +101,54 @@ void main() {
 
       await Future<void>.delayed(Duration.zero);
       expect(bloc.state.isRunning, isFalse);
+    });
+  });
+
+  group('WindowsDesktopService follower-side command forwarding', () {
+    late WindowsDesktopService followerService;
+    late MiniTrackerCubit followerCubit;
+
+    setUp(() {
+      followerService = WindowsDesktopService();
+      followerCubit = MiniTrackerCubit();
+      followerService.setFollowerCubitForTesting(followerCubit);
+    });
+
+    tearDown(() async {
+      await followerCubit.close();
+    });
+
+    test('focusComment forwards to the follower cubit as a command', () async {
+      final received = <MiniPanelCommand>[];
+      final sub = followerCubit.commands.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting('focusComment', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [MiniPanelCommand.focusComment]);
+      await sub.cancel();
+    });
+
+    test('acceptComment forwards to the follower cubit as a command', () async {
+      final received = <MiniPanelCommand>[];
+      final sub = followerCubit.commands.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting('acceptComment', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [MiniPanelCommand.acceptComment]);
+      await sub.cancel();
+    });
+
+    test('dismissComment forwards to the follower cubit as a command', () async {
+      final received = <MiniPanelCommand>[];
+      final sub = followerCubit.commands.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting('dismissComment', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [MiniPanelCommand.dismissComment]);
+      await sub.cancel();
     });
   });
 }
