@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
+
+enum MiniPanelCommand { focusComment, acceptComment, dismissComment }
 
 class MiniTrackerState {
   final bool isRunning;
@@ -44,6 +48,20 @@ class MiniTrackerState {
 class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
 
+  final _commandController = StreamController<MiniPanelCommand>.broadcast();
+
+  Stream<MiniPanelCommand> get commands => _commandController.stream;
+
+  void emitCommand(MiniPanelCommand command) {
+    _commandController.add(command);
+  }
+
+  @override
+  Future<void> close() {
+    _commandController.close();
+    return super.close();
+  }
+
   void updateFromSnapshot(TimerSnapshot snapshot) {
     if (snapshot.timestamp < state.lastTimestamp) return;
     emit(
@@ -79,6 +97,13 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     if (!state.isRunning) return;
     DesktopServiceRegistry.instance.dispatchAction(
       TimerAction(type: TimerActionType.stop),
+    );
+  }
+
+  void updateComment(String comment) {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.dispatchAction(
+      TimerAction(type: TimerActionType.updateComment, comment: comment),
     );
   }
 }

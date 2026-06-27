@@ -12,9 +12,13 @@ import 'package:worklog_studio/state/project_task_state.dart';
 /// yet have a concrete implementation. All methods are safe to call and do
 /// nothing.
 class NoOpDesktopService implements IDesktopPlatformService {
-  NoOpDesktopService._();
+  /// Constructor available to subclasses (e.g. test fakes) that need to
+  /// extend this no-op base without sharing its singleton instance.
+  NoOpDesktopService.base();
 
-  static final NoOpDesktopService _instance = NoOpDesktopService._();
+  static final NoOpDesktopService _instance = NoOpDesktopService.base();
+
+  /// Returns the shared singleton instance for production use.
   factory NoOpDesktopService() => _instance;
 
   final _navigationStreamController = StreamController<String>.broadcast();
