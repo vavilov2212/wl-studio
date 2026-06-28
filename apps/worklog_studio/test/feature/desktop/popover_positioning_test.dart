@@ -85,4 +85,34 @@ void main() {
       expect(clamped.bottom, screenSize.height);
     });
   });
+
+  group('computeActivityPromptFrame', () {
+    test('centers horizontally and sits a fixed distance from the top', () {
+      const screenSize = Size(1920, 1080);
+      const promptSize = Size(420, 100);
+
+      final frame = computeActivityPromptFrame(
+        screenSize: screenSize,
+        promptSize: promptSize,
+      );
+
+      expect(frame.left, (screenSize.width - promptSize.width) / 2);
+      expect(frame.top, 96);
+      expect(frame.width, promptSize.width);
+      expect(frame.height, promptSize.height);
+    });
+
+    test('honors a custom top margin', () {
+      const screenSize = Size(1920, 1080);
+      const promptSize = Size(420, 100);
+
+      final frame = computeActivityPromptFrame(
+        screenSize: screenSize,
+        promptSize: promptSize,
+        topMargin: 40,
+      );
+
+      expect(frame.top, 40);
+    });
+  });
 }

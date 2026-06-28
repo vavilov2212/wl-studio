@@ -34,3 +34,22 @@ Rect clampFrameToScreen(Rect frame, Size screenSize) {
   final top = frame.top.clamp(0.0, maxTop);
   return Rect.fromLTWH(left, top, frame.width, frame.height);
 }
+
+/// Computes the on-screen frame for the dedicated activity prompt window:
+/// horizontally centered, a fixed distance from the top of the screen.
+///
+/// Unlike [computePopoverFrame], this takes no tray bounds at all - the
+/// activity prompt is fired unattended (by the reminder) as often as it is
+/// fired directly (hotkey, a button in the mini panel), so there is no
+/// "the user just clicked something at this exact spot" context worth
+/// anchoring to. A fixed, screen-size-derived position is simpler and
+/// avoids the unreliable-native-query problems `computePopoverFrame`'s
+/// tray-relative anchoring has had to work around.
+Rect computeActivityPromptFrame({
+  required Size screenSize,
+  required Size promptSize,
+  double topMargin = 96,
+}) {
+  final left = (screenSize.width - promptSize.width) / 2;
+  return Rect.fromLTWH(left, topMargin, promptSize.width, promptSize.height);
+}
