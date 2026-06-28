@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:worklog_studio/core/services/settings_keys.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
@@ -40,6 +41,7 @@ CancelableTimer _defaultOneShot(Duration duration, void Function() onFire) =>
 class ReminderService {
   final TimeTrackerBloc _bloc;
   final Future<String?> Function(String key) _getSetting;
+  final bool Function() _isPopoverOpen;
   final Future<void> Function() _onFire;
   final Future<void> Function() _onAutoDismiss;
   final PeriodicTimerFactory _periodicTimerFactory;
@@ -55,12 +57,14 @@ class ReminderService {
   ReminderService({
     required TimeTrackerBloc bloc,
     required Future<String?> Function(String key) getSetting,
+    required bool Function() isPopoverOpen,
     required Future<void> Function() onFire,
     required Future<void> Function() onAutoDismiss,
     PeriodicTimerFactory periodicTimerFactory = _defaultPeriodic,
     OneShotTimerFactory oneShotTimerFactory = _defaultOneShot,
   })  : _bloc = bloc,
         _getSetting = getSetting,
+        _isPopoverOpen = isPopoverOpen,
         _onFire = onFire,
         _onAutoDismiss = onAutoDismiss,
         _periodicTimerFactory = periodicTimerFactory,
@@ -86,7 +90,12 @@ class ReminderService {
     _cancelTimers();
     final raw = await _getSetting(SettingsKeys.reminderIntervalMinutes);
     final minutes = raw != null ? int.tryParse(raw) : null;
-    if (minutes == null || minutes <= 0) return;
+    debugPrint('ReminderService: _startReminderTimer raw="$raw" minutes=$minutes');
+    if (minutes == null || minutes <= 0) {
+      debugPrint('ReminderService: not starting a timer (off or unset)');
+      return;
+    }
+    debugPrint('ReminderService: starting periodic timer for $minutes minute(s)');
     _reminderTimer = _periodicTimerFactory(
       Duration(minutes: minutes),
       () => _fire(),
@@ -98,6 +107,7 @@ class ReminderService {
   /// happens while idle, the next session start already reads the fresh
   /// value via [_onBlocState], so there's nothing to do here.
   Future<void> reloadInterval() async {
+    debugPrint('ReminderService: reloadInterval called, _wasRunning=$_wasRunning');
     if (_wasRunning) {
       await _startReminderTimer();
     }
@@ -111,6 +121,16 @@ class ReminderService {
   }
 
   Future<void> _fire() async {
+    if (_isPopoverOpen()) {
+      // The user already has the popover open on their own - firing the
+      // reminder on top of that would interrupt them and (depending on
+      // what the leader's onFire does) risks visibly disrupting a window
+      // they're actively looking at. The 20s auto-dismiss only makes sense
+      // for a popover *this* reminder opened, so skip scheduling it too.
+      debugPrint('ReminderService: popover already open - skipping reminder fire');
+      return;
+    }
+    debugPrint('ReminderService: firing reminder now');
     await _onFire();
     _autoDismissTimer = _oneShotTimerFactory(_autoDismissDelay, () {
       _onAutoDismiss();

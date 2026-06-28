@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
 /// Thin seam between [HotkeyService] and the `hotkey_manager` package.
@@ -17,7 +18,13 @@ class HotkeyManagerRegistrar implements HotkeyRegistrar {
     HotKey hotKey, {
     required void Function() onPressed,
   }) async {
-    await hotKeyManager.register(hotKey, keyDownHandler: (_) => onPressed());
+    await hotKeyManager.register(
+      hotKey,
+      keyDownHandler: (pressed) {
+        debugPrint('HotkeyManagerRegistrar: key pressed - ${pressed.debugName}');
+        onPressed();
+      },
+    );
   }
 
   @override

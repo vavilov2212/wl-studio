@@ -36,4 +36,53 @@ void main() {
       expect(frame.bottom, trayBounds.top - 20);
     });
   });
+
+  group('clampFrameToScreen', () {
+    const screenSize = Size(1920, 1080);
+
+    test('leaves a frame that already fits on screen unchanged', () {
+      const frame = Rect.fromLTWH(1001, 267, 360, 520);
+
+      final clamped = clampFrameToScreen(frame, screenSize);
+
+      expect(clamped, frame);
+    });
+
+    test('pulls a frame overflowing the left edge back on screen', () {
+      // e.g. a tray-bounds query that reports a small/wrong x position -
+      // the exact failure mode this guards against, regardless of why the
+      // upstream tray bounds were wrong.
+      const frame = Rect.fromLTWH(-323, 403, 360, 520);
+
+      final clamped = clampFrameToScreen(frame, screenSize);
+
+      expect(clamped.left, 0);
+      expect(clamped.width, 360);
+      expect(clamped.height, 520);
+    });
+
+    test('pulls a frame overflowing the right edge back on screen', () {
+      const frame = Rect.fromLTWH(1900, 403, 360, 520);
+
+      final clamped = clampFrameToScreen(frame, screenSize);
+
+      expect(clamped.right, screenSize.width);
+    });
+
+    test('pulls a frame overflowing the top edge back on screen', () {
+      const frame = Rect.fromLTWH(1001, -50, 360, 520);
+
+      final clamped = clampFrameToScreen(frame, screenSize);
+
+      expect(clamped.top, 0);
+    });
+
+    test('pulls a frame overflowing the bottom edge back on screen', () {
+      const frame = Rect.fromLTWH(1001, 1000, 360, 520);
+
+      final clamped = clampFrameToScreen(frame, screenSize);
+
+      expect(clamped.bottom, screenSize.height);
+    });
+  });
 }

@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
-import 'package:worklog_studio/feature/settings/settings_screen.dart';
+import 'package:worklog_studio/feature/settings/general_settings_screen.dart';
+import 'package:worklog_studio/feature/settings/hotkey_settings_screen.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
@@ -25,7 +26,11 @@ import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'dart:async';
 
-enum AppRoute { dashboard, history, projects, tasks, settings }
+enum AppRoute { dashboard, history, projects, tasks, settingsGeneral, settingsHotkeys }
+
+/// Whether [route] belongs to the Settings section of the sidebar.
+bool isSettingsRoute(AppRoute route) =>
+    route == AppRoute.settingsGeneral || route == AppRoute.settingsHotkeys;
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -137,8 +142,10 @@ class _AppShellState extends State<AppShell> {
         return const ProjectsScreen();
       case AppRoute.tasks:
         return const TasksScreen();
-      case AppRoute.settings:
-        return const SettingsScreen();
+      case AppRoute.settingsGeneral:
+        return const GeneralSettingsScreen();
+      case AppRoute.settingsHotkeys:
+        return const HotkeySettingsScreen();
     }
   }
 
@@ -733,6 +740,7 @@ class SidebarNavigation extends StatefulWidget {
 class _SidebarNavigationState extends State<SidebarNavigation> {
   bool _collapsed = true;
   bool _headerHovered = false;
+  bool _settingsExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -871,7 +879,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                     )
                   else
                     SizedBox(height: theme.spacings.sm),
-                  _navItem(AppRoute.settings, 'Settings', Icons.settings_outlined),
+                  ..._settingsNavGroup(),
                 ],
               ),
             ),
@@ -931,6 +939,71 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       icon: icon,
       isActive: widget.currentRoute == route,
       collapsed: _collapsed,
+      onTap: () => widget.onRouteSelected(route),
+    );
+  }
+
+  /// The expandable "Settings" entry plus its "General"/"Hotkeys" children.
+  ///
+  /// When the sidebar itself is collapsed (icon-only mode) there's no room
+  /// to show children inline, so tapping the parent navigates straight to
+  /// the active settings sub-route (or General by default) instead of
+  /// toggling an expansion that wouldn't be visible anyway.
+  List<Widget> _settingsNavGroup() {
+    final isOnSettings = isSettingsRoute(widget.currentRoute);
+
+    final parent = SidebarItem(
+      label: 'Settings',
+      icon: Icons.settings_outlined,
+      isActive: isOnSettings && (_collapsed || !_settingsExpanded),
+      collapsed: _collapsed,
+      trailing: _collapsed
+          ? null
+          : Icon(
+              _settingsExpanded
+                  ? Icons.expand_more_rounded
+                  : Icons.chevron_right_rounded,
+              size: 18,
+              color: Colors.white.withValues(alpha: 0.45),
+            ),
+      onTap: () {
+        if (_collapsed) {
+          // No room to show General/Hotkeys inline while collapsed - expand
+          // the whole sidebar so they become reachable, rather than
+          // guessing which one the user wants.
+          setState(() {
+            _collapsed = false;
+            _settingsExpanded = true;
+          });
+        } else {
+          setState(() => _settingsExpanded = !_settingsExpanded);
+        }
+      },
+    );
+
+    if (_collapsed || !_settingsExpanded) {
+      return [parent];
+    }
+
+    return [
+      parent,
+      _subNavItem(AppRoute.settingsGeneral, 'General'),
+      _subNavItem(AppRoute.settingsHotkeys, 'Hotkeys'),
+    ];
+  }
+
+  /// A nested item under the expandable "Settings" entry. Reuses
+  /// [SidebarItem] itself (rather than a bespoke widget) so sub-items get
+  /// the exact same hover/active/full-width row behavior as top-level
+  /// items - `dense: true` gives them the lighter visual weight expected
+  /// of a subordinate entry, and `indent` nests them under their parent.
+  Widget _subNavItem(AppRoute route, String label) {
+    final theme = context.theme;
+    return SidebarItem(
+      label: label,
+      isActive: widget.currentRoute == route,
+      indent: theme.spacings.xl,
+      variant: SidebarItemVariant.nested,
       onTap: () => widget.onRouteSelected(route),
     );
   }

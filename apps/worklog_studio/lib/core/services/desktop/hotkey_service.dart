@@ -37,6 +37,22 @@ class HotkeyService {
         modifiers: [HotKeyModifier.control, HotKeyModifier.shift],
       );
 
+  /// The documented default hotkey for [settingKey], used both as the
+  /// registration fallback and by the settings UI to display "what will
+  /// this revert to" without needing a live [HotkeyService] instance.
+  static HotKey defaultHotKeyFor(String settingKey) {
+    switch (settingKey) {
+      case SettingsKeys.toggleHotkey:
+        return _defaultHotKey(PhysicalKeyboardKey.keyM);
+      case SettingsKeys.acceptHotkey:
+        return _defaultHotKey(PhysicalKeyboardKey.enter);
+      case SettingsKeys.dismissHotkey:
+        return _defaultHotKey(PhysicalKeyboardKey.escape);
+      default:
+        throw ArgumentError('Unknown hotkey setting key: $settingKey');
+    }
+  }
+
   Future<HotKey> _resolveHotKey(String settingKey, HotKey fallback) async {
     final stored = await _getSetting(settingKey);
     if (stored == null) return fallback;
@@ -55,15 +71,15 @@ class HotkeyService {
   Future<void> _registerAll() async {
     final toggle = await _resolveHotKey(
       SettingsKeys.toggleHotkey,
-      _defaultHotKey(PhysicalKeyboardKey.keyM),
+      defaultHotKeyFor(SettingsKeys.toggleHotkey),
     );
     final accept = await _resolveHotKey(
       SettingsKeys.acceptHotkey,
-      _defaultHotKey(PhysicalKeyboardKey.enter),
+      defaultHotKeyFor(SettingsKeys.acceptHotkey),
     );
     final dismiss = await _resolveHotKey(
       SettingsKeys.dismissHotkey,
-      _defaultHotKey(PhysicalKeyboardKey.escape),
+      defaultHotKeyFor(SettingsKeys.dismissHotkey),
     );
 
     await _registrar.register(toggle, onPressed: () => _onToggle());

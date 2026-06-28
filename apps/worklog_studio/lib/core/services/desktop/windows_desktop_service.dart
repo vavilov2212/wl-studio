@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
@@ -53,6 +54,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
   final _settingsRepository = SqliteSettingsRepository();
   HotkeyService? _hotkeyService;
   ReminderService? _reminderService;
+
+  Timer? _prewarmWatchdog;
+  static const _prewarmCheckInterval = Duration(seconds: 1);
 
   /// Exposed for unit tests only.
   @visibleForTesting
@@ -111,8 +115,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _reminderService = ReminderService(
       bloc: bloc,
       getSetting: _settingsRepository.getString,
+      isPopoverOpen: () => _isPopoverVisible,
       onFire: () async {
-        await showPopover();
+        await showPopoverNearScreenCorner();
         await requestFocusComment();
       },
       onAutoDismiss: autoDismissCurrentComment,
@@ -122,6 +127,12 @@ class WindowsDesktopService implements IDesktopPlatformService {
       GetIt.I.unregister<ReminderService>();
     }
     GetIt.I.registerSingleton<ReminderService>(_reminderService!);
+
+    // Boot the popover engine now, hidden, so the *first* open is instant
+    // instead of paying the multi-second Firebase/DB cold-boot cost the
+    // moment the user actually asks for it.
+    await _ensurePopoverWindowExists();
+    _startPrewarmWatchdog();
   }
 
   @override
@@ -150,7 +161,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
     // deciding which branch to take, or the first click after a close-via-X
     // would silently call hidePopover() on an already-dead window (a no-op)
     // instead of actually reopening it.
+    debugPrint('WindowsDesktopService: togglePopover called, _isPopoverVisible=$_isPopoverVisible');
     await _reconcilePopoverState();
+    debugPrint('WindowsDesktopService: after reconcile, _isPopoverVisible=$_isPopoverVisible _popoverWindowId=$_popoverWindowId');
     if (_isPopoverVisible) {
       await hidePopover();
     } else {
@@ -160,7 +173,16 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   @override
-  Future<void> showPopover() async {
+  Future<void> showPopover() => _showPopover(_computeFrameNearTray);
+
+  /// Used by [ReminderService], which fires unattended on a timer rather
+  /// than from a direct user click - there is no extra context here that
+  /// would make a live tray-icon lookup any more trustworthy than usual,
+  /// so this always anchors to the fixed screen-corner position instead
+  /// of the icon-relative one [showPopover] uses.
+  Future<void> showPopoverNearScreenCorner() => _showPopover(_computeFrameFixedCorner);
+
+  Future<void> _showPopover(Future<Rect> Function() computeFrame) async {
     // See togglePopover()'s comment: the popover's native window has a
     // titlebar close button that the desktop_multi_window plugin gives no
     // way to suppress or intercept on Windows, so the user can destroy the
@@ -168,26 +190,23 @@ class WindowsDesktopService implements IDesktopPlatformService {
     // destroyed window id is a silent no-op on the native side, which would
     // otherwise leave the popover permanently unopenable.
     await _reconcilePopoverState();
+    await _ensurePopoverWindowExists();
 
-    final wasNewWindow = _popoverWindowId == null;
+    if (_popoverWindowId == null) {
+      debugPrint('WindowsDesktopService: showPopover aborted - no popover window available');
+      return;
+    }
+
     try {
-      final frame = await _computeFrame();
-      if (_popoverWindowId == null) {
-        final window = await DesktopMultiWindow.createWindow(jsonEncode({}));
-        _popoverWindowId = window.windowId;
-        await window.setFrame(frame);
-        await window.show();
-      } else {
-        final controller = WindowController.fromWindowId(_popoverWindowId!);
-        await controller.setFrame(frame);
-        await controller.show();
-      }
+      final frame = await computeFrame();
+      debugPrint('WindowsDesktopService: showPopover computed frame=$frame');
+      final controller = WindowController.fromWindowId(_popoverWindowId!);
+      await controller.setFrame(frame);
+      await controller.show();
       _isPopoverVisible = true;
+      debugPrint('WindowsDesktopService: showPopover completed successfully, windowId=$_popoverWindowId');
     } catch (e) {
       debugPrint('WindowsDesktopService: error showing popover - $e');
-      if (wasNewWindow) {
-        _popoverWindowId = null;
-      }
     }
   }
 
@@ -198,13 +217,107 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
   }
 
+  /// `getAllSubWindowIds()` has a native list-encoding bug on some Windows
+  /// builds (throws `RangeError` on every call, not just when something is
+  /// actually wrong), so it cannot be trusted as a liveness signal here -
+  /// see the removed previous implementation's history for that dead end.
+  ///
+  /// Instead, this sends a harmless targeted IPC call straight to
+  /// [_popoverWindowId]. The native plugin's `HandleWindowChannelCall`
+  /// looks the id up in its own window map *before* trying to reach the
+  /// follower engine at all, and replies with the exact error
+  /// `PlatformException(code: '-1', message: 'target window not found.')`
+  /// only when that id has actually been erased from the map - which only
+  /// happens via the native `OnWindowDestroy` callback, i.e. the window is
+  /// genuinely gone (closed via its native titlebar X button, since the
+  /// plugin gives us no way to intercept that). Any other failure (e.g. the
+  /// follower engine exists but hasn't finished registering its method
+  /// handler yet) is inconclusive, not proof of death - treating it as
+  /// "alive" avoids the previous bug where any probe hiccup forced a
+  /// brand-new popover engine (a multi-second Firebase/DB cold boot) on
+  /// every single toggle.
   Future<bool> _isPopoverWindowAlive() async {
     try {
-      final aliveIds = await DesktopMultiWindow.getAllSubWindowIds();
-      return aliveIds.contains(_popoverWindowId);
+      await DesktopMultiWindow.invokeMethod(_popoverWindowId!, 'livenessPing', null);
+      return true;
+    } on PlatformException catch (e) {
+      if (e.code == '-1' && e.message == 'target window not found.') {
+        debugPrint('WindowsDesktopService: popover window $_popoverWindowId confirmed destroyed - $e');
+        return false;
+      }
+      debugPrint('WindowsDesktopService: inconclusive liveness probe, assuming alive - $e');
+      return true;
     } catch (e) {
-      debugPrint('WindowsDesktopService: error checking popover liveness - $e');
-      return false;
+      debugPrint('WindowsDesktopService: inconclusive liveness probe, assuming alive - $e');
+      return true;
+    }
+  }
+
+  Future<void>? _creationInFlight;
+
+  /// Ensures a popover engine exists, creating one if necessary - without
+  /// showing it. Used both to pre-warm (startup, and after the watchdog
+  /// detects a close-via-X) and as the creation step inside `showPopover()`.
+  ///
+  /// Concurrent callers share the same in-flight `createWindow()` call
+  /// instead of each starting their own: a user-initiated `showPopover()`
+  /// and the 1s watchdog's pre-warm tick can otherwise both observe
+  /// `_popoverWindowId == null` at the same time (the create call takes
+  /// long enough to boot a whole engine) and each create their own window.
+  /// Whichever one's create call resolves *second* would then silently
+  /// overwrite `_popoverWindowId` with its own (different, never-shown)
+  /// window id - leaving the leader pointing at a hidden window while the
+  /// one actually on screen never receives any further snapshots, focus
+  /// requests, or hide/show calls. Funnelling every creation through this
+  /// one in-flight future makes that race impossible: only one
+  /// `createWindow()` call is ever outstanding, and every other caller
+  /// just awaits its result.
+  Future<void> _ensurePopoverWindowExists() async {
+    if (_popoverWindowId != null) return;
+    if (_creationInFlight != null) {
+      await _creationInFlight;
+      return;
+    }
+    final completer = Completer<void>();
+    _creationInFlight = completer.future;
+    try {
+      final window = await DesktopMultiWindow.createWindow(jsonEncode({}));
+      _popoverWindowId = window.windowId;
+      debugPrint('WindowsDesktopService: created popover window id=${window.windowId}');
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to create popover window - $e');
+    } finally {
+      _creationInFlight = null;
+      completer.complete();
+    }
+  }
+
+  /// Polls popover liveness so a close-via-X gets noticed - and a
+  /// replacement engine gets pre-warmed - without waiting for the user to
+  /// try reopening it first. Skips the check entirely while the popover is
+  /// actually visible, since there is nothing to detect in that case.
+  void _startPrewarmWatchdog() {
+    _prewarmWatchdog?.cancel();
+    _prewarmWatchdog = Timer.periodic(_prewarmCheckInterval, (_) => _checkAndRewarmPopover());
+  }
+
+  Future<void> _checkAndRewarmPopover() async {
+    if (_popoverWindowId == null) {
+      await _ensurePopoverWindowExists();
+      return;
+    }
+    // No "skip while visible" shortcut here on purpose: _isPopoverVisible
+    // is only ever corrected by our own hidePopover()/reconcile calls, not
+    // by any native close callback, so right after a close-via-X it stays
+    // stuck at true forever. Trusting it here would make the watchdog skip
+    // its own check permanently the moment it's needed most.
+    final alive = await _isPopoverWindowAlive();
+    if (!alive) {
+      debugPrint('WindowsDesktopService: watchdog detected popover destroyed via X - re-warming');
+      _popoverWindowId = null;
+      _isPopoverVisible = false;
+      _followerReady = false;
+      await _ensurePopoverWindowExists();
     }
   }
 
@@ -302,6 +415,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   void dispose() {
+    _prewarmWatchdog?.cancel();
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();
@@ -311,13 +425,53 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
-  Future<Rect> _computeFrame() async {
-    final trayBounds =
-        await trayManager.getBounds() ?? const Rect.fromLTWH(0, 0, 32, 32);
-    return computePopoverFrame(
-      trayBounds: trayBounds,
+  /// Used by [showPopover] - the user just clicked the tray icon or
+  /// pressed the toggle hotkey, so a live tray-icon position is worth
+  /// asking for. Falls back to the fixed corner (see
+  /// [_computeFrameFixedCorner]) when the live query looks degenerate.
+  Future<Rect> _computeFrameNearTray() async {
+    final rawBounds = await trayManager.getBounds();
+    final view = PlatformDispatcher.instance.views.first;
+    final screenSize = view.physicalSize / view.devicePixelRatio;
+    final frame = computePopoverFrame(
+      trayBounds: _sanitizeTrayBounds(rawBounds, screenSize),
       popoverSize: _popoverSize,
     );
+    return clampFrameToScreen(frame, screenSize);
+  }
+
+  /// `trayManager.getBounds()` only catches the fully-degenerate
+  /// (near-zero) case - a plausible-looking but still wrong rect (wrong
+  /// X, or wrong Y entirely off the taskbar) slips through this check.
+  /// `_computeFrameNearTray` is only used for direct user actions
+  /// (tray click, toggle hotkey), where a bad reading is an occasional
+  /// annoyance the user can immediately retry. [showPopoverNearScreenCorner]
+  /// (used by the unattended reminder) skips the live query altogether.
+  Rect _sanitizeTrayBounds(Rect? rawBounds, Size screenSize) {
+    if (rawBounds != null && rawBounds.width > 1 && rawBounds.height > 1) {
+      return rawBounds;
+    }
+    return _fixedTrayAnchor(screenSize);
+  }
+
+  /// Used by [showPopoverNearScreenCorner] - fired unattended by
+  /// [ReminderService], where there is no live tray-icon position worth
+  /// trusting any more than usual, so this skips `trayManager.getBounds()`
+  /// entirely and always anchors to a fixed synthetic point near the
+  /// screen's bottom-right corner, where the system tray conventionally
+  /// lives.
+  Future<Rect> _computeFrameFixedCorner() async {
+    final view = PlatformDispatcher.instance.views.first;
+    final screenSize = view.physicalSize / view.devicePixelRatio;
+    final frame = computePopoverFrame(
+      trayBounds: _fixedTrayAnchor(screenSize),
+      popoverSize: _popoverSize,
+    );
+    return clampFrameToScreen(frame, screenSize);
+  }
+
+  Rect _fixedTrayAnchor(Size screenSize) {
+    return Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
   }
 
   Future<void> _handleIncomingIpcMessage(
@@ -443,6 +597,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   // ── Test seams ─────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  Rect fixedTrayAnchorForTesting(Size screenSize) => _fixedTrayAnchor(screenSize);
+
+  @visibleForTesting
+  Rect sanitizeTrayBoundsForTesting(Rect? rawBounds, Size screenSize) =>
+      _sanitizeTrayBounds(rawBounds, screenSize);
 
   @visibleForTesting
   void setLeaderBlocForTesting(TimeTrackerBloc bloc) => _leaderBloc = bloc;

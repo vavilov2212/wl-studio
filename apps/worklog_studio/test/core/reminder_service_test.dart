@@ -27,6 +27,7 @@ void main() {
   late List<Duration> oneShotDurations;
   late List<void Function()> oneShotCallbacks;
   late List<_FakeCancelableTimer> oneShotTimers;
+  late bool isPopoverOpen;
   late ReminderService service;
 
   setUp(() {
@@ -42,10 +43,12 @@ void main() {
     oneShotDurations = [];
     oneShotCallbacks = [];
     oneShotTimers = [];
+    isPopoverOpen = false;
 
     service = ReminderService(
       bloc: bloc,
       getSetting: (key) async => store[key],
+      isPopoverOpen: () => isPopoverOpen,
       onFire: () async => fireCalls++,
       onAutoDismiss: () async => autoDismissCalls++,
       periodicTimerFactory: (duration, onTick) {
@@ -131,6 +134,25 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(autoDismissCalls, 1);
+    });
+
+    test('does not fire when the popover is already open', () async {
+      repo.seed(TimeEntry(
+        id: 'e1',
+        startAt: clock.now(),
+        status: TimeEntryStatus.running,
+      ));
+      bloc.add(TimeTrackerLoaded());
+      await bloc.stream.firstWhere((s) => s.isRunning);
+      store[SettingsKeys.reminderIntervalMinutes] = '5';
+      await service.init();
+      isPopoverOpen = true;
+
+      periodicCallbacks.single();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(fireCalls, 0);
+      expect(oneShotDurations, isEmpty);
     });
   });
 

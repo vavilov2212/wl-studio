@@ -809,24 +809,27 @@ class _MiniPanelState extends State<MiniPanel> {
                     child: Container(
                       decoration: BoxDecoration(color: Color(0xFFf8fafc)),
                       child: _query.isEmpty
-                          ? Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: theme.spacings.lg,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildActiveSession(
-                                    isRunning,
-                                    activeEntry,
-                                    state,
-                                    theme,
-                                    context,
-                                  ),
-                                  SizedBox(height: theme.spacings.lg),
-                                  _buildRecentActivity(state, theme),
-                                ],
+                          ? SingleChildScrollView(
+                              physics: const ClampingScrollPhysics(),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: theme.spacings.lg,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildActiveSession(
+                                      isRunning,
+                                      activeEntry,
+                                      state,
+                                      theme,
+                                      context,
+                                    ),
+                                    SizedBox(height: theme.spacings.lg),
+                                    _buildRecentActivity(state, theme),
+                                  ],
+                                ),
                               ),
                             )
                           : SingleChildScrollView(

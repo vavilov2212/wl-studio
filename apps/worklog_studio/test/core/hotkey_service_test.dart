@@ -135,4 +135,32 @@ void main() {
       expect(registrar.unregisterAllCalls, 1);
     });
   });
+
+  group('HotkeyService.defaultHotKeyFor', () {
+    test('toggleHotkey defaults to PhysicalKeyboardKey.keyM', () {
+      final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.toggleHotkey);
+
+      expect(hotKey.key, PhysicalKeyboardKey.keyM);
+      expect(hotKey.modifiers, [HotKeyModifier.control, HotKeyModifier.shift]);
+    });
+
+    test('acceptHotkey defaults to PhysicalKeyboardKey.enter', () {
+      final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.acceptHotkey);
+
+      expect(hotKey.key, PhysicalKeyboardKey.enter);
+    });
+
+    test('dismissHotkey defaults to PhysicalKeyboardKey.escape', () {
+      final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.dismissHotkey);
+
+      expect(hotKey.key, PhysicalKeyboardKey.escape);
+    });
+
+    test('throws for an unknown setting key', () {
+      expect(
+        () => HotkeyService.defaultHotKeyFor('not_a_real_key'),
+        throwsArgumentError,
+      );
+    });
+  });
 }

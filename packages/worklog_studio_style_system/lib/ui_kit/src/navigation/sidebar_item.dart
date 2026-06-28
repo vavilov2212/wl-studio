@@ -2,6 +2,17 @@
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:vector_svg/vector_svg.dart';
 
+/// Visual weight of a [SidebarItem].
+enum SidebarItemVariant {
+  /// A top-level destination - bold label, solid active highlight.
+  standard,
+
+  /// A nested entry under a parent (e.g. "Settings > General") - regular
+  /// label weight and a softer active highlight, so it reads as
+  /// subordinate rather than a second row of equally-weighted items.
+  nested,
+}
+
 class SidebarItem extends StatefulWidget {
 final String label;
 final String? iconPath;
@@ -9,6 +20,14 @@ final IconData? icon;
 final bool isActive;
   final bool collapsed;
 final VoidCallback onTap;
+  /// Optional trailing widget (e.g. an expand/collapse chevron), rendered
+  /// only in expanded (non-collapsed) mode.
+  final Widget? trailing;
+  /// Extra leading space before the icon/label, for rendering a nested
+  /// sub-item under a parent (e.g. "Settings > General"). Ignored in
+  /// [collapsed] mode, where there is no room for a visible hierarchy.
+  final double indent;
+  final SidebarItemVariant variant;
 
 const SidebarItem({
 required this.label,
@@ -17,6 +36,9 @@ this.iconPath,
   this.icon,
     this.isActive = false,
   this.collapsed = false,
+  this.trailing,
+  this.indent = 0,
+  this.variant = SidebarItemVariant.standard,
   super.key,
   });
 
@@ -90,19 +112,25 @@ colorsPalette,
 ) {
 final palette = theme.colorsPalette;
 
+final isNested = widget.variant == SidebarItemVariant.nested;
+
 final backgroundColor = widget.isActive
-? palette.accent.primary
+? (isNested ? Colors.white.withValues(alpha: 0.12) : palette.accent.primary)
 : isHovered
 ? Colors.white.withValues(alpha: 0.07)
 : palette.base.transparent;
 
 final textColor = widget.isActive
 ? Colors.white
-: Colors.white.withValues(alpha: 0.55);
+: Colors.white.withValues(alpha: isNested ? 0.65 : 0.55);
 
 final iconColor = widget.isActive
 ? Colors.white
 : Colors.white.withValues(alpha: 0.45);
+
+final textStyle = isNested
+? theme.commonTextStyles.body2
+: theme.commonTextStyles.body2Bold;
 
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
@@ -112,9 +140,11 @@ final iconColor = widget.isActive
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: kThemeAnimationDuration,
-          padding: EdgeInsets.symmetric(
-            horizontal: theme.spacings.md,
-            vertical: theme.spacings.sm,
+          padding: EdgeInsets.only(
+            left: theme.spacings.md + widget.indent,
+            right: theme.spacings.md,
+            top: isNested ? theme.spacings.xs : theme.spacings.sm,
+            bottom: isNested ? theme.spacings.xs : theme.spacings.sm,
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -139,11 +169,10 @@ final iconColor = widget.isActive
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
-                  style: theme.commonTextStyles.body2Bold.copyWith(
-                    color: textColor,
-                  ),
+                  style: textStyle.copyWith(color: textColor),
                 ),
               ),
+              if (widget.trailing != null) widget.trailing!,
             ],
           ),
         ),
