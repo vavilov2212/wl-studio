@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
@@ -190,10 +192,47 @@ class _HotkeyRecorderRow extends StatefulWidget {
 class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
   HotKey? _displayedHotKey;
 
+  /// `HotKeyRecorder` fires `onHotKeyRecorded` on every single keydown, not
+  /// once per finished combo - pressing Ctrl alone fires it with just
+  /// Control, adding Shift fires it again with Shift+Control, and so on.
+  /// Saving (and therefore re-registering all three live hotkeys) on every
+  /// one of those intermediate, often-bare-modifier states is both wrong
+  /// (whatever key you pressed last "wins" if you don't press the whole
+  /// combo in one instant) and dangerous (rapid concurrent
+  /// unregister/register native calls if you type the combo at any normal
+  /// human pace). Only the combo that's still current once keydowns stop
+  /// arriving for [_settleDelay] gets saved.
+  HotKey? _pendingHotKey;
+  Timer? _settleTimer;
+  static const _settleDelay = Duration(milliseconds: 600);
+
   @override
   void initState() {
     super.initState();
     _loadDisplayedHotKey();
+  }
+
+  @override
+  void didUpdateWidget(_HotkeyRecorderRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRecording && !oldWidget.isRecording) {
+      // A fresh recording session - drop any leftover preview from an
+      // aborted previous attempt instead of briefly showing it again.
+      _settleTimer?.cancel();
+      _pendingHotKey = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _settleTimer?.cancel();
+    super.dispose();
+  }
+
+  void _cancelRecording() {
+    _settleTimer?.cancel();
+    _pendingHotKey = null;
+    widget.onStopRecording();
   }
 
   Future<void> _loadDisplayedHotKey() async {
@@ -206,7 +245,25 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
     });
   }
 
-  Future<void> _onRecorded(HotKey hotKey) async {
+  bool _isBareModifierKey(PhysicalKeyboardKey key) {
+    return HotKeyModifier.values.any((m) => m.physicalKeys.contains(key));
+  }
+
+  void _onRecorded(HotKey hotKey) {
+    _pendingHotKey = hotKey;
+    setState(() {}); // live preview while the combo is still being built
+    _settleTimer?.cancel();
+    _settleTimer = Timer(_settleDelay, _commitPending);
+  }
+
+  Future<void> _commitPending() async {
+    final hotKey = _pendingHotKey;
+    final key = hotKey?.key;
+    // A bare modifier (e.g. just "Control") isn't a usable hotkey on its
+    // own - keep waiting instead of locking in something useless.
+    if (hotKey == null || key is PhysicalKeyboardKey && _isBareModifierKey(key)) {
+      return;
+    }
     final service = widget.hotkeyService;
     if (service != null) {
       await service.saveHotkey(widget.settingKey, hotKey);
@@ -234,7 +291,10 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
         if (widget.isRecording) ...[
           Expanded(
             child: Text(
-              'Press a key combo...', // TODO: l10n
+              // Modifiers and the trigger key can be pressed one at a time,
+              // not all together - hold each one down while adding the
+              // next, and release once the combo you want is showing.
+              _pendingHotKey?.debugName ?? 'Hold modifiers, then press a key...', // TODO: l10n
               style: theme.commonTextStyles.body.copyWith(
                 color: theme.colorsPalette.text.muted,
                 fontStyle: FontStyle.italic,
@@ -248,7 +308,7 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
             type: ButtonType.ghost,
             size: ButtonSize.sm,
             leftIconWidget: const Icon(Icons.close, size: 16),
-            onTap: widget.onStopRecording,
+            onTap: _cancelRecording,
           ),
         ] else ...[
           Expanded(
