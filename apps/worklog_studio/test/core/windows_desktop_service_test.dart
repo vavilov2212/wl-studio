@@ -10,9 +10,8 @@ void main() {
     const screenSize = Size(1920, 1080);
 
     test('anchors near the bottom-right corner of the screen', () {
-      // Used unconditionally by showPopoverNearScreenCorner() (the
-      // reminder's path), which has no live tray-icon context worth
-      // trusting any more than usual.
+      // Used by the mini panel's near-tray positioning fallback when the
+      // live tray-icon bounds query is suspicious or unavailable.
       final anchor = service.fixedTrayAnchorForTesting(screenSize);
 
       expect(anchor.right, screenSize.width);

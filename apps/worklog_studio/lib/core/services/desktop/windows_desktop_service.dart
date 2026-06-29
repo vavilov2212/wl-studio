@@ -331,8 +331,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   /// Used by [showPopover] - the user just clicked the tray icon or
   /// pressed the toggle hotkey, so a live tray-icon position is worth
-  /// asking for. Falls back to the fixed corner (see
-  /// [_computeFrameFixedCorner]) when the live query looks degenerate.
+  /// asking for.
   Future<Rect> _computeFrameNearTray() async {
     final rawBounds = await trayManager.getBounds();
     final view = PlatformDispatcher.instance.views.first;
@@ -347,10 +346,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
   /// `trayManager.getBounds()` only catches the fully-degenerate
   /// (near-zero) case - a plausible-looking but still wrong rect (wrong
   /// X, or wrong Y entirely off the taskbar) slips through this check.
-  /// `_computeFrameNearTray` is only used for direct user actions
-  /// (tray click, toggle hotkey), where a bad reading is an occasional
-  /// annoyance the user can immediately retry. [showPopoverNearScreenCorner]
-  /// (used by the unattended reminder) skips the live query altogether.
+  /// Falls back to a fixed corner anchor when bounds are suspicious.
+  /// The mini panel uses this fallback when the live tray query looks bad.
   Rect _sanitizeTrayBounds(Rect? rawBounds, Size screenSize) {
     if (rawBounds != null && rawBounds.width > 1 && rawBounds.height > 1) {
       return rawBounds;
