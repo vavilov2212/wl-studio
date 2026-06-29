@@ -441,7 +441,11 @@ class WindowsDesktopService implements IDesktopPlatformService {
     return clampFrameToScreen(frame, screenSize);
   }
 
-  static const _activityPromptSize = Size(420, 100);
+  // 100 logical pixels (the original design size) is 4px too short for the
+  // panel's actual content (TextField + gap + status caption, against the
+  // container's real padding) - confirmed by a RenderFlex overflow assertion
+  // in manual testing. 120 leaves real margin instead of a bare minimum.
+  static const _activityPromptSize = Size(420, 120);
 
   Future<void> _handleIncomingIpcMessage(
     String? method,
