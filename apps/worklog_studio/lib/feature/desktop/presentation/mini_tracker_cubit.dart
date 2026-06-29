@@ -111,4 +111,13 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
       TimerAction(type: TimerActionType.updateComment, comment: comment),
     );
   }
+
+  /// Opens the dedicated activity prompt window (see
+  /// `ActivityPromptPanel`) - a no-op when nothing is currently being
+  /// tracked, mirroring the leader-side guard in
+  /// `WindowsDesktopService.showActivityPrompt()`.
+  void requestActivityPrompt() {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.requestActivityPrompt();
+  }
 }

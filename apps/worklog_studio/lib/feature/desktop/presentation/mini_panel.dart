@@ -233,6 +233,15 @@ class _MiniPanelState extends State<MiniPanel> {
                       autofocus: true,
                     ),
                   ),
+                  SizedBox(height: theme.spacings.sm),
+                  PrimaryButton(
+                    type: ButtonType.ghost,
+                    size: ButtonSize.sm,
+                    leftIconWidget: const Icon(Icons.chat_bubble_outline, size: 14),
+                    onTap: () {
+                      context.read<MiniTrackerCubit>().requestActivityPrompt();
+                    },
+                  ),
                 ],
               ),
             ),

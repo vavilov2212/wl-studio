@@ -10,10 +10,16 @@ class _RecordingDesktopService extends NoOpDesktopService {
   _RecordingDesktopService() : super.base();
 
   final List<dynamic> dispatched = [];
+  int requestActivityPromptCalls = 0;
 
   @override
   void dispatchAction(covariant dynamic action) {
     dispatched.add(action);
+  }
+
+  @override
+  void requestActivityPrompt() {
+    requestActivityPromptCalls++;
   }
 }
 
@@ -74,6 +80,35 @@ void main() {
 
       expect(received, [MiniPanelCommand.focusComment, MiniPanelCommand.acceptComment]);
       await sub.cancel();
+    });
+  });
+
+  group('MiniTrackerCubit.requestActivityPrompt', () {
+    test('asks the desktop service to open the activity prompt when a session is running', () {
+      cubit.updateFromSnapshot(
+        TimerSnapshot(
+          isRunning: true,
+          activeEntry: TimeEntry(
+            id: 'e1',
+            startAt: DateTime(2025, 1, 1, 9),
+            status: TimeEntryStatus.running,
+          ),
+          entries: const [],
+          tasks: const [],
+          projects: const [],
+          timestamp: 1,
+        ),
+      );
+
+      cubit.requestActivityPrompt();
+
+      expect(desktopService.requestActivityPromptCalls, 1);
+    });
+
+    test('does nothing when no session is running', () {
+      cubit.requestActivityPrompt();
+
+      expect(desktopService.requestActivityPromptCalls, 0);
     });
   });
 }
