@@ -262,9 +262,23 @@ class WindowsDesktopService implements IDesktopPlatformService {
   Future<String> resolveStartupRole(List<String> args) async {
     if (args.firstOrNull == 'multi_window' && args.length >= 2) {
       _ownWindowId = int.tryParse(args[1]);
-      return 'tray';
+      return _followerRole(args) == 'activity' ? 'tray:activity' : 'tray';
     }
     return 'main';
+  }
+
+  /// Reads the `role` field out of `createWindow()`'s payload (`args[2]`,
+  /// per `desktop_multi_window`'s documented argument list), defaulting to
+  /// `'miniPanel'` for a missing, empty, or malformed payload.
+  String _followerRole(List<String> args) {
+    if (args.length < 3) return 'miniPanel';
+    try {
+      final payload = jsonDecode(args[2]) as Map<String, dynamic>;
+      return payload['role'] as String? ?? 'miniPanel';
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to parse follower role payload - $e');
+      return 'miniPanel';
+    }
   }
 
   @override

@@ -71,5 +71,29 @@ void main() {
 
       expect(role, 'main');
     });
+
+    test('returns tray:activity when the payload role is activity', () async {
+      final service = WindowsDesktopService();
+
+      final role = await service.resolveStartupRole([
+        'multi_window',
+        '9',
+        '{"role":"activity"}',
+      ]);
+
+      expect(role, 'tray:activity');
+    });
+
+    test('returns plain tray when the payload role is miniPanel', () async {
+      final service = WindowsDesktopService();
+
+      final role = await service.resolveStartupRole([
+        'multi_window',
+        '9',
+        '{"role":"miniPanel"}',
+      ]);
+
+      expect(role, 'tray');
+    });
   });
 }
