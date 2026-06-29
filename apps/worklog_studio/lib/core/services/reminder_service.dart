@@ -120,6 +120,16 @@ class ReminderService {
     _autoDismissTimer = null;
   }
 
+  /// Cancels a pending auto-dismiss timer, if any - call this once the
+  /// activity prompt this reminder opened has been explicitly acknowledged
+  /// (brought into focus) or closed by the user, so a stale 20s timer never
+  /// fires against a window the user has already dealt with. A harmless
+  /// no-op when nothing is pending.
+  void cancelAutoDismiss() {
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
+  }
+
   Future<void> _fire() async {
     if (_isPopoverOpen()) {
       // The user already has the popover open on their own - firing the

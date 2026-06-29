@@ -7,6 +7,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
@@ -200,7 +201,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
   ///   for it via a real hotkey press, so [ManagedPopoverWindow.activate]
   ///   is safe here);
   /// - visible but not focused (e.g. the reminder put it there) -> just
-  ///   grab focus, don't close it;
+  ///   grab focus, don't close it. This counts as acknowledging a
+  ///   reminder-opened prompt, so its 20s auto-dismiss is cancelled - once
+  ///   the user has actually looked at it, it should stay open until they
+  ///   explicitly close it, not vanish out from under them mid-edit;
   /// - visible and already focused -> close it, mirroring the mini panel's
   ///   old toggle-close behavior (nothing unsaved is ever lost either way).
   Future<void> toggleActivityPrompt() async {
@@ -210,8 +214,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
       _activityWindow.activate();
     } else if (!_activityWindow.isForeground) {
       _activityWindow.activate();
+      _reminderService?.cancelAutoDismiss();
       await requestFocusComment();
     } else {
+      _reminderService?.cancelAutoDismiss();
       await _activityWindow.hide();
     }
   }
@@ -249,6 +255,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   /// the window's engine stays alive while hidden, so this is safe even
   /// though we don't wait for it here.
   Future<void> acceptCurrentComment() async {
+    _reminderService?.cancelAutoDismiss();
     await _invokeWindow(_activityWindow, 'acceptComment', null);
     await _activityWindow.hide();
   }
@@ -257,6 +264,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   /// edit (reverting the field to the last persisted value), then hides
   /// the window.
   Future<void> dismissCurrentComment() async {
+    _reminderService?.cancelAutoDismiss();
     await _invokeWindow(_activityWindow, 'dismissComment', null);
     await _activityWindow.hide();
   }
@@ -345,13 +353,29 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
+  /// `PlatformDispatcher.instance.views.first` reports the *leader engine's
+  /// own view* (the main app window's client area), not the monitor's true
+  /// resolution - the two only coincide by accident when the main window
+  /// happens to be maximized. `screen_retriever` queries the actual display
+  /// directly, so popovers center/clamp against the real screen regardless
+  /// of whatever size the main window currently is.
+  Future<Size> _screenSize() async {
+    try {
+      final display = await screenRetriever.getPrimaryDisplay();
+      return display.size;
+    } catch (e) {
+      debugPrint('WindowsDesktopService: getPrimaryDisplay failed, falling back to view size - $e');
+      final view = PlatformDispatcher.instance.views.first;
+      return view.physicalSize / view.devicePixelRatio;
+    }
+  }
+
   /// Used by [showPopover] - the user just clicked the tray icon or
   /// pressed the toggle hotkey, so a live tray-icon position is worth
   /// asking for.
   Future<Rect> _computeFrameNearTray() async {
     final rawBounds = await trayManager.getBounds();
-    final view = PlatformDispatcher.instance.views.first;
-    final screenSize = view.physicalSize / view.devicePixelRatio;
+    final screenSize = await _screenSize();
     final frame = computePopoverFrame(
       trayBounds: _sanitizeTrayBounds(rawBounds, screenSize),
       popoverSize: _popoverSize,
@@ -376,8 +400,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   Future<Rect> _computeActivityPromptFrame() async {
-    final view = PlatformDispatcher.instance.views.first;
-    final screenSize = view.physicalSize / view.devicePixelRatio;
+    final screenSize = await _screenSize();
     final frame = computeActivityPromptFrame(
       screenSize: screenSize,
       promptSize: _activityPromptSize,

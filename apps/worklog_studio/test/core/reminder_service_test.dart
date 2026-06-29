@@ -136,6 +136,32 @@ void main() {
       expect(autoDismissCalls, 1);
     });
 
+    test(
+        'cancelAutoDismiss cancels the pending timer - the window was '
+        'acknowledged, not ignored', () async {
+      repo.seed(TimeEntry(
+        id: 'e1',
+        startAt: clock.now(),
+        status: TimeEntryStatus.running,
+      ));
+      bloc.add(TimeTrackerLoaded());
+      await bloc.stream.firstWhere((s) => s.isRunning);
+      store[SettingsKeys.reminderIntervalMinutes] = '5';
+      await service.init();
+      periodicCallbacks.single();
+      await Future<void>.delayed(Duration.zero);
+      expect(oneShotTimers, hasLength(1));
+      expect(oneShotTimers.single.cancelled, isFalse);
+
+      service.cancelAutoDismiss();
+
+      expect(oneShotTimers.single.cancelled, isTrue);
+    });
+
+    test('cancelAutoDismiss is a harmless no-op when nothing is pending', () async {
+      expect(() => service.cancelAutoDismiss(), returnsNormally);
+    });
+
     test('does not fire when the popover is already open', () async {
       repo.seed(TimeEntry(
         id: 'e1',

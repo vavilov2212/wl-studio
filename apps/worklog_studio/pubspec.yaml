@@ -80,6 +80,7 @@ dependencies:
   hotkey_manager: ^0.2.3
   win32: ^5.15.0
   ffi: ^2.1.4
+  screen_retriever: ^0.2.0
 
   # Charts
   fl_chart: ^0.69.2
