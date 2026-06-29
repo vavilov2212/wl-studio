@@ -74,11 +74,11 @@ Future<void> run(List<String> args) async {
   // Role detection is now owned by the platform service itself.
   final role = await DesktopServiceRegistry.instance.resolveStartupRole(args);
   debugPrint('Successfully resolved engine role: $role');
-
-  final isPopover = role == 'tray';
   debugPrint('runApp starting with role: $role');
 
-  if (isPopover) {
+  if (role == 'tray:activity') {
+    runApp(const ActivityPromptApp());
+  } else if (role == 'tray') {
     runApp(const MiniApp());
   } else {
     runApp(const MainApp());
