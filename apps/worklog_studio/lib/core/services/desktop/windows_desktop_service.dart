@@ -116,7 +116,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       registrar: HotkeyManagerRegistrar(),
       getSetting: _settingsRepository.getString,
       setSetting: _settingsRepository.setString,
-      onToggle: togglePopover,
+      onToggle: toggleActivityPrompt,
       onAccept: acceptCurrentComment,
       onDismiss: dismissCurrentComment,
     );
@@ -129,11 +129,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _reminderService = ReminderService(
       bloc: bloc,
       getSetting: _settingsRepository.getString,
-      isPopoverOpen: () => _miniPanelWindow.isVisible,
-      onFire: () async {
-        await showPopoverNearScreenCorner();
-        await requestFocusComment();
-      },
+      isPopoverOpen: () => _activityWindow.isVisible,
+      onFire: showActivityPrompt,
       onAutoDismiss: autoDismissCurrentComment,
     );
     await _reminderService!.init();
@@ -181,13 +178,27 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   Future<void> showPopover() => _miniPanelWindow.show();
 
-  /// Used by [ReminderService], which fires unattended on a timer rather
-  /// than from a direct user click - there is no extra context here that
-  /// would make a live tray-icon lookup any more trustworthy than usual,
-  /// so this always anchors to the fixed screen-corner position instead
-  /// of the icon-relative one [showPopover] uses.
-  Future<void> showPopoverNearScreenCorner() =>
-      _miniPanelWindow.show(frameOverride: _computeFrameFixedCorner);
+  /// Opens the activity prompt and focuses its comment field. A no-op if
+  /// nothing is currently being tracked - there is nothing to comment on.
+  Future<void> showActivityPrompt() async {
+    if (_leaderBloc?.state.isRunning != true) return;
+    await _activityWindow.show();
+    await requestFocusComment();
+  }
+
+  /// Opens/closes the activity prompt - the target of the toggle hotkey.
+  /// Closing just hides the window, mirroring how the mini panel's old
+  /// toggle closed without sending an explicit discard signal: the field
+  /// is simply not visible anymore, and nothing was ever persisted from
+  /// an uncommitted edit either way.
+  Future<void> toggleActivityPrompt() async {
+    await _activityWindow.reconcile();
+    if (_activityWindow.isVisible) {
+      await _activityWindow.hide();
+    } else {
+      await showActivityPrompt();
+    }
+  }
 
   void _startPrewarmWatchdog() {
     _prewarmWatchdog?.cancel();
@@ -202,52 +213,46 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   bool _pendingFocusComment = false;
 
-  /// Asks the follower (popover) engine to put the comment field into edit
-  /// mode and request keyboard focus. If the popover isn't ready yet (e.g.
-  /// it was just created and hasn't sent `miniReady`), the request is
-  /// deferred and replayed once `miniReady` arrives - see
+  /// Asks the activity-prompt follower to put its comment field into edit
+  /// mode and request keyboard focus. If it isn't ready yet (e.g. it was
+  /// just created and hasn't sent `miniReady`), the request is deferred
+  /// and replayed once `miniReady` arrives - see
   /// [_handleIncomingIpcMessage]'s `'miniReady'` case.
   Future<void> requestFocusComment() async {
-    if (_miniPanelWindow.followerReady && _miniPanelWindow.windowId != null) {
-      await _invokeFollower('focusComment', null);
+    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
+      await _invokeWindow(_activityWindow, 'focusComment', null);
     } else {
       _pendingFocusComment = true;
     }
   }
 
-  /// Tells the follower to commit its current comment edit (if any), then
-  /// hides the popover. The actual `TimerAction.updateComment` dispatch (if
-  /// the comment changed) arrives asynchronously afterward over the existing
-  /// `dispatchAction` channel - the popover engine stays alive while hidden,
-  /// so this is safe even though we don't wait for it here.
+  /// Tells the activity-prompt follower to commit its current comment
+  /// edit (if any), then hides the window. The actual
+  /// `TimerAction.updateComment` dispatch (if the comment changed) arrives
+  /// asynchronously afterward over the existing `dispatchAction` channel -
+  /// the window's engine stays alive while hidden, so this is safe even
+  /// though we don't wait for it here.
   Future<void> acceptCurrentComment() async {
-    await _invokeFollower('acceptComment', null);
-    await hidePopover();
+    await _invokeWindow(_activityWindow, 'acceptComment', null);
+    await _activityWindow.hide();
   }
 
-  /// Tells the follower to discard its current comment edit (reverting the
-  /// field to the last persisted value), then hides the popover.
+  /// Tells the activity-prompt follower to discard its current comment
+  /// edit (reverting the field to the last persisted value), then hides
+  /// the window.
   Future<void> dismissCurrentComment() async {
-    await _invokeFollower('dismissComment', null);
-    await hidePopover();
+    await _invokeWindow(_activityWindow, 'dismissComment', null);
+    await _activityWindow.hide();
   }
 
-  /// Tells the follower the reminder popover timed out automatically (as
-  /// opposed to a user-initiated dismiss). Unlike [dismissCurrentComment],
-  /// this preserves any unsaved comment edit by committing it instead of
-  /// discarding it - see [MiniPanelCommand.autoDismissComment].
+  /// Tells the activity-prompt follower the reminder timed out
+  /// automatically (as opposed to a user-initiated dismiss). Unlike
+  /// [dismissCurrentComment], this preserves any unsaved comment edit by
+  /// committing it instead of discarding it - see
+  /// [MiniPanelCommand.autoDismissComment].
   Future<void> autoDismissCurrentComment() async {
-    await _invokeFollower('autoDismissComment', null);
-    await hidePopover();
-  }
-
-  Future<void> _invokeFollower(String method, dynamic arguments) async {
-    if (_miniPanelWindow.windowId == null) return;
-    try {
-      await DesktopMultiWindow.invokeMethod(_miniPanelWindow.windowId!, method, arguments);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to invoke follower "$method" - $e');
-    }
+    await _invokeWindow(_activityWindow, 'autoDismissComment', null);
+    await _activityWindow.hide();
   }
 
   Future<void> _invokeWindow(ManagedPopoverWindow window, String method, dynamic arguments) async {
@@ -276,6 +281,16 @@ class WindowsDesktopService implements IDesktopPlatformService {
       DesktopMultiWindow.invokeMethod(0, 'dispatchAction', action.toJson());
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to dispatch action - $e');
+    }
+  }
+
+  @override
+  void requestActivityPrompt() {
+    if (!_isPopover) return;
+    try {
+      DesktopMultiWindow.invokeMethod(0, 'requestActivityPrompt', null);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to request activity prompt - $e');
     }
   }
 
@@ -343,22 +358,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
     return _fixedTrayAnchor(screenSize);
   }
 
-  /// Used by [showPopoverNearScreenCorner] - fired unattended by
-  /// [ReminderService], where there is no live tray-icon position worth
-  /// trusting any more than usual, so this skips `trayManager.getBounds()`
-  /// entirely and always anchors to a fixed synthetic point near the
-  /// screen's bottom-right corner, where the system tray conventionally
-  /// lives.
-  Future<Rect> _computeFrameFixedCorner() async {
-    final view = PlatformDispatcher.instance.views.first;
-    final screenSize = view.physicalSize / view.devicePixelRatio;
-    final frame = computePopoverFrame(
-      trayBounds: _fixedTrayAnchor(screenSize),
-      popoverSize: _popoverSize,
-    );
-    return clampFrameToScreen(frame, screenSize);
-  }
-
   Rect _fixedTrayAnchor(Size screenSize) {
     return Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
   }
@@ -403,6 +402,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
               _navigationStreamController.add(route);
             }
           }
+
+        case 'requestActivityPrompt':
+          await showActivityPrompt();
 
         case 'miniClosed':
           _windowForId(fromWindowId)?.followerReady = false;

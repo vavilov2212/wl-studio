@@ -68,6 +68,15 @@ abstract interface class IDesktopPlatformService {
   /// No-op unless the current process is the macOS tray-popover follower.
   void dispatchAction(covariant dynamic action);
 
+  // ── Activity prompt (Windows popover follower only, this iteration) ──────
+
+  /// Ask the leader to open the dedicated activity prompt window.
+  ///
+  /// Called from a follower/popover. Windows-only this iteration - no-op
+  /// on platforms without that window (macOS's equivalent is deferred to a
+  /// follow-up spec).
+  void requestActivityPrompt();
+
   // ── Startup role detection ────────────────────────────────────────────────
 
   /// Resolve the startup role of this process from its raw startup [args].

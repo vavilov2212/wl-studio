@@ -52,6 +52,9 @@ class NoOpDesktopService implements IDesktopPlatformService {
   void dispatchAction(dynamic action) {}
 
   @override
+  void requestActivityPrompt() {}
+
+  @override
   Future<String> resolveStartupRole(List<String> args) async => 'main';
 
   @override
