@@ -18,13 +18,19 @@ class HotkeyManagerRegistrar implements HotkeyRegistrar {
     HotKey hotKey, {
     required void Function() onPressed,
   }) async {
-    await hotKeyManager.register(
-      hotKey,
-      keyDownHandler: (pressed) {
-        debugPrint('HotkeyManagerRegistrar: key pressed - ${pressed.debugName}');
-        onPressed();
-      },
-    );
+    debugPrint('HotkeyManagerRegistrar: registering ${hotKey.debugName}');
+    try {
+      await hotKeyManager.register(
+        hotKey,
+        keyDownHandler: (pressed) {
+          debugPrint('HotkeyManagerRegistrar: key pressed - ${pressed.debugName}');
+          onPressed();
+        },
+      );
+      debugPrint('HotkeyManagerRegistrar: registered ${hotKey.debugName}');
+    } catch (e) {
+      debugPrint('HotkeyManagerRegistrar: FAILED to register ${hotKey.debugName} - $e');
+    }
   }
 
   @override
