@@ -1,7 +1,10 @@
 // ignore_for_file: depend_on_referenced_packages
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/windows_desktop_service.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
+import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
@@ -159,6 +162,45 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(received, [MiniPanelCommand.autoDismissComment]);
+      await sub.cancel();
+    });
+
+    test('activityPromptStatus forwards the parsed status to the follower cubit', () async {
+      final received = <ActivityPromptStatus>[];
+      final sub = followerCubit.activityPromptStatus.listen(received.add);
+      final autoDismissAt = DateTime(2025, 1, 1, 9, 0, 20);
+
+      await followerService.handleIncomingIpcMessageForTesting(
+        'activityPromptStatus',
+        jsonEncode(
+          ActivityPromptStatus(
+            source: ActivityPromptSource.reminder,
+            autoDismissAt: autoDismissAt,
+          ).toJson(),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, hasLength(1));
+      expect(received.single.source, ActivityPromptSource.reminder);
+      expect(received.single.autoDismissAt, autoDismissAt);
+      await sub.cancel();
+    });
+
+    test('activityPromptStatus with no autoDismissAt parses as idle', () async {
+      final received = <ActivityPromptStatus>[];
+      final sub = followerCubit.activityPromptStatus.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting(
+        'activityPromptStatus',
+        jsonEncode(
+          const ActivityPromptStatus(source: ActivityPromptSource.manual).toJson(),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received.single.source, ActivityPromptSource.manual);
+      expect(received.single.autoDismissAt, isNull);
       await sub.cancel();
     });
   });

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
@@ -28,12 +29,16 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _commentFocusNode = FocusNode();
   StreamSubscription<MiniPanelCommand>? _commandSub;
+  StreamSubscription<ActivityPromptStatus>? _statusSub;
+  Timer? _countdownTicker;
+  ActivityPromptStatus? _status;
   String _lastPersistedComment = '';
 
   @override
   void initState() {
     super.initState();
     _commandSub = context.read<MiniTrackerCubit>().commands.listen(_handleCommand);
+    _statusSub = context.read<MiniTrackerCubit>().activityPromptStatus.listen(_handleStatus);
   }
 
   @override
@@ -41,7 +46,36 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
     _commentController.dispose();
     _commentFocusNode.dispose();
     _commandSub?.cancel();
+    _statusSub?.cancel();
+    _countdownTicker?.cancel();
     super.dispose();
+  }
+
+  void _handleStatus(ActivityPromptStatus status) {
+    if (!mounted) return;
+    setState(() => _status = status);
+    _countdownTicker?.cancel();
+    _countdownTicker = status.autoDismissAt == null
+        ? null
+        : Timer.periodic(const Duration(seconds: 1), (_) {
+            if (mounted) setState(() {});
+          });
+  }
+
+  /// What's currently going on, for the user: a live countdown while a
+  /// reminder-opened prompt is still unacknowledged, or a simple "stays
+  /// open" message otherwise - whether that's because it was opened
+  /// deliberately (hotkey/button) or because a reminder-opened prompt has
+  /// already been brought into focus once (see `WindowsDesktopService.
+  /// toggleActivityPrompt`).
+  String get _statusMessage {
+    final autoDismissAt = _status?.autoDismissAt;
+    if (autoDismissAt == null) {
+      return 'Idle - Enter to save, Esc to cancel';
+    }
+    final remaining = autoDismissAt.difference(DateTime.now()).inSeconds;
+    final seconds = remaining < 0 ? 0 : remaining;
+    return 'Closing in ${seconds}s - Enter to save, Esc to cancel';
   }
 
   void _commit() {
@@ -120,7 +154,7 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
           ),
           SizedBox(height: theme.spacings.xs),
           Text(
-            'Enter to submit, Esc to dismiss',
+            _statusMessage,
             style: theme.commonTextStyles.caption2.copyWith(
               color: theme.colorsPalette.text.muted,
             ),

@@ -54,16 +54,28 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
 
   final _commandController = StreamController<MiniPanelCommand>.broadcast();
+  final _activityPromptStatusController =
+      StreamController<ActivityPromptStatus>.broadcast();
 
   Stream<MiniPanelCommand> get commands => _commandController.stream;
+
+  /// How/why the activity prompt window was opened - see
+  /// `ActivityPromptPanel`, the only consumer of this stream.
+  Stream<ActivityPromptStatus> get activityPromptStatus =>
+      _activityPromptStatusController.stream;
 
   void emitCommand(MiniPanelCommand command) {
     _commandController.add(command);
   }
 
+  void emitActivityPromptStatus(ActivityPromptStatus status) {
+    _activityPromptStatusController.add(status);
+  }
+
   @override
   Future<void> close() {
     _commandController.close();
+    _activityPromptStatusController.close();
     return super.close();
   }
 

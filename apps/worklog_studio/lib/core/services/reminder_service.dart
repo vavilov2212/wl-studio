@@ -47,7 +47,7 @@ class ReminderService {
   final PeriodicTimerFactory _periodicTimerFactory;
   final OneShotTimerFactory _oneShotTimerFactory;
 
-  static const _autoDismissDelay = Duration(seconds: 20);
+  static const autoDismissDelay = Duration(seconds: 20);
 
   StreamSubscription<TimeTrackerBlocState>? _blocSub;
   CancelableTimer? _reminderTimer;
@@ -142,7 +142,7 @@ class ReminderService {
     }
     debugPrint('ReminderService: firing reminder now');
     await _onFire();
-    _autoDismissTimer = _oneShotTimerFactory(_autoDismissDelay, () {
+    _autoDismissTimer = _oneShotTimerFactory(autoDismissDelay, () {
       _onAutoDismiss();
     });
   }

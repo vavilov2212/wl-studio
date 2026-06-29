@@ -72,6 +72,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
     return null;
   }
 
+  ActivityPromptStatus? _pendingActivityStatus;
+  ActivityPromptSource _lastActivityPromptSource = ActivityPromptSource.manual;
+
   Timer? _prewarmWatchdog;
   static const _prewarmCheckInterval = Duration(seconds: 1);
 
@@ -133,7 +136,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       bloc: bloc,
       getSetting: _settingsRepository.getString,
       isPopoverOpen: () => _activityWindow.isVisible,
-      onFire: showActivityPrompt,
+      onFire: () => showActivityPrompt(source: ActivityPromptSource.reminder),
       onAutoDismiss: autoDismissCurrentComment,
     );
     await _reminderService!.init();
@@ -188,10 +191,26 @@ class WindowsDesktopService implements IDesktopPlatformService {
   /// the reminder never steals input focus from whatever the user is
   /// currently doing. A no-op if nothing is currently being tracked - there
   /// is nothing to comment on.
-  Future<void> showActivityPrompt() async {
+  ///
+  /// [source] is forwarded to the follower (see [ActivityPromptStatus]) so
+  /// it can tell the user how/why it was opened - [ActivityPromptSource.
+  /// reminder] also schedules a visible auto-dismiss countdown matching
+  /// [ReminderService.autoDismissDelay].
+  Future<void> showActivityPrompt({
+    ActivityPromptSource source = ActivityPromptSource.manual,
+  }) async {
     if (_leaderBloc?.state.isRunning != true) return;
     await _activityWindow.show(activate: false);
     await requestFocusComment();
+    _lastActivityPromptSource = source;
+    await _sendActivityPromptStatus(
+      ActivityPromptStatus(
+        source: source,
+        autoDismissAt: source == ActivityPromptSource.reminder
+            ? DateTime.now().add(ReminderService.autoDismissDelay)
+            : null,
+      ),
+    );
   }
 
   /// The target of the toggle hotkey - three states, not just two, since
@@ -216,9 +235,23 @@ class WindowsDesktopService implements IDesktopPlatformService {
       _activityWindow.activate();
       _reminderService?.cancelAutoDismiss();
       await requestFocusComment();
+      await _sendActivityPromptStatus(
+        ActivityPromptStatus(source: _lastActivityPromptSource, autoDismissAt: null),
+      );
     } else {
       _reminderService?.cancelAutoDismiss();
       await _activityWindow.hide();
+    }
+  }
+
+  /// Sends [status] to the activity follower if it's ready, or defers it
+  /// for replay once `miniReady` arrives - see [_handleIncomingIpcMessage]'s
+  /// `'miniReady'` case. Mirrors [_pendingFocusComment]'s deferral pattern.
+  Future<void> _sendActivityPromptStatus(ActivityPromptStatus status) async {
+    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
+      await _invokeWindow(_activityWindow, 'activityPromptStatus', jsonEncode(status.toJson()));
+    } else {
+      _pendingActivityStatus = status;
     }
   }
 
@@ -424,9 +457,20 @@ class WindowsDesktopService implements IDesktopPlatformService {
             if (_leaderBloc != null) {
               await _broadcastSnapshotTo(readyWindow, _leaderBloc!.state);
             }
-            if (readyWindow == _activityWindow && _pendingFocusComment) {
-              _pendingFocusComment = false;
-              await _invokeWindow(_activityWindow, 'focusComment', null);
+            if (readyWindow == _activityWindow) {
+              if (_pendingFocusComment) {
+                _pendingFocusComment = false;
+                await _invokeWindow(_activityWindow, 'focusComment', null);
+              }
+              if (_pendingActivityStatus != null) {
+                final status = _pendingActivityStatus!;
+                _pendingActivityStatus = null;
+                await _invokeWindow(
+                  _activityWindow,
+                  'activityPromptStatus',
+                  jsonEncode(status.toJson()),
+                );
+              }
             }
           }
 
@@ -440,10 +484,16 @@ class WindowsDesktopService implements IDesktopPlatformService {
           }
 
         case 'requestActivityPrompt':
-          await showActivityPrompt();
+          await toggleActivityPrompt();
 
         case 'miniClosed':
           _windowForId(fromWindowId)?.followerReady = false;
+
+        case 'activityPromptStatus':
+          if (arguments is String) {
+            final map = Map<String, dynamic>.from(jsonDecode(arguments));
+            _followerCubit?.emitActivityPromptStatus(ActivityPromptStatus.fromJson(map));
+          }
 
         case 'focusComment':
           _followerCubit?.emitCommand(MiniPanelCommand.focusComment);
