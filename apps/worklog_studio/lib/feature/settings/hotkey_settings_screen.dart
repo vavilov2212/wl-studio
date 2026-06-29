@@ -259,9 +259,22 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
   Future<void> _commitPending() async {
     final hotKey = _pendingHotKey;
     final key = hotKey?.key;
-    // A bare modifier (e.g. just "Control") isn't a usable hotkey on its
-    // own - keep waiting instead of locking in something useless.
-    if (hotKey == null || key is PhysicalKeyboardKey && _isBareModifierKey(key)) {
+    // Reject anything that isn't a real modifier+key combo: a bare modifier
+    // (just "Control") isn't a usable hotkey, and - critically - a bare
+    // trigger key with no modifiers at all would register as a SYSTEM-WIDE
+    // hotkey for that key alone (e.g. just "M"), intercepting every normal
+    // press of that key anywhere on the system, not just in this app. This
+    // happens naturally if modifiers are released a moment before the
+    // trigger key - HotKeyRecorder only reports whatever is *currently*
+    // held at each keydown, so the final captured state can be missing
+    // modifiers the user meant to keep down. Keep waiting instead of
+    // locking in something dangerous.
+    if (hotKey == null ||
+        (hotKey.modifiers?.isEmpty ?? true) ||
+        key is PhysicalKeyboardKey && _isBareModifierKey(key)) {
+      // Tell the user why nothing was saved instead of leaving them
+      // wondering whether the recorder is even listening anymore.
+      if (mounted) setState(() => _pendingHotKey = null);
       return;
     }
     final service = widget.hotkeyService;
