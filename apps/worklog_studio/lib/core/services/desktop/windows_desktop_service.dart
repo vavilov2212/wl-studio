@@ -171,7 +171,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
       await hidePopover();
     } else {
       await showPopover();
-      await requestFocusComment();
     }
   }
 
