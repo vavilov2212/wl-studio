@@ -70,7 +70,14 @@ class ManagedPopoverWindow {
     final titlePtr = _nativeTitle.toNativeUtf16();
     try {
       final hwnd = win32.FindWindow(nullptr, titlePtr);
-      return hwnd == 0 ? null : hwnd;
+      if (hwnd == 0) {
+        debugPrint(
+          'ManagedPopoverWindow($role): FindWindow could not locate '
+          '"$_nativeTitle" - GetLastError=${win32.GetLastError()}',
+        );
+        return null;
+      }
+      return hwnd;
     } finally {
       calloc.free(titlePtr);
     }
@@ -87,7 +94,7 @@ class ManagedPopoverWindow {
             win32.WS_MINIMIZEBOX |
             win32.WS_MAXIMIZEBOX);
     win32.SetWindowLongPtr(hwnd, win32.GWL_STYLE, stripped);
-    win32.SetWindowPos(
+    final result = win32.SetWindowPos(
       hwnd,
       0,
       0,
@@ -96,12 +103,18 @@ class ManagedPopoverWindow {
       0,
       win32.SWP_NOMOVE | win32.SWP_NOSIZE | win32.SWP_NOZORDER | win32.SWP_FRAMECHANGED,
     );
+    if (result == 0) {
+      debugPrint(
+        'ManagedPopoverWindow($role): SetWindowPos (frameless) failed - '
+        'GetLastError=${win32.GetLastError()}',
+      );
+    }
   }
 
   void _applyAlwaysOnTop() {
     final hwnd = _nativeHandle();
     if (hwnd == null) return;
-    win32.SetWindowPos(
+    final result = win32.SetWindowPos(
       hwnd,
       win32.HWND_TOPMOST,
       0,
@@ -109,6 +122,10 @@ class ManagedPopoverWindow {
       0,
       0,
       win32.SWP_NOMOVE | win32.SWP_NOSIZE | win32.SWP_NOACTIVATE,
+    );
+    debugPrint(
+      'ManagedPopoverWindow($role): SetWindowPos(HWND_TOPMOST) on hwnd=$hwnd '
+      'result=$result${result == 0 ? " GetLastError=${win32.GetLastError()}" : ""}',
     );
   }
 
@@ -120,7 +137,10 @@ class ManagedPopoverWindow {
   void activate() {
     final hwnd = _nativeHandle();
     if (hwnd == null) return;
-    win32.SetForegroundWindow(hwnd);
+    final result = win32.SetForegroundWindow(hwnd);
+    if (result == 0) {
+      debugPrint('ManagedPopoverWindow($role): SetForegroundWindow failed for hwnd=$hwnd');
+    }
   }
 
   /// Whether this window currently owns OS keyboard focus.
@@ -236,13 +256,18 @@ class ManagedPopoverWindow {
       await controller.setFrame(frame);
 
       final previousForeground = activate ? null : win32.GetForegroundWindow();
+      debugPrint('ManagedPopoverWindow($role): previousForeground=$previousForeground (activate=$activate)');
       await controller.show();
       isVisible = true;
 
       if (frameless) _applyFrameless();
       if (alwaysOnTop) _applyAlwaysOnTop();
       if (!activate && previousForeground != null && previousForeground != 0) {
-        win32.SetForegroundWindow(previousForeground);
+        final restoreResult = win32.SetForegroundWindow(previousForeground);
+        debugPrint(
+          'ManagedPopoverWindow($role): restored foreground to $previousForeground, '
+          'result=$restoreResult',
+        );
       }
       debugPrint('ManagedPopoverWindow($role): show completed, windowId=$windowId');
     } catch (e) {
