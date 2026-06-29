@@ -162,4 +162,63 @@ void main() {
       await sub.cancel();
     });
   });
+
+  group('WindowsDesktopService leader-side window-aware routing', () {
+    late WindowsDesktopService leaderService;
+
+    setUp(() {
+      leaderService = WindowsDesktopService();
+      leaderService.miniPanelWindowForTesting.windowId = 101;
+      leaderService.miniPanelWindowForTesting.followerReady = false;
+      leaderService.activityWindowForTesting.windowId = 202;
+      leaderService.activityWindowForTesting.followerReady = false;
+    });
+
+    test('miniReady from the mini panel window marks only that window ready', () async {
+      await leaderService.handleIncomingIpcMessageForTesting(
+        'miniReady',
+        null,
+        fromWindowId: 101,
+      );
+
+      expect(leaderService.miniPanelWindowForTesting.followerReady, isTrue);
+      expect(leaderService.activityWindowForTesting.followerReady, isFalse);
+    });
+
+    test('miniReady from the activity window marks only that window ready', () async {
+      await leaderService.handleIncomingIpcMessageForTesting(
+        'miniReady',
+        null,
+        fromWindowId: 202,
+      );
+
+      expect(leaderService.activityWindowForTesting.followerReady, isTrue);
+      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
+    });
+
+    test('miniClosed from a window clears only that window\'s readiness', () async {
+      leaderService.miniPanelWindowForTesting.followerReady = true;
+      leaderService.activityWindowForTesting.followerReady = true;
+
+      await leaderService.handleIncomingIpcMessageForTesting(
+        'miniClosed',
+        null,
+        fromWindowId: 101,
+      );
+
+      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
+      expect(leaderService.activityWindowForTesting.followerReady, isTrue);
+    });
+
+    test('miniReady from an unknown window id is a harmless no-op', () async {
+      await leaderService.handleIncomingIpcMessageForTesting(
+        'miniReady',
+        null,
+        fromWindowId: 999,
+      );
+
+      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
+      expect(leaderService.activityWindowForTesting.followerReady, isFalse);
+    });
+  });
 }

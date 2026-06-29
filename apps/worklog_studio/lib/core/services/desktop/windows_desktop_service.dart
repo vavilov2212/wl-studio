@@ -58,6 +58,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
     computeFrame: _computeFrameNearTray,
   );
 
+  late final ManagedPopoverWindow _activityWindow = ManagedPopoverWindow(
+    role: 'activity',
+    computeFrame: _computeActivityPromptFrame,
+  );
+
+  ManagedPopoverWindow? _windowForId(int windowId) {
+    if (_miniPanelWindow.windowId == windowId) return _miniPanelWindow;
+    if (_activityWindow.windowId == windowId) return _activityWindow;
+    return null;
+  }
+
   Timer? _prewarmWatchdog;
   static const _prewarmCheckInterval = Duration(seconds: 1);
 
@@ -97,7 +108,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     });
 
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      await _handleIncomingIpcMessage(call.method, call.arguments);
+      await _handleIncomingIpcMessage(call.method, call.arguments, fromWindowId);
       return null;
     });
 
@@ -135,6 +146,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     // instead of paying the multi-second Firebase/DB cold-boot cost the
     // moment the user actually asks for it.
     await _miniPanelWindow.ensureExists();
+    await _activityWindow.ensureExists();
     _startPrewarmWatchdog();
   }
 
@@ -144,7 +156,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _followerCubit = cubit;
 
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      await _handleIncomingIpcMessage(call.method, call.arguments);
+      await _handleIncomingIpcMessage(call.method, call.arguments, fromWindowId);
       return null;
     });
 
@@ -179,10 +191,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   void _startPrewarmWatchdog() {
     _prewarmWatchdog?.cancel();
-    _prewarmWatchdog = Timer.periodic(
-      _prewarmCheckInterval,
-      (_) => _miniPanelWindow.checkAndRewarm(),
-    );
+    _prewarmWatchdog = Timer.periodic(_prewarmCheckInterval, (_) async {
+      await _miniPanelWindow.checkAndRewarm();
+      await _activityWindow.checkAndRewarm();
+    });
   }
 
   @override
@@ -235,6 +247,15 @@ class WindowsDesktopService implements IDesktopPlatformService {
       await DesktopMultiWindow.invokeMethod(_miniPanelWindow.windowId!, method, arguments);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to invoke follower "$method" - $e');
+    }
+  }
+
+  Future<void> _invokeWindow(ManagedPopoverWindow window, String method, dynamic arguments) async {
+    if (window.windowId == null) return;
+    try {
+      await DesktopMultiWindow.invokeMethod(window.windowId!, method, arguments);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to invoke "$method" on ${window.role} - $e');
     }
   }
 
@@ -342,20 +363,36 @@ class WindowsDesktopService implements IDesktopPlatformService {
     return Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
   }
 
+  Future<Rect> _computeActivityPromptFrame() async {
+    final view = PlatformDispatcher.instance.views.first;
+    final screenSize = view.physicalSize / view.devicePixelRatio;
+    final frame = computeActivityPromptFrame(
+      screenSize: screenSize,
+      promptSize: _activityPromptSize,
+    );
+    return clampFrameToScreen(frame, screenSize);
+  }
+
+  static const _activityPromptSize = Size(420, 100);
+
   Future<void> _handleIncomingIpcMessage(
     String? method,
     dynamic arguments,
+    int fromWindowId,
   ) async {
     try {
       switch (method) {
         case 'miniReady':
-          _miniPanelWindow.followerReady = true;
-          if (_leaderBloc != null) {
-            await _broadcastSnapshotIfReady(_leaderBloc!.state);
-          }
-          if (_pendingFocusComment) {
-            _pendingFocusComment = false;
-            await _invokeFollower('focusComment', null);
+          final readyWindow = _windowForId(fromWindowId);
+          if (readyWindow != null) {
+            readyWindow.followerReady = true;
+            if (_leaderBloc != null) {
+              await _broadcastSnapshotTo(readyWindow, _leaderBloc!.state);
+            }
+            if (readyWindow == _activityWindow && _pendingFocusComment) {
+              _pendingFocusComment = false;
+              await _invokeWindow(_activityWindow, 'focusComment', null);
+            }
           }
 
         case 'openMainWindow':
@@ -368,7 +405,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
           }
 
         case 'miniClosed':
-          _miniPanelWindow.followerReady = false;
+          _windowForId(fromWindowId)?.followerReady = false;
 
         case 'focusComment':
           _followerCubit?.emitCommand(MiniPanelCommand.focusComment);
@@ -441,8 +478,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   Future<void> _broadcastSnapshotIfReady(TimeTrackerBlocState state) async {
-    if (!_miniPanelWindow.followerReady || _miniPanelWindow.windowId == null) return;
+    for (final window in [_miniPanelWindow, _activityWindow]) {
+      if (window.followerReady && window.windowId != null) {
+        await _broadcastSnapshotTo(window, state);
+      }
+    }
+  }
 
+  Future<void> _broadcastSnapshotTo(
+    ManagedPopoverWindow window,
+    TimeTrackerBlocState state,
+  ) async {
     final snapshot = TimerSnapshot(
       isRunning: state.isRunning,
       activeEntry: state.activeEntryOrNull,
@@ -454,13 +500,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
     try {
       final jsonStr = jsonEncode(snapshot.toJson());
-      await DesktopMultiWindow.invokeMethod(
-        _miniPanelWindow.windowId!,
-        'broadcastSnapshot',
-        jsonStr,
-      );
+      await DesktopMultiWindow.invokeMethod(window.windowId!, 'broadcastSnapshot', jsonStr);
     } catch (e) {
-      debugPrint('WindowsDesktopService: failed to broadcast snapshot - $e');
+      debugPrint('WindowsDesktopService: failed to broadcast snapshot to ${window.role} - $e');
     }
   }
 
@@ -481,9 +523,16 @@ class WindowsDesktopService implements IDesktopPlatformService {
       _followerCubit = cubit;
 
   @visibleForTesting
+  ManagedPopoverWindow get miniPanelWindowForTesting => _miniPanelWindow;
+
+  @visibleForTesting
+  ManagedPopoverWindow get activityWindowForTesting => _activityWindow;
+
+  @visibleForTesting
   Future<void> handleIncomingIpcMessageForTesting(
     String method,
-    dynamic arguments,
-  ) =>
-      _handleIncomingIpcMessage(method, arguments);
+    dynamic arguments, {
+    int fromWindowId = 0,
+  }) =>
+      _handleIncomingIpcMessage(method, arguments, fromWindowId);
 }
