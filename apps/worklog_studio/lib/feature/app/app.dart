@@ -14,6 +14,7 @@ import 'package:worklog_studio/data/sqlite/sqlite_task_repository.dart';
 import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
+import 'package:worklog_studio/feature/desktop/presentation/activity_prompt_panel.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
@@ -55,6 +56,36 @@ class MiniApp extends StatelessWidget {
           // render the same opaque background.
           backgroundColor: Color(0xFFf8fafc),
           body: MiniPanel(),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Activity prompt app (Windows tray engine, activity role only) ───────────
+
+class ActivityPromptApp extends StatelessWidget {
+  const ActivityPromptApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<MiniTrackerCubit>(
+      create: (context) {
+        final cubit = MiniTrackerCubit();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          DesktopServiceRegistry.instance.initFollower(cubit);
+        });
+        return cubit;
+      },
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: appEnvironment.config.lightTheme,
+        darkTheme: appEnvironment.config.lightTheme,
+        home: const Scaffold(
+          // See MiniApp's comment - the Windows popover has no layered/DWM
+          // transparency support, so this stays opaque.
+          backgroundColor: Color(0xFFf8fafc),
+          body: ActivityPromptPanel(),
         ),
       ),
     );
