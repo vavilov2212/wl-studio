@@ -32,9 +32,14 @@ class HotkeyService {
         _onAccept = onAccept,
         _onDismiss = onDismiss;
 
+  // Control+Shift is Windows' own built-in "switch input language" gesture
+  // whenever 2+ keyboard languages are installed - it can swallow the
+  // modifier chord before a third key ever completes the combo, so an
+  // app-registered Control+Shift+<key> hotkey can silently never fire.
+  // Alt+Shift avoids that collision entirely.
   static HotKey _defaultHotKey(KeyboardKey key) => HotKey(
         key: key,
-        modifiers: [HotKeyModifier.control, HotKeyModifier.shift],
+        modifiers: [HotKeyModifier.alt, HotKeyModifier.shift],
       );
 
   /// The documented default hotkey for [settingKey], used both as the
@@ -45,9 +50,9 @@ class HotkeyService {
       case SettingsKeys.toggleHotkey:
         return _defaultHotKey(PhysicalKeyboardKey.keyM);
       case SettingsKeys.acceptHotkey:
-        return _defaultHotKey(PhysicalKeyboardKey.enter);
+        return _defaultHotKey(PhysicalKeyboardKey.keyA);
       case SettingsKeys.dismissHotkey:
-        return _defaultHotKey(PhysicalKeyboardKey.escape);
+        return _defaultHotKey(PhysicalKeyboardKey.keyX);
       default:
         throw ArgumentError('Unknown hotkey setting key: $settingKey');
     }

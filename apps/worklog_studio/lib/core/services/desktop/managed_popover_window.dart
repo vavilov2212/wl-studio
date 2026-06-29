@@ -250,11 +250,18 @@ class ManagedPopoverWindow {
     }
   }
 
+  /// Hiding does not touch [followerReady] - the follower engine and its
+  /// IPC channel stay fully alive while hidden, they just aren't visible.
+  /// `'miniReady'` (the only thing that ever sets [followerReady] `true`)
+  /// is sent exactly once, at the follower's cold boot - if `hide()` reset
+  /// it here, every `followerReady`-gated message (focus-seeding, status
+  /// updates) to this window would silently defer forever after the very
+  /// first show/hide cycle, since nothing would ever set it back to `true`
+  /// short of the window being destroyed and recreated from scratch.
   Future<void> hide() async {
     if (windowId != null) {
       try {
         await WindowController.fromWindowId(windowId!).hide();
-        followerReady = false;
       } catch (e) {
         debugPrint('ManagedPopoverWindow($role): error hiding - $e');
       }

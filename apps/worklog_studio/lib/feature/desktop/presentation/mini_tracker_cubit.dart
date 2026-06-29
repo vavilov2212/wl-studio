@@ -132,4 +132,18 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     if (!state.isRunning) return;
     DesktopServiceRegistry.instance.requestActivityPrompt();
   }
+
+  /// Asks the leader to accept the activity prompt's current edit and
+  /// close it - used by a local Enter keypress inside `ActivityPromptPanel`
+  /// itself (when the window already has OS keyboard focus), as opposed to
+  /// the global accept hotkey reaching the same leader-side method.
+  void requestAcceptComment() {
+    DesktopServiceRegistry.instance.requestAcceptComment();
+  }
+
+  /// Asks the leader to discard the activity prompt's current edit and
+  /// close it - the local-Escape counterpart to [requestAcceptComment].
+  void requestDismissComment() {
+    DesktopServiceRegistry.instance.requestDismissComment();
+  }
 }

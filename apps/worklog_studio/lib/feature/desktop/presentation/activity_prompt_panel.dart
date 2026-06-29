@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
@@ -86,6 +87,21 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
     _commentController.text = _lastPersistedComment;
   }
 
+  /// Local Enter while this window has actual OS keyboard focus - asks the
+  /// leader to accept, which round-trips back as `MiniPanelCommand.
+  /// acceptComment` (committing, see [_handleCommand]) and hides the
+  /// window, exactly like the global accept hotkey. Routed through the
+  /// leader rather than committing directly here so there's exactly one
+  /// code path for "accept", not two that could drift apart.
+  void _handleLocalAccept() {
+    context.read<MiniTrackerCubit>().requestAcceptComment();
+  }
+
+  /// Local Escape counterpart to [_handleLocalAccept].
+  void _handleLocalDismiss() {
+    context.read<MiniTrackerCubit>().requestDismissComment();
+  }
+
   void _handleCommand(MiniPanelCommand command) {
     if (!mounted) return;
     switch (command) {
@@ -124,42 +140,53 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
   Widget build(BuildContext context) {
     final theme = context.theme;
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.lg,
-        vertical: theme.spacings.md,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFf8fafc),
-        border: Border.all(color: theme.colorsPalette.border.primary.withOpacity(0.5)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _commentController,
-            focusNode: _commentFocusNode,
-            autofocus: true,
-            maxLines: 2,
-            minLines: 1,
-            decoration: const InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              hintText: 'Briefly describe what are you working on',
+    // CallbackShortcuts (not onSubmitted) is what makes Enter/Escape work
+    // here: a multi-line TextField (maxLines > 1) treats Enter as "insert a
+    // newline" by default and never calls onSubmitted at all, and there is
+    // no equivalent widget-level callback for Escape. CallbackShortcuts is
+    // Flutter's documented mechanism for overriding default key behavior
+    // for an entire subtree even when a descendant TextField has focus.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter): _handleLocalAccept,
+        const SingleActivator(LogicalKeyboardKey.escape): _handleLocalDismiss,
+      },
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacings.lg,
+          vertical: theme.spacings.md,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFf8fafc),
+          border: Border.all(color: theme.colorsPalette.border.primary.withOpacity(0.5)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _commentController,
+              focusNode: _commentFocusNode,
+              autofocus: true,
+              maxLines: 2,
+              minLines: 1,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Briefly describe what are you working on',
+              ),
             ),
-            onSubmitted: (_) => _commit(),
-          ),
-          SizedBox(height: theme.spacings.xs),
-          Text(
-            _statusMessage,
-            style: theme.commonTextStyles.caption2.copyWith(
-              color: theme.colorsPalette.text.muted,
+            SizedBox(height: theme.spacings.xs),
+            Text(
+              _statusMessage,
+              style: theme.commonTextStyles.caption2.copyWith(
+                color: theme.colorsPalette.text.muted,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -74,7 +74,7 @@ void main() {
       await service.init();
 
       final acceptHotKey = registrar.registered.firstWhere(
-        (h) => h.key == PhysicalKeyboardKey.enter,
+        (h) => h.key == PhysicalKeyboardKey.keyA,
       );
       registrar.handlers[acceptHotKey]!();
 
@@ -85,7 +85,7 @@ void main() {
       await service.init();
 
       final dismissHotKey = registrar.registered.firstWhere(
-        (h) => h.key == PhysicalKeyboardKey.escape,
+        (h) => h.key == PhysicalKeyboardKey.keyX,
       );
       registrar.handlers[dismissHotKey]!();
 
@@ -137,23 +137,25 @@ void main() {
   });
 
   group('HotkeyService.defaultHotKeyFor', () {
-    test('toggleHotkey defaults to PhysicalKeyboardKey.keyM', () {
+    test('toggleHotkey defaults to Alt+Shift+M', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.toggleHotkey);
 
       expect(hotKey.key, PhysicalKeyboardKey.keyM);
-      expect(hotKey.modifiers, [HotKeyModifier.control, HotKeyModifier.shift]);
+      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
     });
 
-    test('acceptHotkey defaults to PhysicalKeyboardKey.enter', () {
+    test('acceptHotkey defaults to Alt+Shift+A', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.acceptHotkey);
 
-      expect(hotKey.key, PhysicalKeyboardKey.enter);
+      expect(hotKey.key, PhysicalKeyboardKey.keyA);
+      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
     });
 
-    test('dismissHotkey defaults to PhysicalKeyboardKey.escape', () {
+    test('dismissHotkey defaults to Alt+Shift+X', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.dismissHotkey);
 
-      expect(hotKey.key, PhysicalKeyboardKey.escape);
+      expect(hotKey.key, PhysicalKeyboardKey.keyX);
+      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
     });
 
     test('throws for an unknown setting key', () {

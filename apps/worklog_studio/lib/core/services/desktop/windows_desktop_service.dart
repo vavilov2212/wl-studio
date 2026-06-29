@@ -352,6 +352,26 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   @override
+  void requestAcceptComment() {
+    if (!_isPopover) return;
+    try {
+      DesktopMultiWindow.invokeMethod(0, 'requestAcceptComment', null);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to request accept comment - $e');
+    }
+  }
+
+  @override
+  void requestDismissComment() {
+    if (!_isPopover) return;
+    try {
+      DesktopMultiWindow.invokeMethod(0, 'requestDismissComment', null);
+    } catch (e) {
+      debugPrint('WindowsDesktopService: failed to request dismiss comment - $e');
+    }
+  }
+
+  @override
   Future<String> resolveStartupRole(List<String> args) async {
     if (args.firstOrNull == 'multi_window' && args.length >= 2) {
       _ownWindowId = int.tryParse(args[1]);
@@ -489,6 +509,12 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
         case 'requestActivityPrompt':
           await toggleActivityPrompt();
+
+        case 'requestAcceptComment':
+          await acceptCurrentComment();
+
+        case 'requestDismissComment':
+          await dismissCurrentComment();
 
         case 'miniClosed':
           _windowForId(fromWindowId)?.followerReady = false;

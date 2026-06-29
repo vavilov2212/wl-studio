@@ -77,6 +77,17 @@ abstract interface class IDesktopPlatformService {
   /// follow-up spec).
   void requestActivityPrompt();
 
+  /// Ask the leader to accept/commit the activity prompt's current comment
+  /// edit and close it - the same effect as the global accept hotkey, but
+  /// triggered by a local in-window key (Enter) while the prompt has actual
+  /// OS keyboard focus, rather than a system-wide hotkey.
+  void requestAcceptComment();
+
+  /// Ask the leader to discard the activity prompt's current comment edit
+  /// and close it - the same effect as the global dismiss hotkey, but
+  /// triggered by a local in-window key (Escape).
+  void requestDismissComment();
+
   // ── Startup role detection ────────────────────────────────────────────────
 
   /// Resolve the startup role of this process from its raw startup [args].

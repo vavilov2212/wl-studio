@@ -11,6 +11,8 @@ class _RecordingDesktopService extends NoOpDesktopService {
 
   final List<dynamic> dispatched = [];
   int requestActivityPromptCalls = 0;
+  int requestAcceptCommentCalls = 0;
+  int requestDismissCommentCalls = 0;
 
   @override
   void dispatchAction(covariant dynamic action) {
@@ -20,6 +22,16 @@ class _RecordingDesktopService extends NoOpDesktopService {
   @override
   void requestActivityPrompt() {
     requestActivityPromptCalls++;
+  }
+
+  @override
+  void requestAcceptComment() {
+    requestAcceptCommentCalls++;
+  }
+
+  @override
+  void requestDismissComment() {
+    requestDismissCommentCalls++;
   }
 }
 
@@ -109,6 +121,22 @@ void main() {
       cubit.requestActivityPrompt();
 
       expect(desktopService.requestActivityPromptCalls, 0);
+    });
+  });
+
+  group('MiniTrackerCubit.requestAcceptComment', () {
+    test('asks the desktop service to accept regardless of running state', () {
+      cubit.requestAcceptComment();
+
+      expect(desktopService.requestAcceptCommentCalls, 1);
+    });
+  });
+
+  group('MiniTrackerCubit.requestDismissComment', () {
+    test('asks the desktop service to dismiss regardless of running state', () {
+      cubit.requestDismissComment();
+
+      expect(desktopService.requestDismissCommentCalls, 1);
     });
   });
 }
