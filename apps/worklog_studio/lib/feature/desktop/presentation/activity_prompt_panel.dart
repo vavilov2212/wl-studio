@@ -59,6 +59,14 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
         _lastPersistedComment =
             context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
         _commentController.text = _lastPersistedComment;
+        // Selected, not just focused: the window may not have OS keyboard
+        // focus yet (see WindowsDesktopService.showActivityPrompt) - once
+        // the user does bring it forward, typing should immediately
+        // replace the existing comment rather than insert into it.
+        _commentController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _commentController.text.length,
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _commentFocusNode.requestFocus();
         });

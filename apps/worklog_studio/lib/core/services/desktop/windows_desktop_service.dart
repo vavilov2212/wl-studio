@@ -61,6 +61,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
   late final ManagedPopoverWindow _activityWindow = ManagedPopoverWindow(
     role: 'activity',
     computeFrame: _computeActivityPromptFrame,
+    frameless: true,
+    alwaysOnTop: true,
   );
 
   ManagedPopoverWindow? _windowForId(int windowId) {
@@ -177,25 +179,40 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   Future<void> showPopover() => _miniPanelWindow.show();
 
-  /// Opens the activity prompt and focuses its comment field. A no-op if
-  /// nothing is currently being tracked - there is nothing to comment on.
+  /// Shows the activity prompt - topmost, but without taking OS keyboard
+  /// focus. The comment field is seeded and select-all-ready (see
+  /// [requestFocusComment]) so that whenever the user does explicitly bring
+  /// it into focus (the toggle hotkey, via [toggleActivityPrompt]), typing
+  /// immediately replaces the existing text - but a passive trigger like
+  /// the reminder never steals input focus from whatever the user is
+  /// currently doing. A no-op if nothing is currently being tracked - there
+  /// is nothing to comment on.
   Future<void> showActivityPrompt() async {
     if (_leaderBloc?.state.isRunning != true) return;
-    await _activityWindow.show();
+    await _activityWindow.show(activate: false);
     await requestFocusComment();
   }
 
-  /// Opens/closes the activity prompt - the target of the toggle hotkey.
-  /// Closing just hides the window, mirroring how the mini panel's old
-  /// toggle closed without sending an explicit discard signal: the field
-  /// is simply not visible anymore, and nothing was ever persisted from
-  /// an uncommitted edit either way.
+  /// The target of the toggle hotkey - three states, not just two, since
+  /// [showActivityPrompt] (used by the reminder too) can leave the window
+  /// visible without OS focus:
+  /// - hidden -> show it and explicitly grab OS focus (the user just asked
+  ///   for it via a real hotkey press, so [ManagedPopoverWindow.activate]
+  ///   is safe here);
+  /// - visible but not focused (e.g. the reminder put it there) -> just
+  ///   grab focus, don't close it;
+  /// - visible and already focused -> close it, mirroring the mini panel's
+  ///   old toggle-close behavior (nothing unsaved is ever lost either way).
   Future<void> toggleActivityPrompt() async {
     await _activityWindow.reconcile();
-    if (_activityWindow.isVisible) {
-      await _activityWindow.hide();
-    } else {
+    if (!_activityWindow.isVisible) {
       await showActivityPrompt();
+      _activityWindow.activate();
+    } else if (!_activityWindow.isForeground) {
+      _activityWindow.activate();
+      await requestFocusComment();
+    } else {
+      await _activityWindow.hide();
     }
   }
 
