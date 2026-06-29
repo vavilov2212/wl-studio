@@ -314,6 +314,16 @@ class ManagedPopoverWindow {
       isVisible = false;
       followerReady = false;
       await ensureExists();
+      return;
     }
+    // HWND_TOPMOST is "best effort" on Windows - activating a different,
+    // ordinary window can still visually cover a topmost-but-unfocused
+    // window on some Windows versions/configurations even though the flag
+    // is correctly set (confirmed: SetWindowPos itself reports success).
+    // Every real "Always On Top" utility deals with this the same way -
+    // by re-asserting topmost periodically rather than trusting one call
+    // to stick forever - so this watchdog tick (already running once a
+    // second for liveness) re-applies it too while visible.
+    if (alwaysOnTop && isVisible) _applyAlwaysOnTop();
   }
 }
