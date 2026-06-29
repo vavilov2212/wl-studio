@@ -234,9 +234,16 @@ class ManagedPopoverWindow {
   /// [computeFrame] unless [frameOverride] is supplied.
   ///
   /// If [activate] is `false`, the window is shown without taking OS
-  /// keyboard focus: whatever held focus immediately before this call still
-  /// holds it afterward, even if the underlying native `Show()` happened to
-  /// activate this window as a side effect (see [alwaysOnTop]'s doc comment).
+  /// keyboard focus at all, via a direct `ShowWindow(..., SW_SHOWNA)` FFI
+  /// call instead of the plugin's own `Show()` (a bare `ShowWindow(...,
+  /// SW_SHOW)`, which can activate). An earlier version of this method
+  /// used `SW_SHOW` unconditionally and then tried to *undo* an unwanted
+  /// activation by calling `SetForegroundWindow` on whatever previously
+  /// held focus - but that restore call itself reactivates that other
+  /// window, and Windows draws the active window above a topmost-but-
+  /// inactive one regardless of the topmost flag being correctly set.
+  /// `SW_SHOWNA` avoids the problem at its source: it never touches the
+  /// foreground window in the first place, so there is nothing to restore.
   Future<void> show({
     Future<Rect> Function()? frameOverride,
     bool activate = true,
@@ -255,20 +262,19 @@ class ManagedPopoverWindow {
       final controller = WindowController.fromWindowId(windowId!);
       await controller.setFrame(frame);
 
-      final previousForeground = activate ? null : win32.GetForegroundWindow();
-      debugPrint('ManagedPopoverWindow($role): previousForeground=$previousForeground (activate=$activate)');
-      await controller.show();
+      final hwnd = _nativeHandle();
+      if (hwnd != null) {
+        win32.ShowWindow(hwnd, activate ? win32.SW_SHOW : win32.SW_SHOWNA);
+      } else {
+        // Couldn't resolve the hwnd yet (e.g. title not registered in
+        // time) - fall back to the plugin's own show(), which may
+        // activate when we didn't want it to, but still shows the window.
+        await controller.show();
+      }
       isVisible = true;
 
       if (frameless) _applyFrameless();
       if (alwaysOnTop) _applyAlwaysOnTop();
-      if (!activate && previousForeground != null && previousForeground != 0) {
-        final restoreResult = win32.SetForegroundWindow(previousForeground);
-        debugPrint(
-          'ManagedPopoverWindow($role): restored foreground to $previousForeground, '
-          'result=$restoreResult',
-        );
-      }
       debugPrint('ManagedPopoverWindow($role): show completed, windowId=$windowId');
     } catch (e) {
       debugPrint('ManagedPopoverWindow($role): error showing - $e');
