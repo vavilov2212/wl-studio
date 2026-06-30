@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:worklog_studio/domain/history_filters.dart';
 import 'package:worklog_studio/domain/history_sort.dart';
 import 'package:worklog_studio/domain/projects_filters.dart';
@@ -13,13 +14,29 @@ import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 /// Session-scoped (in-memory, lost on app restart) view-mode, filter, and
 /// sort state for History/Tasks/Projects, lifted out of the page widgets so
 /// it survives the pages being disposed when the user switches tabs.
+///
+/// [historyKpiStripVisible] is persisted across restarts via SharedPreferences.
 class PageUiPreferences extends ChangeNotifier {
+  static const _kHistoryKpiStripVisible = 'history_kpi_strip_visible';
+
   HistoryViewMode _historyViewMode = HistoryViewMode.table;
   HistoryFilters _historyFilters = const HistoryFilters();
   bool? _historyFilterExpandedOverride;
   HistorySortField _historySortField = HistorySortField.date;
   SortDirection _historySortDirection = SortDirection.desc;
   bool? _historySortExpandedOverride;
+  bool _historyKpiStripVisible = true;
+
+  PageUiPreferences() {
+    _loadPersistedPrefs();
+  }
+
+  Future<void> _loadPersistedPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _historyKpiStripVisible =
+        prefs.getBool(_kHistoryKpiStripVisible) ?? true;
+    notifyListeners();
+  }
 
   TaskViewMode _tasksViewMode = TaskViewMode.table;
   TasksFilters _tasksFilters = const TasksFilters();
@@ -41,6 +58,7 @@ class PageUiPreferences extends ChangeNotifier {
   HistorySortField get historySortField => _historySortField;
   SortDirection get historySortDirection => _historySortDirection;
   bool? get historySortExpandedOverride => _historySortExpandedOverride;
+  bool get historyKpiStripVisible => _historyKpiStripVisible;
 
   TaskViewMode get tasksViewMode => _tasksViewMode;
   TasksFilters get tasksFilters => _tasksFilters;
@@ -84,6 +102,13 @@ class PageUiPreferences extends ChangeNotifier {
   void setHistorySortExpandedOverride(bool? value) {
     _historySortExpandedOverride = value;
     notifyListeners();
+  }
+
+  Future<void> setHistoryKpiStripVisible(bool value) async {
+    _historyKpiStripVisible = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kHistoryKpiStripVisible, value);
   }
 
   void setTasksViewMode(TaskViewMode mode) {
