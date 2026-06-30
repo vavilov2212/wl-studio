@@ -31,6 +31,8 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final GlobalKey _selectedRowKey = GlobalKey();
+  // Basic structure for tracking scroll notifications
+  final ValueNotifier<String> _scrollMessage = ValueNotifier<String>('Idle');
 
   @override
   void initState() {
@@ -66,6 +68,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
     final resolvedEntries = context
         .watch<EntityResolver>()
         .getResolvedTimeEntries();
@@ -78,32 +82,189 @@ class _HistoryScreenState extends State<HistoryScreen> {
         prefs.historyFilterExpandedOverride ?? prefs.historyFilters.isActive;
     final isSortExpanded = prefs.historySortExpandedOverride ?? false;
 
-    return TimeEntryList(
-      entries: resolvedEntries,
-      selectedEntry: selectedEntry,
-      selectedRowKey: _selectedRowKey,
-      onEntrySelected: _handleEntrySelected,
-      onCreateEntry: _handleCreateEntry,
-      viewMode: prefs.historyViewMode,
-      onViewModeChanged: (mode) =>
-          context.read<PageUiPreferences>().setHistoryViewMode(mode),
-      filters: prefs.historyFilters,
-      onFiltersChanged: (f) =>
-          context.read<PageUiPreferences>().setHistoryFilters(f),
-      isFilterExpanded: isFilterExpanded,
-      onFilterExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setHistoryFilterExpandedOverride(!isFilterExpanded),
-      sortField: prefs.historySortField,
-      sortDirection: prefs.historySortDirection,
-      onSortFieldChanged: (field) =>
-          context.read<PageUiPreferences>().setHistorySortField(field),
-      onSortDirectionChanged: (direction) =>
-          context.read<PageUiPreferences>().setHistorySortDirection(direction),
-      isSortExpanded: isSortExpanded,
-      onSortExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setHistorySortExpandedOverride(!isSortExpanded),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        if (notification is ScrollUpdateNotification) {
+          final isNearTop = notification.metrics.pixels <= 50.0;
+          final target = isNearTop ? 'Idle' : 'Scrolling...';
+          if (_scrollMessage.value != target) _scrollMessage.value = target;
+        }
+        return false;
+      },
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacings.x2l),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Time history', style: theme.commonTextStyles.h3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: theme.spacings.lg,
+                  children: [
+                    PrimaryButton(
+                      onTap: () => context
+                          .read<PageUiPreferences>()
+                          .setHistoryKpiStripVisible(
+                            !prefs.historyKpiStripVisible,
+                          ),
+                      leftIconWidget: Icon(Icons.insights_rounded, size: 16),
+                      type: prefs.historyKpiStripVisible
+                          ? ButtonType.secondary
+                          : ButtonType.ghost,
+                      size: ButtonSize.sm,
+                    ),
+                    SegmentedToggle<HistoryViewMode>(
+                      value: prefs.historyViewMode,
+                      onChanged: (mode) => context
+                          .read<PageUiPreferences>()
+                          .setHistoryViewMode(mode),
+                      options: const [
+                        SegmentedToggleOption(
+                          value: HistoryViewMode.cards,
+                          icon: Icons.view_agenda_rounded,
+                        ),
+                        SegmentedToggleOption(
+                          value: HistoryViewMode.table,
+                          icon: Icons.table_rows_rounded,
+                        ),
+                      ],
+                    ),
+                    PrimaryButton(
+                      onTap: _handleCreateEntry,
+                      title: 'New Entry', // TODO: l10n
+                      leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                      size: ButtonSize.sm,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: theme.spacings.lg),
+            // KPI strip - collapses while scrolling or when hidden by the user.
+            // Animates with the same SizeTransition+FadeTransition pattern used
+            // elsewhere in the app (drawers, confirmation panels).
+            ValueListenableBuilder<String>(
+              valueListenable: _scrollMessage,
+              builder: (context, scrollValue, _) {
+                final showStrip =
+                    prefs.historyKpiStripVisible &&
+                    scrollValue != 'Scrolling...';
+
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                final todayEntries = resolvedEntries.where((e) {
+                  final d = DateTime(
+                    e.startAt.year,
+                    e.startAt.month,
+                    e.startAt.day,
+                  );
+                  return d == today;
+                });
+                final todayDur = todayEntries.fold<Duration>(
+                  Duration.zero,
+                  (p, e) => p + e.entry.duration(now),
+                );
+                final weekStart = today.subtract(
+                  Duration(days: today.weekday - 1),
+                );
+                final weekEntries = resolvedEntries.where((e) {
+                  return !e.startAt.isBefore(weekStart);
+                });
+                final weekDur = weekEntries.fold<Duration>(
+                  Duration.zero,
+                  (p, e) => p + e.entry.duration(now),
+                );
+                final unassigned = resolvedEntries
+                    .where((e) => e.task == null)
+                    .length;
+
+                String fmtDur(Duration d) =>
+                    '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) => SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: showStrip
+                      ? Column(
+                          key: const ValueKey('kpi_strip'),
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _KpiChip(
+                                  label: 'Today', // TODO: l10n
+                                  value: fmtDur(todayDur),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'This week', // TODO: l10n
+                                  value: fmtDur(weekDur),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'Efficiency', // TODO: l10n
+                                  value: '94%',
+                                  valueColor: palette.accent.success,
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'Unassigned', // TODO: l10n
+                                  value: '$unassigned',
+                                  valueColor: unassigned > 0
+                                      ? palette.accent.warning
+                                      : palette.text.secondary,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: theme.spacings.lg),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                );
+              },
+            ),
+            Expanded(
+              child: TimeEntryList(
+                entries: resolvedEntries,
+                selectedEntry: selectedEntry,
+                selectedRowKey: _selectedRowKey,
+                onEntrySelected: _handleEntrySelected,
+                onCreateEntry: _handleCreateEntry,
+                viewMode: prefs.historyViewMode,
+                onViewModeChanged: (mode) =>
+                    context.read<PageUiPreferences>().setHistoryViewMode(mode),
+                filters: prefs.historyFilters,
+                onFiltersChanged: (f) =>
+                    context.read<PageUiPreferences>().setHistoryFilters(f),
+                isFilterExpanded: isFilterExpanded,
+                onFilterExpandedToggle: () => context
+                    .read<PageUiPreferences>()
+                    .setHistoryFilterExpandedOverride(!isFilterExpanded),
+                sortField: prefs.historySortField,
+                sortDirection: prefs.historySortDirection,
+                onSortFieldChanged: (field) => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortField(field),
+                onSortDirectionChanged: (direction) => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortDirection(direction),
+                isSortExpanded: isSortExpanded,
+                onSortExpandedToggle: () => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortExpandedOverride(!isSortExpanded),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -184,102 +345,10 @@ class TimeEntryList extends StatelessWidget {
         : <DateTime>[];
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.x2l),
+      padding: EdgeInsets.all(theme.spacings.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Time history', style: theme.commonTextStyles.h3),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: theme.spacings.lg,
-                children: [
-                  SegmentedToggle<HistoryViewMode>(
-                    value: viewMode,
-                    onChanged: onViewModeChanged,
-                    options: const [
-                      SegmentedToggleOption(
-                        value: HistoryViewMode.cards,
-                        icon: Icons.view_agenda_rounded,
-                      ),
-                      SegmentedToggleOption(
-                        value: HistoryViewMode.table,
-                        icon: Icons.table_rows_rounded,
-                      ),
-                    ],
-                  ),
-                  PrimaryButton(
-                    onTap: onCreateEntry,
-                    title: 'New Entry',
-                    leftIcon: WorklogStudioAssets.vectors.plus24Svg,
-                    size: ButtonSize.sm,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: theme.spacings.lg),
-          // KPI strip
-          Builder(
-            builder: (context) {
-              final allEntries = context.select(
-                (TimeTrackerBloc bloc) => bloc.state.allEntries,
-              );
-              final now = DateTime.now();
-              final today = DateTime(now.year, now.month, now.day);
-              final todayEntries = entries.where((e) {
-                final d = DateTime(
-                  e.startAt.year,
-                  e.startAt.month,
-                  e.startAt.day,
-                );
-                return d == today;
-              });
-              final todayDur = todayEntries.fold<Duration>(
-                Duration.zero,
-                (p, e) => p + e.entry.duration(now),
-              );
-              final weekStart = today.subtract(
-                Duration(days: today.weekday - 1),
-              );
-              final weekEntries = entries.where((e) {
-                return !e.startAt.isBefore(weekStart);
-              });
-              final weekDur = weekEntries.fold<Duration>(
-                Duration.zero,
-                (p, e) => p + e.entry.duration(now),
-              );
-              final unassigned = entries.where((e) => e.task == null).length;
-
-              String fmtDur(Duration d) =>
-                  '${d.inHours}h ${d.inMinutes.remainder(60)}m';
-
-              return Row(
-                children: [
-                  _KpiChip(label: 'Today', value: fmtDur(todayDur)),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(label: 'This week', value: fmtDur(weekDur)),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(
-                    label: 'Efficiency',
-                    value: '94%',
-                    valueColor: palette.accent.success,
-                  ),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(
-                    label: 'Unassigned',
-                    value: '$unassigned',
-                    valueColor: unassigned > 0
-                        ? palette.accent.warning
-                        : palette.text.secondary,
-                  ),
-                ],
-              );
-            },
-          ),
-          SizedBox(height: theme.spacings.lg),
           TableToolbar(
             isFilterExpanded: isFilterExpanded,
             onFilterTap: onFilterExpandedToggle,
