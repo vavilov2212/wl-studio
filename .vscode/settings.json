@@ -1,12 +1,22 @@
 {
   "dart.flutterSdkPath": ".fvm/versions/3.38.5",
   "dart.runPubGetOnPubspecChanges": "never",
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/build": true
+  },
   "files.watcherExclude": {
-    "**/.fvm": true
+    "**/.fvm": true,
+    "**/.worktrees": true,
+    "**/.dart_tool": true,
+    "**/build": true
   },
   "search.exclude": {
     "**/.fvm": true,
-    "**/.claude": true
+    "**/.claude": true,
+    "**/.worktrees": true,
+    "**/.dart_tool": true,
+    "**/build": true
   },
   // treat CLAUDE.md files as Markdown for syntax highlighting
   "files.associations": {
