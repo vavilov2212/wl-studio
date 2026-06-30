@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:worklog_studio/domain/history_filters.dart';
 import 'package:worklog_studio/domain/history_sort.dart';
 import 'package:worklog_studio/domain/projects_filters.dart';
@@ -12,7 +13,13 @@ import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 import 'package:worklog_studio/state/page_ui_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('PageUiPreferences', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     test('defaults to table view mode and empty filters for every page', () {
       final prefs = PageUiPreferences();
 
