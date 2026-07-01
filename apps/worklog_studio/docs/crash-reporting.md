@@ -26,49 +26,51 @@ catch them.
 
 ## Reading a crash dump
 
-### Install WinDbg
+### Option A - Visual Studio (recommended if already installed)
 
-Download **WinDbg Preview** from the Microsoft Store (free). It is the
-standard tool for reading Windows minidumps.
+1. File > Open > File > select the `.dmp` file.
+2. VS shows a **Minidump Summary** page with the exception code and faulting module.
+3. Click **"Debug with Native Only"** in the Actions section.
+4. VS loads the dump as a frozen debug session - full call stack in the Call Stack
+   window, locals, and register values.
 
-### Open the dump
+**Loading Flutter symbols in Visual Studio:**
+Tools > Options > Debugging > Symbols - add a symbol server entry:
+```
+https://storage.googleapis.com/flutter_infra_release/flutter/<ENGINE_HASH>/windows-x64/symbols
+```
+Replace `<ENGINE_HASH>` with the engine hash from `flutter --version` (the `Engine` line).
+VS downloads and caches the `.pdb` for `flutter_windows.dll` on first use.
 
-1. Launch WinDbg Preview.
-2. File > Open dump file > select the `.dmp` file.
-3. Wait for it to finish loading (it will say `Loading unloaded module list...`).
-4. In the command box at the bottom, run:
+VS also needs the original `flutter_windows.dll` binary to match against the dump.
+If it prompts, point it to the release folder that crashed
+(e.g. `Downloads\worklog_studio_windows_1.0.11-dev.10\`).
+
+### Option B - WinDbg Preview (no Visual Studio required)
+
+Download from the Microsoft Store (free).
+
+1. File > Open dump file > select the `.dmp` file.
+2. Wait for it to load, then run in the command box:
    ```
    !analyze -v
    ```
 
-### What to look for
-
-`!analyze -v` prints a section called `STACK_TEXT`. It lists every frame on
-the crashing thread's call stack at the moment of the crash. Even without full
-symbols you will see which function inside `flutter_windows.dll` faulted and
-what called it.
-
-Useful follow-up commands:
+`!analyze -v` prints a `STACK_TEXT` section - every frame on the crashing
+thread. Useful follow-up commands:
 
 ```
-k          - print the raw call stack
-~*k        - print the stack for every thread (useful for race conditions)
-lmvm flutter_windows  - show the module version and timestamp
+k          - raw call stack
+~*k        - stack for every thread (useful for race conditions)
+lmvm flutter_windows  - module version and timestamp
 ```
 
-### Loading Flutter symbols (optional but helpful)
-
-The Flutter engine publishes symbol files to a public symbol server. Add it
-in WinDbg to get readable function names instead of raw offsets:
-
-1. File > Settings > Debugging settings > Symbol path.
-2. Add:
-   ```
-   srv*C:\symbols*https://storage.googleapis.com/flutter_infra_release/flutter/<ENGINE_HASH>/windows-x64/symbols
-   ```
-   Replace `<ENGINE_HASH>` with the engine hash from `flutter --version`
-   (the `Engine` line, e.g. `c108a94d7a8273e112339e6c6833daa06e723a54`).
-3. Run `.reload` then `!analyze -v` again.
+**Loading Flutter symbols in WinDbg:**
+File > Settings > Debugging settings > Symbol path, add:
+```
+srv*C:\symbols*https://storage.googleapis.com/flutter_infra_release/flutter/<ENGINE_HASH>/windows-x64/symbols
+```
+Then run `.reload` followed by `!analyze -v` again.
 
 ---
 
