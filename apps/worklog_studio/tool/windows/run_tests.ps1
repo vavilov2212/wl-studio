@@ -108,7 +108,7 @@ $skip = 0
 $t0   = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
-$flutterArgs = @('flutter', 'test') + $Paths + @('--reporter', 'json')
+$flutterArgs = @('flutter', 'test') + $Paths + @('--reporter', 'json', '--concurrency', '1')
 
 & fvm @flutterArgs 2>&1 | ForEach-Object {
 
