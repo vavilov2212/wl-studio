@@ -59,6 +59,15 @@ class ManagedPopoverWindow {
 
   Future<void>? _creationInFlight;
 
+  /// Cached result of the first successful `FindWindow` call for this window.
+  /// Cleared whenever [windowId] is reset (i.e. the native window has been
+  /// destroyed and a new one will be created on next [show]). This avoids the
+  /// race between [WindowController.setTitle] returning and Win32 actually
+  /// registering the new title - the HWND resolved during [show]'s initial
+  /// `ShowWindow` call is reused immediately by [_applyAlwaysOnTop] and
+  /// [_applyFrameless] without a second `FindWindow` round-trip.
+  int? _cachedHwnd;
+
   /// Set once on the native window purely so [_nativeHandle] can find it
   /// again later via `FindWindow` - never shown to the user (this window
   /// either has no title bar at all once [frameless] strips it, or, for a
@@ -67,6 +76,7 @@ class ManagedPopoverWindow {
   String get _nativeTitle => 'WorklogStudioPopover_$role';
 
   int? _nativeHandle() {
+    if (_cachedHwnd != null) return _cachedHwnd;
     final titlePtr = _nativeTitle.toNativeUtf16();
     try {
       final hwnd = win32.FindWindow(nullptr, titlePtr);
@@ -77,6 +87,7 @@ class ManagedPopoverWindow {
         );
         return null;
       }
+      _cachedHwnd = hwnd;
       return hwnd;
     } finally {
       calloc.free(titlePtr);
@@ -225,9 +236,14 @@ class ManagedPopoverWindow {
   /// one instead of silently no-op'ing against a dead id.
   Future<void> reconcile() async {
     if (windowId != null && !await isAlive()) {
-      windowId = null;
-      isVisible = false;
+      _resetWindowState();
     }
+  }
+
+  void _resetWindowState() {
+    windowId = null;
+    isVisible = false;
+    _cachedHwnd = null;
   }
 
   /// Shows this window, creating it first if necessary. Uses
@@ -316,8 +332,7 @@ class ManagedPopoverWindow {
     final alive = await isAlive();
     if (!alive) {
       debugPrint('ManagedPopoverWindow($role): watchdog detected destruction - re-warming');
-      windowId = null;
-      isVisible = false;
+      _resetWindowState();
       followerReady = false;
       await ensureExists();
       return;
@@ -332,4 +347,18 @@ class ManagedPopoverWindow {
     // second for liveness) re-applies it too while visible.
     if (alwaysOnTop && isVisible) _applyAlwaysOnTop();
   }
+
+  // ─── Test seams ────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  int? get cachedHwndForTesting => _cachedHwnd;
+
+  @visibleForTesting
+  void setCachedHwndForTesting(int? hwnd) => _cachedHwnd = hwnd;
+
+  /// Resets all native-window state as [reconcile] does when it detects
+  /// destruction - exposed for tests that cannot drive a real Win32 window
+  /// lifecycle.
+  @visibleForTesting
+  void resetWindowStateForTesting() => _resetWindowState();
 }

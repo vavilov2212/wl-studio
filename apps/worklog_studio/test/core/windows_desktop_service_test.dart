@@ -53,6 +53,28 @@ void main() {
     });
   });
 
+  group('ManagedPopoverWindow HWND cache', () {
+    test('cachedHwnd starts as null', () {
+      final service = WindowsDesktopService();
+      expect(service.activityWindowForTesting.cachedHwndForTesting, isNull);
+    });
+
+    test('resetWindowStateForTesting clears windowId, isVisible and cachedHwnd', () {
+      final service = WindowsDesktopService();
+      final window = service.activityWindowForTesting;
+
+      window.setCachedHwndForTesting(12345);
+      window.windowId = 99;
+      window.isVisible = true;
+
+      window.resetWindowStateForTesting();
+
+      expect(window.cachedHwndForTesting, isNull);
+      expect(window.windowId, isNull);
+      expect(window.isVisible, isFalse);
+    });
+  });
+
   group('WindowsDesktopService.resolveStartupRole', () {
     test('returns tray and stores the window id for multi_window args', () async {
       final service = WindowsDesktopService();
