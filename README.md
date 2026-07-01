@@ -177,11 +177,12 @@ cd apps\worklog_studio
 
 ---
 
-## 🎨 App Icons
+## 🛠 Tooling
 
-The app ships two icon variants: **prod** (default, committed as the live icon) and **dev** (same artwork with a red "DEV" ribbon). The live icon files must be swapped on disk before building a specific flavor. The swap is automated via VS Code pre-launch tasks, the CI release workflow, and a pre-commit hook - manual invocation is only needed when running `flutter run` directly from a terminal.
+Platform-specific scripts for running tests, bumping versions, packaging releases, and managing icon assets:
 
-See the [Windows Scripts Reference](apps/worklog_studio/tool/windows/README.md#app-icons) for the full icon workflow, `select_app_icon.ps1` usage, and icon regeneration steps.
+- [Windows Scripts](apps/worklog_studio/tool/windows/README.md) - test runner, bump/publish/release, app icons, tray icons
+- [macOS Scripts](apps/worklog_studio/tool/macos/README.md) - release guide, build and signing workflow
 
 ---
 
@@ -198,18 +199,6 @@ The app stores its data in a local SQLite file (`worklog.db`) under the OS appli
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🛠 Tooling
-
-Platform-specific scripts for running tests, bumping versions, packaging releases, and managing icon assets:
-
-- [Windows Scripts](apps/worklog_studio/tool/windows/README.md) - test runner, bump/publish/release, app icons, tray icons
-- [macOS Scripts](apps/worklog_studio/tool/macos/README.md) - release guide, build and signing workflow
-
-## 📦 Releases & Development
-For information on building, packaging, and the automatic update process, please refer to the [macOS Release Guide](apps/worklog_studio/tool/macos/README.md).
 
 ---
 
