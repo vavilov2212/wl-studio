@@ -81,8 +81,7 @@ Write-Host "pubspec.yaml updated" -ForegroundColor Green
 # ─────────────────────────────────────────────
 # 4. Run unit tests
 # ─────────────────────────────────────────────
-Write-Host "Running unit tests..." -ForegroundColor Yellow
-fvm flutter test test/core/ test/feature/ --reporter expanded
-Write-Host "All tests passed" -ForegroundColor Green
+& "$PSScriptRoot\run_tests.ps1"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Version bumped to $newName. Run publish.ps1 to push - CI builds and releases Windows + macOS." -ForegroundColor Green
