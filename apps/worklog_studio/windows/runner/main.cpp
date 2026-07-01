@@ -23,7 +23,10 @@ static LONG WINAPI WriteCrashDump(EXCEPTION_POINTERS* ei) {
 
   WCHAR crashDir[MAX_PATH];
   StringCchPrintfW(crashDir, MAX_PATH, L"%s\\WorklogStudio\\crashes", appData);
-  CreateDirectoryW(crashDir, NULL);
+  // SHCreateDirectoryExW creates all intermediate directories (like mkdir -p).
+  // CreateDirectoryW only creates one level and silently fails if the parent
+  // does not exist yet.
+  SHCreateDirectoryExW(NULL, crashDir, NULL);
 
   SYSTEMTIME st;
   GetLocalTime(&st);
@@ -108,6 +111,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(false);
+
+  // Re-register after window.Create() in case the Flutter engine overrode the
+  // handler during its own initialisation.
+  SetUnhandledExceptionFilter(WriteCrashDump);
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {
