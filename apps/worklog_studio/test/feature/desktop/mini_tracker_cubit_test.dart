@@ -81,6 +81,71 @@ void main() {
     });
   });
 
+  group('MiniTrackerCubit.restartWithComment', () {
+    test('dispatches a start action with the given projectId, taskId and comment when running', () {
+      cubit.updateFromSnapshot(
+        TimerSnapshot(
+          isRunning: true,
+          activeEntry: TimeEntry(
+            id: 'e1',
+            startAt: DateTime(2025, 1, 1, 9),
+            status: TimeEntryStatus.running,
+            projectId: 'p1',
+            taskId: 't1',
+            comment: 'old comment',
+          ),
+          entries: const [],
+          tasks: const [],
+          projects: const [],
+          timestamp: 1,
+        ),
+      );
+
+      cubit.restartWithComment('p1', 't1', 'new comment');
+
+      expect(desktopService.dispatched, hasLength(1));
+      final action = desktopService.dispatched.single as TimerAction;
+      expect(action.type, TimerActionType.start);
+      expect(action.projectId, 'p1');
+      expect(action.taskId, 't1');
+      expect(action.comment, 'new comment');
+    });
+
+    test('dispatches start even when project and task match the running entry', () {
+      // Contrast with startTimer which no-ops in this case.
+      // restartWithComment always fires to create a new time-entry boundary.
+      cubit.updateFromSnapshot(
+        TimerSnapshot(
+          isRunning: true,
+          activeEntry: TimeEntry(
+            id: 'e1',
+            startAt: DateTime(2025, 1, 1, 9),
+            status: TimeEntryStatus.running,
+            projectId: 'p1',
+            taskId: 't1',
+            comment: 'old',
+          ),
+          entries: const [],
+          tasks: const [],
+          projects: const [],
+          timestamp: 1,
+        ),
+      );
+
+      cubit.restartWithComment('p1', 't1', '');
+
+      expect(desktopService.dispatched, hasLength(1));
+      final action = desktopService.dispatched.single as TimerAction;
+      expect(action.type, TimerActionType.start);
+    });
+
+    test('does nothing when no session is running', () {
+      cubit.restartWithComment('p1', 't1', 'new comment');
+
+      expect(desktopService.dispatched, isEmpty);
+    });
+  });
+
   group('MiniTrackerCubit.commands', () {
     test('emitCommand replays on the commands stream', () async {
       final received = <MiniPanelCommand>[];

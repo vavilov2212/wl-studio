@@ -80,7 +80,14 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
   }
 
   void _commit() {
-    context.read<MiniTrackerCubit>().updateComment(_commentController.text);
+    final newComment = _commentController.text;
+    final cubit = context.read<MiniTrackerCubit>();
+    if (newComment != _lastPersistedComment) {
+      final entry = cubit.state.activeEntry;
+      cubit.restartWithComment(entry?.projectId, entry?.taskId, newComment);
+    } else {
+      cubit.updateComment(newComment);
+    }
   }
 
   void _revert() {

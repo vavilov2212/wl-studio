@@ -124,6 +124,23 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     );
   }
 
+  /// Stops the current time entry and starts a fresh one with the same
+  /// project and task but a new comment. Unlike [startTimer], this bypasses
+  /// the "already tracking same task" guard - the caller has determined that
+  /// the comment change represents a new activity, so a new entry boundary
+  /// is always required.
+  void restartWithComment(String? projectId, String? taskId, String comment) {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.dispatchAction(
+      TimerAction(
+        type: TimerActionType.start,
+        projectId: projectId,
+        taskId: taskId,
+        comment: comment,
+      ),
+    );
+  }
+
   /// Opens the dedicated activity prompt window (see
   /// `ActivityPromptPanel`) - a no-op when nothing is currently being
   /// tracked, mirroring the leader-side guard in
