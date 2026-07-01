@@ -57,10 +57,12 @@ function Write-FileHeader([string] $path) {
   Write-Host "  ${Cyan}${Bold}  ${rel}${R}"
   Write-Host "  ${Cyan}${Bold}$(HRule)${R}"
   Write-Host ""
+  $Script:freshFileHeader = $true
 }
 
 function Write-GroupHeader([string] $name) {
-  Write-Host ""
+  if (-not $Script:freshFileHeader) { Write-Host "" }
+  $Script:freshFileHeader = $false
   Write-Host "  ${Bold}${Yellow}${name}${R}"
 }
 
@@ -99,8 +101,9 @@ $testMeta    = @{}  # testID  -> testStart.test JSON object
 $testStartMs = @{}  # testID  -> testStart event time (ms since runner started)
 $errors      = @{}  # testID  -> {message, stackTrace}
 
-$seenFiles  = @{}   # suiteID -> shown?
-$seenGroups = @{}   # groupID -> shown?
+$seenFiles        = @{}   # suiteID -> shown?
+$seenGroups       = @{}   # groupID -> shown?
+$freshFileHeader  = $false  # true immediately after a file banner is printed
 
 $pass = 0
 $fail = 0
