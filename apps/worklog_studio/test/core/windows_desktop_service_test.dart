@@ -77,7 +77,7 @@ void main() {
       final window = service.activityWindowForTesting;
 
       window.setCachedHwndForTesting(12345);
-      window.windowId = 99;
+      window.windowId = '99';
       window.isVisible = true;
 
       window.resetWindowStateForTesting();
@@ -95,7 +95,7 @@ void main() {
       final role = await service.resolveStartupRole(['multi_window', '7', '{}']);
 
       expect(role, 'tray');
-      expect(service.ownWindowIdForTesting, 7);
+      expect(service.ownWindowIdForTesting, '7');
     });
 
     test('returns main for ordinary startup args', () async {

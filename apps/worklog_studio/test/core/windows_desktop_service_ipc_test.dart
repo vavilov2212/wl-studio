@@ -224,17 +224,16 @@ void main() {
 
     setUp(() {
       leaderService = WindowsDesktopService();
-      leaderService.miniPanelWindowForTesting.windowId = 101;
+      leaderService.miniPanelWindowForTesting.windowId = '101';
       leaderService.miniPanelWindowForTesting.followerReady = false;
-      leaderService.activityWindowForTesting.windowId = 202;
+      leaderService.activityWindowForTesting.windowId = '202';
       leaderService.activityWindowForTesting.followerReady = false;
     });
 
     test('miniReady from the mini panel window marks only that window ready', () async {
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniReady',
-        null,
-        fromWindowId: 101,
+        {'fromWindowId': '101'},
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isTrue);
@@ -244,8 +243,7 @@ void main() {
     test('miniReady from the activity window marks only that window ready', () async {
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniReady',
-        null,
-        fromWindowId: 202,
+        {'fromWindowId': '202'},
       );
 
       expect(leaderService.activityWindowForTesting.followerReady, isTrue);
@@ -258,8 +256,7 @@ void main() {
 
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniClosed',
-        null,
-        fromWindowId: 101,
+        {'fromWindowId': '101'},
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
@@ -269,8 +266,7 @@ void main() {
     test('miniReady from an unknown window id is a harmless no-op', () async {
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniReady',
-        null,
-        fromWindowId: 999,
+        {'fromWindowId': '999'},
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);

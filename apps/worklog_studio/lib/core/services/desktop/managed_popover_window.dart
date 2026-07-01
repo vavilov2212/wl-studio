@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:ui';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:win32/win32.dart' as win32;
 
 /// Manages the lifecycle of one `desktop_multi_window` secondary engine:
@@ -19,18 +19,23 @@ class ManagedPopoverWindow {
   ManagedPopoverWindow({
     required this.role,
     required this.computeFrame,
+    required this.getMainWindowId,
     this.frameless = false,
     this.alwaysOnTop = false,
   });
 
   /// A short tag identifying this window's purpose (e.g. `'miniPanel'`,
-  /// `'activity'`), passed through `createWindow()`'s payload so the new
+  /// `'activity'`), passed through `create()`'s payload so the new
   /// engine's `main()` can tell which top-level widget to run.
   final String role;
 
   /// Computes this window's on-screen frame when shown via `show()`
   /// without an explicit `frameOverride`.
   final Future<Rect> Function() computeFrame;
+
+  /// Returns the leader engine's window ID so it can be embedded in the
+  /// creation arguments and used by the follower for IPC back to the leader.
+  final String? Function() getMainWindowId;
 
   /// Strips the native title bar/border (no minimize/maximize/close, no
   /// resize handles) right after every `show()`. `desktop_multi_window`'s
@@ -53,45 +58,66 @@ class ManagedPopoverWindow {
   /// if `Show()` happened to grab it.
   final bool alwaysOnTop;
 
-  int? windowId;
+  String? windowId;
   bool isVisible = false;
   bool followerReady = false;
 
   Future<void>? _creationInFlight;
 
-  /// Cached result of the first successful `FindWindow` call for this window.
-  /// Cleared whenever [windowId] is reset (i.e. the native window has been
-  /// destroyed and a new one will be created on next [show]). This avoids the
-  /// race between [WindowController.setTitle] returning and Win32 actually
-  /// registering the new title - the HWND resolved during [show]'s initial
-  /// `ShowWindow` call is reused immediately by [_applyAlwaysOnTop] and
-  /// [_applyFrameless] without a second `FindWindow` round-trip.
+  /// Cached HWND for this window, discovered via `FindWindowEx` at creation
+  /// time. Cleared whenever [windowId] is reset (i.e. the native window has
+  /// been destroyed and a new one will be created on next [show]).
   int? _cachedHwnd;
 
-  /// Set once on the native window purely so [_nativeHandle] can find it
-  /// again later via `FindWindow` - never shown to the user (this window
-  /// either has no title bar at all once [frameless] strips it, or, for a
-  /// non-frameless window, no Windows convention surfaces a popover's
-  /// window title anywhere visible).
-  String get _nativeTitle => 'WorklogStudioPopover_$role';
+  static const _flutterWindowClass = 'FLUTTER_RUNNER_WIN32_WINDOW';
 
-  int? _nativeHandle() {
-    if (_cachedHwnd != null) return _cachedHwnd;
-    final titlePtr = _nativeTitle.toNativeUtf16();
+  int? _nativeHandle() => _cachedHwnd;
+
+  /// Returns HWNDs of all Flutter windows owned by this process.
+  Set<int> _allFlutterProcessHwnds() {
+    final result = <int>{};
+    final pid = win32.GetCurrentProcessId();
+    final classPtr = _flutterWindowClass.toNativeUtf16();
     try {
-      final hwnd = win32.FindWindow(nullptr, titlePtr);
-      if (hwnd == 0) {
-        debugPrint(
-          'ManagedPopoverWindow($role): FindWindow could not locate '
-          '"$_nativeTitle" - GetLastError=${win32.GetLastError()}',
-        );
-        return null;
+      var hwnd = win32.FindWindowEx(0, 0, classPtr, nullptr);
+      while (hwnd != 0) {
+        final pidPtr = calloc<Uint32>();
+        try {
+          win32.GetWindowThreadProcessId(hwnd, pidPtr);
+          if (pidPtr.value == pid) result.add(hwnd);
+        } finally {
+          calloc.free(pidPtr);
+        }
+        hwnd = win32.FindWindowEx(0, hwnd, classPtr, nullptr);
       }
-      _cachedHwnd = hwnd;
-      return hwnd;
     } finally {
-      calloc.free(titlePtr);
+      calloc.free(classPtr);
     }
+    return result;
+  }
+
+  /// Finds the HWND of a Flutter window in this process NOT in [excludeHwnds].
+  int? _findNewFlutterHwnd({required Set<int> excludeHwnds}) {
+    final pid = win32.GetCurrentProcessId();
+    final classPtr = _flutterWindowClass.toNativeUtf16();
+    try {
+      var hwnd = win32.FindWindowEx(0, 0, classPtr, nullptr);
+      while (hwnd != 0) {
+        if (!excludeHwnds.contains(hwnd)) {
+          final pidPtr = calloc<Uint32>();
+          try {
+            win32.GetWindowThreadProcessId(hwnd, pidPtr);
+            if (pidPtr.value == pid) return hwnd;
+          } finally {
+            calloc.free(pidPtr);
+          }
+        }
+        hwnd = win32.FindWindowEx(0, hwnd, classPtr, nullptr);
+      }
+    } finally {
+      calloc.free(classPtr);
+    }
+    return null;
   }
 
   void _applyFrameless() {
@@ -140,6 +166,24 @@ class ManagedPopoverWindow {
     );
   }
 
+  void _applyFrame(int hwnd, Rect frame) {
+    final result = win32.SetWindowPos(
+      hwnd,
+      0,
+      frame.left.toInt(),
+      frame.top.toInt(),
+      frame.width.toInt(),
+      frame.height.toInt(),
+      win32.SWP_NOZORDER | win32.SWP_NOACTIVATE,
+    );
+    if (result == 0) {
+      debugPrint(
+        'ManagedPopoverWindow($role): SetWindowPos (frame) failed - '
+        'GetLastError=${win32.GetLastError()}',
+      );
+    }
+  }
+
   /// Explicitly grabs OS keyboard focus. Only call this from a real, direct
   /// user input event (e.g. a global hotkey callback) - Windows generally
   /// blocks `SetForegroundWindow` from a process that isn't already the
@@ -163,7 +207,7 @@ class ManagedPopoverWindow {
   /// Ensures a popover engine exists, creating one if necessary - without
   /// showing it. A no-op if one already exists.
   ///
-  /// Concurrent callers share the same in-flight `createWindow()` call
+  /// Concurrent callers share the same in-flight `create()` call
   /// instead of each starting their own: a user-initiated `show()` and a
   /// background pre-warm tick can otherwise both observe `windowId == null`
   /// at the same time (the create call takes long enough to boot a whole
@@ -173,7 +217,7 @@ class ManagedPopoverWindow {
   /// at a hidden window while the one actually on screen never receives
   /// any further snapshots, focus requests, or hide/show calls. Funnelling
   /// every creation through this one in-flight future makes that race
-  /// impossible: only one `createWindow()` call is ever outstanding, and
+  /// impossible: only one `create()` call is ever outstanding, and
   /// every other caller just awaits its result.
   Future<void> ensureExists() async {
     if (windowId != null) return;
@@ -184,10 +228,22 @@ class ManagedPopoverWindow {
     final completer = Completer<void>();
     _creationInFlight = completer.future;
     try {
-      final window = await DesktopMultiWindow.createWindow(jsonEncode({'role': role}));
-      windowId = window.windowId;
-      await WindowController.fromWindowId(windowId!).setTitle(_nativeTitle);
-      debugPrint('ManagedPopoverWindow($role): created window id=${window.windowId}');
+      // Snapshot existing Flutter HWNDs before creating so we can identify
+      // the new window afterward without relying on title-based FindWindow.
+      final existingHwnds = _allFlutterProcessHwnds();
+      final controller = await WindowController.create(
+        WindowConfiguration(
+          arguments: jsonEncode({
+            'role': role,
+            'mainWindowId': getMainWindowId(),
+          }),
+        ),
+      );
+      windowId = controller.windowId;
+      _cachedHwnd = _findNewFlutterHwnd(excludeHwnds: existingHwnds);
+      debugPrint(
+        'ManagedPopoverWindow($role): created window id=$windowId hwnd=$_cachedHwnd',
+      );
     } catch (e) {
       debugPrint('ManagedPopoverWindow($role): failed to create window - $e');
     } finally {
@@ -196,35 +252,22 @@ class ManagedPopoverWindow {
     }
   }
 
-  /// `getAllSubWindowIds()` has a native list-encoding bug on some Windows
-  /// builds (throws `RangeError` on every call, not just when something is
-  /// actually wrong), so it cannot be trusted as a liveness signal - see
-  /// this method's git history for that dead end.
-  ///
-  /// Instead, this sends a harmless targeted IPC call straight to
-  /// [windowId]. The native plugin's `HandleWindowChannelCall` looks the id
-  /// up in its own window map *before* trying to reach the follower engine
-  /// at all, and replies with the exact error `PlatformException(code:
-  /// '-1', message: 'target window not found.')` only when that id has
-  /// actually been erased from the map - which only happens via the native
-  /// `OnWindowDestroy` callback, i.e. the window is genuinely gone (closed
-  /// via its native titlebar X button, since the plugin gives us no way to
-  /// intercept that). Any other failure (e.g. the follower engine exists
-  /// but hasn't finished registering its method handler yet) is
-  /// inconclusive, not proof of death - treating it as "alive" avoids
-  /// forcing a brand-new engine (a multi-second Firebase/DB cold boot) on
-  /// every single probe hiccup.
+  /// Checks whether the window ID still maps to a live native window by
+  /// querying the plugin's own window registry via `WindowController.getAll()`.
+  /// The registry is updated synchronously on window destroy, so a missing
+  /// ID here means the window was closed (via its native title-bar X button
+  /// or any other means), not merely that the follower engine hasn't
+  /// initialised its method handler yet - avoiding the ambiguity that arises
+  /// when checking via an IPC call whose `CHANNEL_UNREGISTERED` error
+  /// conflates "window gone" with "channel not yet registered".
   Future<bool> isAlive() async {
     try {
-      await DesktopMultiWindow.invokeMethod(windowId!, 'livenessPing', null);
-      return true;
-    } on PlatformException catch (e) {
-      if (e.code == '-1' && e.message == 'target window not found.') {
-        debugPrint('ManagedPopoverWindow($role): window $windowId confirmed destroyed - $e');
-        return false;
+      final all = await WindowController.getAll();
+      final alive = all.any((c) => c.windowId == windowId);
+      if (!alive) {
+        debugPrint('ManagedPopoverWindow($role): window $windowId confirmed destroyed');
       }
-      debugPrint('ManagedPopoverWindow($role): inconclusive liveness probe, assuming alive - $e');
-      return true;
+      return alive;
     } catch (e) {
       debugPrint('ManagedPopoverWindow($role): inconclusive liveness probe, assuming alive - $e');
       return true;
@@ -275,17 +318,16 @@ class ManagedPopoverWindow {
     try {
       final frame = await (frameOverride ?? computeFrame)();
       debugPrint('ManagedPopoverWindow($role): show computed frame=$frame');
-      final controller = WindowController.fromWindowId(windowId!);
-      await controller.setFrame(frame);
 
       final hwnd = _nativeHandle();
       if (hwnd != null) {
+        _applyFrame(hwnd, frame);
         win32.ShowWindow(hwnd, activate ? win32.SW_SHOW : win32.SW_SHOWNA);
       } else {
-        // Couldn't resolve the hwnd yet (e.g. title not registered in
-        // time) - fall back to the plugin's own show(), which may
-        // activate when we didn't want it to, but still shows the window.
-        await controller.show();
+        // Couldn't resolve the hwnd yet - fall back to the plugin's show(),
+        // which may activate when we didn't want it to, but still shows the
+        // window. Frame cannot be applied without the hwnd.
+        await WindowController.fromWindowId(windowId!).show();
       }
       isVisible = true;
 

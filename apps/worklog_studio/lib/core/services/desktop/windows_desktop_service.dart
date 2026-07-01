@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -47,7 +46,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   MiniTrackerCubit? _followerCubit;
 
-  int? _ownWindowId;
+  String? _ownWindowId;
+  String? _mainWindowId;
   bool _isPopover = false;
 
   final _settingsRepository = SqliteSettingsRepository();
@@ -57,17 +57,20 @@ class WindowsDesktopService implements IDesktopPlatformService {
   late final ManagedPopoverWindow _miniPanelWindow = ManagedPopoverWindow(
     role: 'miniPanel',
     computeFrame: _computeFrameNearTray,
+    getMainWindowId: () => _ownWindowId,
     alwaysOnTop: true,
   );
 
   late final ManagedPopoverWindow _activityWindow = ManagedPopoverWindow(
     role: 'activity',
     computeFrame: _computeActivityPromptFrame,
+    getMainWindowId: () => _ownWindowId,
     frameless: true,
     alwaysOnTop: true,
   );
 
-  ManagedPopoverWindow? _windowForId(int windowId) {
+  ManagedPopoverWindow? _windowForId(String? windowId) {
+    if (windowId == null) return null;
     if (_miniPanelWindow.windowId == windowId) return _miniPanelWindow;
     if (_activityWindow.windowId == windowId) return _activityWindow;
     return null;
@@ -92,7 +95,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   /// Exposed for unit tests only.
   @visibleForTesting
-  int? get ownWindowIdForTesting => _ownWindowId;
+  String? get ownWindowIdForTesting => _ownWindowId;
 
   // ── IDesktopPlatformService ───────────────────────────────────────────────
 
@@ -125,8 +128,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
       }
     });
 
-    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      await _handleIncomingIpcMessage(call.method, call.arguments, fromWindowId);
+    final ownController = await WindowController.fromCurrentEngine();
+    _ownWindowId = ownController.windowId;
+    await ownController.setWindowMethodHandler((call) async {
+      await _handleIncomingIpcMessage(call.method, call.arguments);
       return null;
     });
 
@@ -170,15 +175,22 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _isPopover = true;
     _followerCubit = cubit;
 
-    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      await _handleIncomingIpcMessage(call.method, call.arguments, fromWindowId);
-      return null;
-    });
+    if (_ownWindowId != null) {
+      await WindowController.fromWindowId(_ownWindowId!).setWindowMethodHandler((call) async {
+        await _handleIncomingIpcMessage(call.method, call.arguments);
+        return null;
+      });
+    }
 
-    try {
-      await DesktopMultiWindow.invokeMethod(0, 'miniReady', null);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: handshake miniReady failed - $e');
+    if (_mainWindowId != null) {
+      try {
+        await WindowController.fromWindowId(_mainWindowId!).invokeMethod(
+          'miniReady',
+          {'fromWindowId': _ownWindowId},
+        );
+      } catch (e) {
+        debugPrint('WindowsDesktopService: handshake miniReady failed - $e');
+      }
     }
   }
 
@@ -346,17 +358,22 @@ class WindowsDesktopService implements IDesktopPlatformService {
   Future<void> _invokeWindow(ManagedPopoverWindow window, String method, dynamic arguments) async {
     if (window.windowId == null) return;
     try {
-      await DesktopMultiWindow.invokeMethod(window.windowId!, method, arguments);
+      await WindowController.fromWindowId(window.windowId!).invokeMethod(method, arguments);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to invoke "$method" on ${window.role} - $e');
     }
+  }
+
+  void _invokeMain(String method, [dynamic arguments]) {
+    if (_mainWindowId == null) return;
+    WindowController.fromWindowId(_mainWindowId!).invokeMethod(method, arguments);
   }
 
   @override
   void openMainWindowFromTray({String? route}) {
     if (!_isPopover) return;
     try {
-      DesktopMultiWindow.invokeMethod(0, 'openMainWindow', {'route': route});
+      _invokeMain('openMainWindow', {'route': route});
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to open main window - $e');
     }
@@ -366,7 +383,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   void dispatchAction(covariant dynamic action) {
     if (!_isPopover || action is! TimerAction) return;
     try {
-      DesktopMultiWindow.invokeMethod(0, 'dispatchAction', action.toJson());
+      _invokeMain('dispatchAction', action.toJson());
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to dispatch action - $e');
     }
@@ -376,7 +393,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   void requestActivityPrompt() {
     if (!_isPopover) return;
     try {
-      DesktopMultiWindow.invokeMethod(0, 'requestActivityPrompt', null);
+      _invokeMain('requestActivityPrompt', null);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to request activity prompt - $e');
     }
@@ -386,7 +403,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   void requestAcceptComment() {
     if (!_isPopover) return;
     try {
-      DesktopMultiWindow.invokeMethod(0, 'requestAcceptComment', null);
+      _invokeMain('requestAcceptComment', null);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to request accept comment - $e');
     }
@@ -396,7 +413,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   void requestDismissComment() {
     if (!_isPopover) return;
     try {
-      DesktopMultiWindow.invokeMethod(0, 'requestDismissComment', null);
+      _invokeMain('requestDismissComment', null);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to request dismiss comment - $e');
     }
@@ -405,23 +422,21 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   Future<String> resolveStartupRole(List<String> args) async {
     if (args.firstOrNull == 'multi_window' && args.length >= 2) {
-      _ownWindowId = int.tryParse(args[1]);
-      return _followerRole(args) == 'activity' ? 'tray:activity' : 'tray';
+      _ownWindowId = args[1];
+      final payload = _parseFollowerPayload(args.length >= 3 ? args[2] : '{}');
+      _mainWindowId = payload['mainWindowId'] as String?;
+      final role = payload['role'] as String? ?? 'miniPanel';
+      return role == 'activity' ? 'tray:activity' : 'tray';
     }
     return 'main';
   }
 
-  /// Reads the `role` field out of `createWindow()`'s payload (`args[2]`,
-  /// per `desktop_multi_window`'s documented argument list), defaulting to
-  /// `'miniPanel'` for a missing, empty, or malformed payload.
-  String _followerRole(List<String> args) {
-    if (args.length < 3) return 'miniPanel';
+  Map<String, dynamic> _parseFollowerPayload(String raw) {
     try {
-      final payload = jsonDecode(args[2]) as Map<String, dynamic>;
-      return payload['role'] as String? ?? 'miniPanel';
+      return jsonDecode(raw) as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('WindowsDesktopService: failed to parse follower role payload - $e');
-      return 'miniPanel';
+      debugPrint('WindowsDesktopService: failed to parse follower payload - $e');
+      return {};
     }
   }
 
@@ -501,11 +516,11 @@ class WindowsDesktopService implements IDesktopPlatformService {
   Future<void> _handleIncomingIpcMessage(
     String? method,
     dynamic arguments,
-    int fromWindowId,
   ) async {
     try {
       switch (method) {
         case 'miniReady':
+          final fromWindowId = arguments is Map ? arguments['fromWindowId'] as String? : null;
           final readyWindow = _windowForId(fromWindowId);
           if (readyWindow != null) {
             readyWindow.followerReady = true;
@@ -552,7 +567,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
           await dismissCurrentComment();
 
         case 'miniClosed':
-          _windowForId(fromWindowId)?.followerReady = false;
+          final fromWindowIdClosed = arguments is Map ? arguments['fromWindowId'] as String? : null;
+          _windowForId(fromWindowIdClosed)?.followerReady = false;
 
         case 'activityPromptStatus':
           if (arguments is String) {
@@ -670,7 +686,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
     try {
       final jsonStr = jsonEncode(snapshot.toJson());
-      await DesktopMultiWindow.invokeMethod(window.windowId!, 'broadcastSnapshot', jsonStr);
+      await WindowController.fromWindowId(window.windowId!).invokeMethod('broadcastSnapshot', jsonStr);
     } catch (e) {
       debugPrint('WindowsDesktopService: failed to broadcast snapshot to ${window.role} - $e');
     }
@@ -701,8 +717,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @visibleForTesting
   Future<void> handleIncomingIpcMessageForTesting(
     String method,
-    dynamic arguments, {
-    int fromWindowId = 0,
-  }) =>
-      _handleIncomingIpcMessage(method, arguments, fromWindowId);
+    dynamic arguments,
+  ) =>
+      _handleIncomingIpcMessage(method, arguments);
 }

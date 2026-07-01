@@ -301,10 +301,10 @@ packages:
     dependency: transitive
     description:
       name: desktop_multi_window
-      sha256: "31d063e492368744d7cca2921a2cf544aed8ee5a847752744897ef6224f30ca2"
+      sha256: "60ba38725b8887b60e44d15afdcf0c3813568b5da2ccaf1e7f6fd09a380a6e24"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.0"
+    version: "0.3.0"
   dio:
     dependency: transitive
     description:
