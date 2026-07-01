@@ -152,6 +152,30 @@ class _HotkeySettingsScreenState extends State<HotkeySettingsScreen> {
   }
 }
 
+/// Builds a release-mode-safe display string for [hotKey] (e.g. "Alt + Shift + M").
+///
+/// `HotKey.debugName` relies on `PhysicalKeyboardKey.debugName` which is only
+/// populated in debug mode — it returns null in release builds, producing the
+/// "null + null + null" display. This helper uses the `keyLabel` extension from
+/// `hotkey_manager_platform_interface` (backed by a known-keys map) and an
+/// explicit modifier-name switch, both of which work in every build mode.
+String _hotkeyDisplayName(HotKey hotKey) {
+  final keyStr = hotKey.key.keyLabel;
+  return [
+    ...(hotKey.modifiers ?? []).map(_modifierLabel),
+    keyStr.isNotEmpty ? keyStr : '?',
+  ].join(' + ');
+}
+
+String _modifierLabel(HotKeyModifier modifier) => switch (modifier) {
+  HotKeyModifier.alt => 'Alt',
+  HotKeyModifier.shift => 'Shift',
+  HotKeyModifier.control => 'Ctrl',
+  HotKeyModifier.meta => 'Win',
+  HotKeyModifier.capsLock => 'CapsLock',
+  HotKeyModifier.fn => 'Fn',
+};
+
 /// A label, a readable display of the bound combo (e.g. "Ctrl + Shift + M"),
 /// and a Record button.
 ///
@@ -307,7 +331,7 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
               // Modifiers and the trigger key can be pressed one at a time,
               // not all together - hold each one down while adding the
               // next, and release once the combo you want is showing.
-              _pendingHotKey?.debugName ?? 'Hold modifiers, then press a key...', // TODO: l10n
+              _pendingHotKey != null ? _hotkeyDisplayName(_pendingHotKey!) : 'Hold modifiers, then press a key...', // TODO: l10n
               style: theme.commonTextStyles.body.copyWith(
                 color: theme.colorsPalette.text.muted,
                 fontStyle: FontStyle.italic,
@@ -326,7 +350,7 @@ class _HotkeyRecorderRowState extends State<_HotkeyRecorderRow> {
         ] else ...[
           Expanded(
             child: Text(
-              _displayedHotKey?.debugName ?? '...',
+              _displayedHotKey != null ? _hotkeyDisplayName(_displayedHotKey!) : '...',
               style: theme.commonTextStyles.body,
             ),
           ),
