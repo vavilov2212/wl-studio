@@ -57,6 +57,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   late final ManagedPopoverWindow _miniPanelWindow = ManagedPopoverWindow(
     role: 'miniPanel',
     computeFrame: _computeFrameNearTray,
+    alwaysOnTop: true,
   );
 
   late final ManagedPopoverWindow _activityWindow = ManagedPopoverWindow(

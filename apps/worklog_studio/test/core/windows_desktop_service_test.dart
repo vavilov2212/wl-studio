@@ -53,6 +53,19 @@ void main() {
     });
   });
 
+  group('WindowsDesktopService window configuration', () {
+    test('mini panel is configured as always-on-top', () {
+      final service = WindowsDesktopService();
+      expect(service.miniPanelWindowForTesting.alwaysOnTop, isTrue);
+    });
+
+    test('activity window is configured as always-on-top and frameless', () {
+      final service = WindowsDesktopService();
+      expect(service.activityWindowForTesting.alwaysOnTop, isTrue);
+      expect(service.activityWindowForTesting.frameless, isTrue);
+    });
+  });
+
   group('ManagedPopoverWindow HWND cache', () {
     test('cachedHwnd starts as null', () {
       final service = WindowsDesktopService();
