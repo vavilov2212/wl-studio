@@ -165,6 +165,20 @@ void main() {
       await sub.cancel();
     });
 
+    test('seedComment forwards to the follower cubit as a seedComment command', () async {
+      // seedComment is sent for passive (reminder-triggered) shows: it seeds
+      // the text field without requesting OS keyboard focus, so the window
+      // appears on top without interrupting whatever the user is doing.
+      final received = <MiniPanelCommand>[];
+      final sub = followerCubit.commands.listen(received.add);
+
+      await followerService.handleIncomingIpcMessageForTesting('seedComment', null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [MiniPanelCommand.seedComment]);
+      await sub.cancel();
+    });
+
     test('activityPromptStatus forwards the parsed status to the follower cubit', () async {
       final received = <ActivityPromptStatus>[];
       final sub = followerCubit.activityPromptStatus.listen(received.add);

@@ -74,6 +74,10 @@ class _MiniPanelState extends State<MiniPanel> {
   void _handleCommand(MiniPanelCommand command) {
     if (!mounted) return;
     switch (command) {
+      case MiniPanelCommand.seedComment:
+        // seedComment is directed at the activity window only; the mini
+        // panel has no passive-seed flow and can ignore it.
+        break;
       case MiniPanelCommand.focusComment:
         _commentFieldController.enterEditMode(_commentController.text);
         WidgetsBinding.instance.addPostFrameCallback((_) {

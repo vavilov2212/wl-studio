@@ -112,14 +112,24 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
   void _handleCommand(MiniPanelCommand command) {
     if (!mounted) return;
     switch (command) {
-      case MiniPanelCommand.focusComment:
+      case MiniPanelCommand.seedComment:
+        // Passive (reminder-triggered) show: seed text and select-all so
+        // the first keystroke replaces the comment once the user does bring
+        // the window into focus - but do NOT call requestFocus(), which
+        // would steal OS keyboard focus from whatever they were doing.
         _lastPersistedComment =
             context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
         _commentController.text = _lastPersistedComment;
-        // Selected, not just focused: the window may not have OS keyboard
-        // focus yet (see WindowsDesktopService.showActivityPrompt) - once
-        // the user does bring it forward, typing should immediately
-        // replace the existing comment rather than insert into it.
+        _commentController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _commentController.text.length,
+        );
+      case MiniPanelCommand.focusComment:
+        // Explicit (hotkey-triggered) activation: seed text, select-all,
+        // AND request OS keyboard focus so the user can type immediately.
+        _lastPersistedComment =
+            context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
+        _commentController.text = _lastPersistedComment;
         _commentController.selection = TextSelection(
           baseOffset: 0,
           extentOffset: _commentController.text.length,
@@ -176,7 +186,7 @@ class _ActivityPromptPanelState extends State<ActivityPromptPanel> {
             TextField(
               controller: _commentController,
               focusNode: _commentFocusNode,
-              autofocus: true,
+              autofocus: false,
               maxLines: 2,
               minLines: 1,
               decoration: const InputDecoration(

@@ -79,6 +79,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
   Timer? _prewarmWatchdog;
   static const _prewarmCheckInterval = Duration(seconds: 1);
 
+  /// Prevents concurrent `_broadcastSnapshotTo` calls from the async BLoC
+  /// stream listener. Without this guard, rapid bloc state changes (e.g. stop
+  /// then start 200 ms apart from `restartWithComment`) can queue multiple
+  /// concurrent `DesktopMultiWindow.invokeMethod` calls to the same window,
+  /// which the native plugin is not required to serialize and which has been
+  /// observed to crash the host process. The latest state that arrives while a
+  /// broadcast is already in-flight is buffered and sent as soon as the
+  /// in-flight call completes.
+  bool _broadcastInFlight = false;
+  TimeTrackerBlocState? _pendingBroadcast;
+
   /// Exposed for unit tests only.
   @visibleForTesting
   int? get ownWindowIdForTesting => _ownWindowId;
@@ -202,7 +213,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }) async {
     if (_leaderBloc?.state.isRunning != true) return;
     await _activityWindow.show(activate: false);
-    await requestFocusComment();
+    await requestSeedComment();
     _lastActivityPromptSource = source;
     await _sendActivityPromptStatus(
       ActivityPromptStatus(
@@ -232,6 +243,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     if (!_activityWindow.isVisible) {
       await showActivityPrompt();
       _activityWindow.activate();
+      await requestFocusComment();
     } else if (!_activityWindow.isForeground) {
       _activityWindow.activate();
       _reminderService?.cancelAutoDismiss();
@@ -267,13 +279,31 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   Future<void> hidePopover() => _miniPanelWindow.hide();
 
+  bool _pendingSeedComment = false;
   bool _pendingFocusComment = false;
+
+  /// Asks the activity-prompt follower to seed its comment field text and
+  /// select-all, WITHOUT requesting OS keyboard focus. Used for passive
+  /// (reminder-triggered) shows where the window must not interrupt the
+  /// user's current task - text is ready so that the first keystroke after
+  /// the user explicitly brings the window into focus replaces, not
+  /// inserts into, the existing comment. Defers if the follower isn't ready
+  /// yet; [_pendingFocusComment] takes priority over this in the replay
+  /// (if the user presses the toggle hotkey before `miniReady` arrives).
+  Future<void> requestSeedComment() async {
+    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
+      await _invokeWindow(_activityWindow, 'seedComment', null);
+    } else {
+      _pendingSeedComment = true;
+    }
+  }
 
   /// Asks the activity-prompt follower to put its comment field into edit
   /// mode and request keyboard focus. If it isn't ready yet (e.g. it was
   /// just created and hasn't sent `miniReady`), the request is deferred
   /// and replayed once `miniReady` arrives - see
   /// [_handleIncomingIpcMessage]'s `'miniReady'` case.
+  /// Takes priority over a pending [requestSeedComment] in the replay.
   Future<void> requestFocusComment() async {
     if (_activityWindow.followerReady && _activityWindow.windowId != null) {
       await _invokeWindow(_activityWindow, 'focusComment', null);
@@ -485,7 +515,11 @@ class WindowsDesktopService implements IDesktopPlatformService {
             if (readyWindow == _activityWindow) {
               if (_pendingFocusComment) {
                 _pendingFocusComment = false;
+                _pendingSeedComment = false;
                 await _invokeWindow(_activityWindow, 'focusComment', null);
+              } else if (_pendingSeedComment) {
+                _pendingSeedComment = false;
+                await _invokeWindow(_activityWindow, 'seedComment', null);
               }
               if (_pendingActivityStatus != null) {
                 final status = _pendingActivityStatus!;
@@ -525,6 +559,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
             final map = Map<String, dynamic>.from(jsonDecode(arguments));
             _followerCubit?.emitActivityPromptStatus(ActivityPromptStatus.fromJson(map));
           }
+
+        case 'seedComment':
+          _followerCubit?.emitCommand(MiniPanelCommand.seedComment);
 
         case 'focusComment':
           _followerCubit?.emitCommand(MiniPanelCommand.focusComment);
@@ -597,10 +634,24 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   Future<void> _broadcastSnapshotIfReady(TimeTrackerBlocState state) async {
-    for (final window in [_miniPanelWindow, _activityWindow]) {
-      if (window.followerReady && window.windowId != null) {
-        await _broadcastSnapshotTo(window, state);
+    if (_broadcastInFlight) {
+      _pendingBroadcast = state;
+      return;
+    }
+    _broadcastInFlight = true;
+    try {
+      TimeTrackerBlocState? toSend = state;
+      while (toSend != null) {
+        for (final window in [_miniPanelWindow, _activityWindow]) {
+          if (window.followerReady && window.windowId != null) {
+            await _broadcastSnapshotTo(window, toSend);
+          }
+        }
+        toSend = _pendingBroadcast;
+        _pendingBroadcast = null;
       }
+    } finally {
+      _broadcastInFlight = false;
     }
   }
 

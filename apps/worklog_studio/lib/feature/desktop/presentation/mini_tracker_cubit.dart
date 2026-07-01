@@ -8,6 +8,15 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 
 enum MiniPanelCommand {
+  /// Seeds the comment field text and selection without requesting OS keyboard
+  /// focus - used when a passive trigger (the reminder timer) shows the
+  /// activity window. Text is ready so the user can start typing the moment
+  /// they explicitly bring the window into focus (toggle hotkey), but the
+  /// window must not steal focus from whatever the user is currently doing.
+  seedComment,
+  /// Seeds the comment field text, select-all, AND requests Flutter/OS
+  /// keyboard focus - used when the user explicitly activates the window
+  /// via the toggle hotkey or the mini panel button.
   focusComment,
   acceptComment,
   dismissComment,
