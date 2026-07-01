@@ -183,6 +183,7 @@ Platform-specific scripts for running tests, bumping versions, packaging release
 
 - [Windows Scripts](apps/worklog_studio/tool/windows/README.md) - test runner, bump/publish/release, app icons, tray icons
 - [macOS Scripts](apps/worklog_studio/tool/macos/README.md) - release guide, build and signing workflow
+- [Crash Reporting](apps/worklog_studio/docs/crash-reporting.md) - local minidump capture, WinDbg analysis, upgrade path to Sentry/BugSplat
 
 ---
 
