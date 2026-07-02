@@ -36,8 +36,15 @@ class NativeMiniPanel {
   int? _hwnd;
   static const _kClassName = 'WorklogMiniPanelV1';
   static bool _classRegistered = false;
-  static final _defWindowProcPtr =
-      Pointer.fromFunction<win32.WNDPROC>(_defWindowProc, 0);
+
+  // Native C pointer to DefWindowProcW - NOT a Dart Pointer.fromFunction.
+  // Win32 sends WM_NCCREATE/WM_CREATE synchronously inside CreateWindowEx,
+  // before it returns. A Dart callback here fires while the VM is inside
+  // the FFI call and crashes with "Cannot invoke native callback outside
+  // an isolate". Using the raw C pointer avoids any Dart re-entry.
+  static final Pointer<NativeFunction<win32.WNDPROC>> _defWindowProcPtr =
+      DynamicLibrary.open('user32.dll')
+          .lookup<NativeFunction<win32.WNDPROC>>('DefWindowProcW');
 
   // Fonts (created once with the window)
   MiniPanelFonts? _fonts;
@@ -125,7 +132,7 @@ class NativeMiniPanel {
         MiniPanelMetrics.panelH(isRunning: false, entryCount: 0),
         win32.NULL,
         win32.NULL,
-        win32.NULL,
+        win32.GetModuleHandle(nullptr),
         nullptr,
       );
       if (h == 0) return;
@@ -156,9 +163,6 @@ class NativeMiniPanel {
       calloc.free(className);
     }
   }
-
-  static int _defWindowProc(int hwnd, int msg, int wParam, int lParam) =>
-      win32.DefWindowProc(hwnd, msg, wParam, lParam);
 
   // ---------------------------------------------------------------------------
   // Layout helpers
@@ -353,7 +357,9 @@ class NativeMiniPanel {
 
   void _handleClick(HitRect hit) {
     switch (hit.hit) {
-      case MiniPanelHit.desktopBtn:
+      case MiniPanelHit.closeBtn:
+        hide();
+      case MiniPanelHit.openMainBtn:
         onOpenMainApp();
       case MiniPanelHit.stopBtn:
         onStop();

@@ -50,6 +50,7 @@ class MiniPanelFonts {
     required this.caption,
     required this.timerLarge,
     required this.label,
+    required this.icon,
   });
 
   final int body;       // Segoe UI 11pt
@@ -57,6 +58,7 @@ class MiniPanelFonts {
   final int caption;    // Segoe UI 9pt
   final int timerLarge; // Segoe UI 24pt
   final int label;      // Segoe UI Bold 9pt (section labels)
+  final int icon;       // Segoe MDL2 Assets 13pt (header action buttons)
 
   static MiniPanelFonts create() {
     return MiniPanelFonts(
@@ -65,6 +67,7 @@ class MiniPanelFonts {
       caption: _createFont('Segoe UI', -12, _fwNormal),
       timerLarge: _createFont('Segoe UI', -32, _fwLight),
       label: _createFont('Segoe UI', -11, _fwBold),
+      icon: _createFont('Segoe MDL2 Assets', -13, _fwNormal),
     );
   }
 
@@ -74,6 +77,7 @@ class MiniPanelFonts {
     win32.DeleteObject(caption);
     win32.DeleteObject(timerLarge);
     win32.DeleteObject(label);
+    win32.DeleteObject(icon);
   }
 
   static int _createFont(String face, int height, int weight) {
@@ -125,7 +129,7 @@ abstract final class MiniPanelPainter {
       if (state.entries.length > MiniPanelMetrics.maxVisibleItems) {
         _paintScrollArrows(memDC, layout, hoveredHit);
       }
-      _paintFooter(memDC, layout, state.statusLine, fonts);
+      _paintFooter(memDC, layout, state, fonts);
 
       win32.BitBlt(screenDC, 0, 0, w, h, memDC, 0, 0, win32.SRCCOPY);
     } finally {
@@ -152,24 +156,37 @@ abstract final class MiniPanelPainter {
     _fillRect(hdc, 0, 0, w, h, _cHeaderBg);
     _drawHLine(hdc, 0, h - 1, w, _cBorder);
 
-    // "Worklog Studio" label
+    // "Worklog Studio" label - leave room for two right-side buttons
     win32.SelectObject(hdc, fonts.bodyBold);
-    _drawText(hdc, 'Worklog Studio', MiniPanelMetrics.padH, 0, w - 60, h,
+    _drawText(hdc, 'Worklog Studio', MiniPanelMetrics.padH, 0, w - 80, h,
         _cTextPrimary, _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
 
-    // Desktop icon button (top-right)
-    final btnHit = layout.hitRects.firstWhere(
-      (r) => r.hit == MiniPanelHit.desktopBtn,
-      orElse: () => HitRect(
-          hit: MiniPanelHit.desktopBtn, x1: 0, y1: 0, x2: 0, y2: 0),
+    // Close button (far right): MDL2 U+E711 Cancel
+    _paintHeaderBtn(hdc, layout, fonts, hovered, MiniPanelHit.closeBtn,
+        '');
+
+    // Open main-app button (left of close): MDL2 U+E8A5 OpenWith
+    _paintHeaderBtn(hdc, layout, fonts, hovered, MiniPanelHit.openMainBtn,
+        '');
+  }
+
+  static void _paintHeaderBtn(
+    int hdc,
+    MiniPanelLayout layout,
+    MiniPanelFonts fonts,
+    HitRect? hovered,
+    MiniPanelHit hit,
+    String glyph,
+  ) {
+    final btn = layout.hitRects.firstWhere(
+      (r) => r.hit == hit,
+      orElse: () => HitRect(hit: hit, x1: 0, y1: 0, x2: 0, y2: 0),
     );
-    final isHovered = hovered?.hit == MiniPanelHit.desktopBtn;
-    final btnBg = isHovered ? _cItemBgHover : _cHeaderBg;
-    _fillRoundRect(hdc, btnHit.x1, btnHit.y1, btnHit.x2, btnHit.y2, 4,
-        btnBg, _cBorder);
-    win32.SelectObject(hdc, fonts.caption);
-    _drawText(hdc, '▣', btnHit.x1, btnHit.y1, btnHit.x2, btnHit.y2,
-        _cTextSecondary,
+    final isHovered = hovered?.hit == hit;
+    _fillRoundRect(hdc, btn.x1, btn.y1, btn.x2, btn.y2, 4,
+        isHovered ? _cItemBgHover : _cHeaderBg, _cBorder);
+    win32.SelectObject(hdc, fonts.icon);
+    _drawText(hdc, glyph, btn.x1, btn.y1, btn.x2, btn.y2, _cTextSecondary,
         _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
   }
 
@@ -384,7 +401,7 @@ abstract final class MiniPanelPainter {
   static void _paintFooter(
     int hdc,
     MiniPanelLayout layout,
-    String statusLine,
+    MiniPanelDisplayState state,
     MiniPanelFonts fonts,
   ) {
     final w = layout.clientW;
@@ -395,10 +412,20 @@ abstract final class MiniPanelPainter {
     _drawHLine(hdc, 0, top, w, _cBorder);
     _fillRect(hdc, 0, top + 1, w, top + h, _cFooterBg);
 
-    // Checkmark + status text
+    final todayStr = _fmtDuration(state.todayDuration);
+    final weekStr = _fmtDuration(state.weekDuration);
+    final statsText = 'Today $todayStr  |  Week $weekStr';
+
     win32.SelectObject(hdc, fonts.caption);
-    _drawText(hdc, '✓ $statusLine', pad, top, w - pad, top + h,
-        _cTextSecondary, _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
+    _drawText(hdc, statsText, pad, top, w - pad, top + h,
+        _cTextSecondary, _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
+  }
+
+  static String _fmtDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    if (h == 0) return '${m}m';
+    return '${h}h ${m}m';
   }
 
   // ---------------------------------------------------------------------------

@@ -58,7 +58,8 @@ class MiniPanelDisplayState {
     this.activeComment,
     this.timerStartAt,
     this.entries = const [],
-    this.statusLine = 'Worklog Studio',
+    this.todayDuration = Duration.zero,
+    this.weekDuration = Duration.zero,
   });
 
   final bool isRunning;
@@ -67,7 +68,8 @@ class MiniPanelDisplayState {
   final String? activeComment;
   final DateTime? timerStartAt;
   final List<MiniPanelEntry> entries; // recent, ordered newest-first, max 10
-  final String statusLine;            // footer text
+  final Duration todayDuration;       // total tracked today (for footer)
+  final Duration weekDuration;        // total tracked this week (for footer)
 
   static const empty = MiniPanelDisplayState();
 
@@ -83,7 +85,8 @@ class MiniPanelDisplayState {
           activeSubtitle == other.activeSubtitle &&
           activeComment == other.activeComment &&
           timerStartAt == other.timerStartAt &&
-          statusLine == other.statusLine &&
+          todayDuration == other.todayDuration &&
+          weekDuration == other.weekDuration &&
           listEquals(entries, other.entries);
 
   @override
@@ -93,6 +96,7 @@ class MiniPanelDisplayState {
         activeSubtitle,
         timerStartAt,
         entries.length,
-        statusLine,
+        todayDuration,
+        weekDuration,
       );
 }

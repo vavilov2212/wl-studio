@@ -42,7 +42,8 @@ abstract final class MiniPanelMetrics {
 /// Named interactive regions. The painter fills [MiniPanelLayout.hitRects]
 /// with one of these per interactive element.
 enum MiniPanelHit {
-  desktopBtn,      // header: open main app
+  openMainBtn,     // header: open main app window
+  closeBtn,        // header: hide/dismiss the mini panel
   stopBtn,         // session card: stop timer
   switchActivity,  // session card: switch activity link
   scrollUp,        // scroll arrow up
@@ -105,12 +106,23 @@ class MiniPanelLayout {
   void _compute() {
     int y = MiniPanelMetrics.headerH;
 
-    // Header desktop button
+    // Header: close button (far right) + open-main button (left of close)
+    const btnSize = 28;
+    const btnGap = 4;
+    final closeBtnX = clientW - MiniPanelMetrics.padH - btnSize;
+    final openMainBtnX = closeBtnX - btnGap - btnSize;
     hitRects.add(HitRect(
-      hit: MiniPanelHit.desktopBtn,
-      x1: clientW - MiniPanelMetrics.padH - 28,
+      hit: MiniPanelHit.closeBtn,
+      x1: closeBtnX,
       y1: 8,
-      x2: clientW - MiniPanelMetrics.padH,
+      x2: closeBtnX + btnSize,
+      y2: MiniPanelMetrics.headerH - 8,
+    ));
+    hitRects.add(HitRect(
+      hit: MiniPanelHit.openMainBtn,
+      x1: openMainBtnX,
+      y1: 8,
+      x2: openMainBtnX + btnSize,
       y2: MiniPanelMetrics.headerH - 8,
     ));
 

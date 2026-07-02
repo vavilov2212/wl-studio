@@ -403,6 +403,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
       ));
     }
 
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final weekStart = todayStart.subtract(Duration(days: todayStart.weekday - 1));
+    Duration todayDur = Duration.zero;
+    Duration weekDur = Duration.zero;
+    for (final e in state.allEntries) {
+      final d = e.duration(now);
+      if (!e.startAt.isBefore(todayStart)) todayDur += d;
+      if (!e.startAt.isBefore(weekStart)) weekDur += d;
+    }
+
     return MiniPanelDisplayState(
       isRunning: state.isRunning,
       activeTitle: activeTitle,
@@ -410,7 +421,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
       activeComment: activeEntry?.comment,
       timerStartAt: activeEntry?.startAt,
       entries: recentEntries,
-      statusLine: 'Worklog Studio',
+      todayDuration: todayDur,
+      weekDuration: weekDur,
     );
   }
 
