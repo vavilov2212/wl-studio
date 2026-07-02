@@ -6,7 +6,6 @@
 
 #include "generated_plugin_registrant.h"
 
-#include <desktop_multi_window/desktop_multi_window_plugin.h>
 #include <firebase_app_check/firebase_app_check_plugin_c_api.h>
 #include <firebase_auth/firebase_auth_plugin_c_api.h>
 #include <firebase_core/firebase_core_plugin_c_api.h>
@@ -16,8 +15,6 @@
 #include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
-  DesktopMultiWindowPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("DesktopMultiWindowPlugin"));
   FirebaseAppCheckPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FirebaseAppCheckPluginCApi"));
   FirebaseAuthPluginCApiRegisterWithRegistrar(

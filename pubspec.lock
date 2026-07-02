@@ -297,13 +297,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
-  desktop_multi_window:
-    dependency: "direct overridden"
-    description:
-      path: "vendor/desktop_multi_window"
-      relative: true
-    source: path
-    version: "0.3.0"
   dio:
     dependency: transitive
     description:
