@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -11,11 +9,12 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
-import 'package:worklog_studio/core/services/desktop/managed_popover_window.dart';
 import 'package:worklog_studio/core/services/desktop/native_activity_window.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
 import 'package:worklog_studio/core/services/reminder_service.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_settings_repository.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
@@ -26,19 +25,17 @@ import 'package:worklog_studio/state/project_task_state.dart';
 /// Windows implementation of [IDesktopPlatformService].
 ///
 /// Owns:
-/// - A [ManagedPopoverWindow] for the mini-tracker popover (Flutter engine,
-///   [desktop_multi_window]).
+/// - A [NativeMiniPanel] for the tray-click mini panel - a GDI-painted Win32
+///   window with no secondary Flutter engine, eliminating the EGL context
+///   race crashes (flutter/flutter#155685) from the old desktop_multi_window
+///   approach.
 /// - A [NativeActivityWindow] for the activity comment prompt - a pure Win32
-///   HWND + EDIT control with no secondary Flutter engine, eliminating the
-///   EGL context management crashes (flutter/flutter#155685) that plagued the
-///   original [desktop_multi_window]-based approach.
+///   HWND + EDIT control, same reasoning.
 class WindowsDesktopService implements IDesktopPlatformService {
   WindowsDesktopService._();
 
   static final WindowsDesktopService _instance = WindowsDesktopService._();
   factory WindowsDesktopService() => _instance;
-
-  static const _popoverSize = Size(360, 520);
 
   final _navigationStreamController = StreamController<String>.broadcast();
 
@@ -46,52 +43,41 @@ class WindowsDesktopService implements IDesktopPlatformService {
   ProjectTaskState? _projectTaskState;
   StreamSubscription<TimeTrackerBlocState>? _blocSubscription;
 
-  MiniTrackerCubit? _followerCubit;
-
-  String? _ownWindowId;
-  String? _mainWindowId;
-  bool _isPopover = false;
-
   final _settingsRepository = SqliteSettingsRepository();
   HotkeyService? _hotkeyService;
   ReminderService? _reminderService;
 
-  late final ManagedPopoverWindow _miniPanelWindow = ManagedPopoverWindow(
-    role: 'miniPanel',
-    computeFrame: _computeFrameNearTray,
-    getMainWindowId: () => _ownWindowId,
-    alwaysOnTop: true,
+  /// Prevents concurrent executions of [acceptCurrentComment].
+  bool _acceptInFlight = false;
+
+  late final NativeMiniPanel _nativePanel = NativeMiniPanel(
+    onStop: () => _handleFollowerAction(
+      TimerAction(type: TimerActionType.stop),
+    ),
+    onStart: (entry) => _handleFollowerAction(
+      TimerAction(
+        type: TimerActionType.start,
+        projectId: entry.projectId,
+        taskId: entry.taskId,
+        comment: entry.comment,
+      ),
+    ),
+    onSwitchActivity: () async {
+      _nativePanel.hide();
+      await showActivityPrompt();
+      _nativeActivityWindow.activate();
+      _reminderService?.cancelAutoDismiss();
+    },
+    onOpenMainApp: () {
+      _nativePanel.hide();
+      WindowsTrayService().restoreWindow();
+    },
   );
 
   late final NativeActivityWindow _nativeActivityWindow = NativeActivityWindow(
     onAccept: _onActivityAccept,
     onDismiss: _onActivityDismiss,
   );
-
-  Timer? _prewarmWatchdog;
-  static const _prewarmCheckInterval = Duration(seconds: 1);
-
-  /// Debounces rapid back-to-back BLoC emissions (e.g. stop+start restart
-  /// sequence) into a single broadcast so the mini panel Flutter engine does
-  /// not receive two render triggers in quick succession. Two rapid renders on
-  /// a cold EGL surface trigger flutter/flutter#155685 ACCESS_VIOLATION.
-  Timer? _broadcastDebounce;
-  static const _broadcastDebounceDelay = Duration(milliseconds: 80);
-
-  /// Prevents concurrent `_broadcastSnapshotTo` calls from the async BLoC
-  /// stream listener. The latest state that arrives while a broadcast is
-  /// already in-flight is buffered and sent once the in-flight call completes.
-  bool _broadcastInFlight = false;
-  TimeTrackerBlocState? _pendingBroadcast;
-
-  /// Prevents concurrent executions of [acceptCurrentComment]. The global
-  /// hotkey can fire multiple times in rapid succession; each one would
-  /// otherwise start a new accept cycle while the first is still running.
-  bool _acceptInFlight = false;
-
-  /// Exposed for unit tests only.
-  @visibleForTesting
-  String? get ownWindowIdForTesting => _ownWindowId;
 
   // ── IDesktopPlatformService ───────────────────────────────────────────────
 
@@ -115,20 +101,13 @@ class WindowsDesktopService implements IDesktopPlatformService {
     );
 
     _blocSubscription = bloc.stream.listen((state) {
-      _broadcastSnapshotIfReady(state);
+      _nativePanel.update(_buildDisplayState(state));
     });
 
     projectTaskState.addListener(() {
       if (_leaderBloc != null) {
-        _broadcastSnapshotIfReady(_leaderBloc!.state);
+        _nativePanel.update(_buildDisplayState(_leaderBloc!.state));
       }
-    });
-
-    final ownController = await WindowController.fromCurrentEngine();
-    _ownWindowId = ownController.windowId;
-    await ownController.setWindowMethodHandler((call) async {
-      await _handleIncomingIpcMessage(call.method, call.arguments);
-      return null;
     });
 
     _hotkeyService = HotkeyService(
@@ -157,53 +136,32 @@ class WindowsDesktopService implements IDesktopPlatformService {
       GetIt.I.unregister<ReminderService>();
     }
     GetIt.I.registerSingleton<ReminderService>(_reminderService!);
-
-    // Pre-warm the mini panel engine so the first open is instant.
-    await _miniPanelWindow.ensureExists();
-    _startPrewarmWatchdog();
   }
 
+  /// No-op on Windows - there is no secondary Flutter engine.
   @override
-  Future<void> initFollower(MiniTrackerCubit cubit) async {
-    _isPopover = true;
-    _followerCubit = cubit;
-
-    if (_ownWindowId != null) {
-      await WindowController.fromWindowId(_ownWindowId!).setWindowMethodHandler((call) async {
-        await _handleIncomingIpcMessage(call.method, call.arguments);
-        return null;
-      });
-    }
-
-    if (_mainWindowId != null) {
-      try {
-        await WindowController.fromWindowId(_mainWindowId!).invokeMethod(
-          'miniReady',
-          {'fromWindowId': _ownWindowId},
-        );
-      } catch (e) {
-        debugPrint('WindowsDesktopService: handshake miniReady failed - $e');
-      }
-    }
-  }
+  Future<void> initFollower(MiniTrackerCubit cubit) async {}
 
   @override
   Future<void> togglePopover() async {
-    await _miniPanelWindow.reconcile();
-    if (_miniPanelWindow.isVisible) {
-      await hidePopover();
+    if (_nativePanel.isVisible) {
+      _nativePanel.hide();
     } else {
-      await showPopover();
+      final (ax, ay) = await _trayAnchorPoint();
+      _nativePanel.show(ax, ay);
     }
   }
 
   @override
-  Future<void> showPopover() => _miniPanelWindow.show();
+  Future<void> showPopover() async {
+    final (ax, ay) = await _trayAnchorPoint();
+    _nativePanel.show(ax, ay);
+  }
 
-  /// Shows the activity comment prompt - topmost, but without taking OS
-  /// keyboard focus unless [source] is [ActivityPromptSource.manual] and the
-  /// caller explicitly calls [toggleActivityPrompt] which then calls
-  /// [NativeActivityWindow.activate]. A no-op if nothing is currently
+  @override
+  Future<void> hidePopover() async => _nativePanel.hide();
+
+  /// Shows the activity comment prompt. A no-op if nothing is currently
   /// being tracked.
   Future<void> showActivityPrompt({
     ActivityPromptSource source = ActivityPromptSource.manual,
@@ -224,7 +182,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   /// Toggle hotkey target - three states:
-  /// - hidden -> show and grab OS focus (user just asked for it);
+  /// - hidden -> show and grab OS focus;
   /// - visible but not focused (reminder put it there) -> grab focus and
   ///   cancel the auto-dismiss countdown;
   /// - visible and already focused -> close it.
@@ -242,16 +200,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
       _nativeActivityWindow.hide();
     }
   }
-
-  void _startPrewarmWatchdog() {
-    _prewarmWatchdog?.cancel();
-    _prewarmWatchdog = Timer.periodic(_prewarmCheckInterval, (_) async {
-      await _miniPanelWindow.checkAndRewarm();
-    });
-  }
-
-  @override
-  Future<void> hidePopover() => _miniPanelWindow.hide();
 
   /// Reads the current comment text from the native EDIT control, hides the
   /// window, then restarts the timer if the comment changed.
@@ -285,9 +233,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _nativeActivityWindow.hide();
   }
 
-  /// Auto-dismiss path: commits any unsaved edit (unlike [dismissCurrentComment]
-  /// which discards), matching the intent of the old [MiniPanelCommand.
-  /// autoDismissComment] behavior.
+  /// Auto-dismiss path: commits any unsaved edit.
   Future<void> autoDismissCurrentComment() async {
     final currentEntry = _leaderBloc?.state.activeEntryOrNull;
     final currentComment = currentEntry?.comment ?? '';
@@ -323,176 +269,41 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
   }
 
-  // Called by [NativeActivityWindow.onDismiss] - window already hidden.
   void _onActivityDismiss() {
     _reminderService?.cancelAutoDismiss();
   }
 
-  void _invokeMain(String method, [dynamic arguments]) {
-    if (_mainWindowId == null) return;
-    WindowController.fromWindowId(_mainWindowId!).invokeMethod(method, arguments);
-  }
-
+  /// No-op on Windows - everything is in-process; the mini panel callbacks
+  /// call [_handleFollowerAction] directly.
   @override
-  void openMainWindowFromTray({String? route}) {
-    if (!_isPopover) return;
-    try {
-      _invokeMain('openMainWindow', {'route': route});
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to open main window - $e');
-    }
-  }
+  void openMainWindowFromTray({String? route}) {}
 
+  /// No-op on Windows - the mini panel's [NativeMiniPanel.onStart] /
+  /// [onStop] callbacks call [_handleFollowerAction] directly.
   @override
-  void dispatchAction(covariant dynamic action) {
-    if (!_isPopover || action is! TimerAction) return;
-    try {
-      _invokeMain('dispatchAction', action.toJson());
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to dispatch action - $e');
-    }
-  }
+  void dispatchAction(covariant dynamic action) {}
 
+  /// No-op on Windows - [NativeMiniPanel.onSwitchActivity] calls
+  /// [toggleActivityPrompt] directly.
   @override
-  void requestActivityPrompt() {
-    if (!_isPopover) return;
-    try {
-      _invokeMain('requestActivityPrompt', null);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to request activity prompt - $e');
-    }
-  }
+  void requestActivityPrompt() {}
 
+  /// Always returns `'main'` - there is no secondary Flutter engine on Windows.
   @override
-  Future<String> resolveStartupRole(List<String> args) async {
-    if (args.firstOrNull == 'multi_window' && args.length >= 2) {
-      _ownWindowId = args[1];
-      final payload = _parseFollowerPayload(args.length >= 3 ? args[2] : '{}');
-      _mainWindowId = payload['mainWindowId'] as String?;
-      return 'tray';
-    }
-    return 'main';
-  }
-
-  Map<String, dynamic> _parseFollowerPayload(String raw) {
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to parse follower payload - $e');
-      return {};
-    }
-  }
+  Future<String> resolveStartupRole(List<String> args) async => 'main';
 
   @override
   void dispose() {
-    _prewarmWatchdog?.cancel();
-    _broadcastDebounce?.cancel();
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();
+    _nativePanel.dispose();
     _nativeActivityWindow.dispose();
     WindowsTrayService().dispose();
     _navigationStreamController.close();
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
-
-  /// `screen_retriever` queries the actual display directly, so popovers
-  /// center/clamp against the real screen regardless of the main window size.
-  Future<Size> _screenSize() async {
-    try {
-      final display = await screenRetriever.getPrimaryDisplay();
-      return display.size;
-    } catch (e) {
-      debugPrint('WindowsDesktopService: getPrimaryDisplay failed, falling back to view size - $e');
-      final view = PlatformDispatcher.instance.views.first;
-      return view.physicalSize / view.devicePixelRatio;
-    }
-  }
-
-  Future<Rect> _computeFrameNearTray() async {
-    final rawBounds = await trayManager.getBounds();
-    final screenSize = await _screenSize();
-    final frame = computePopoverFrame(
-      trayBounds: _sanitizeTrayBounds(rawBounds, screenSize),
-      popoverSize: _popoverSize,
-    );
-    return clampFrameToScreen(frame, screenSize);
-  }
-
-  Rect _sanitizeTrayBounds(Rect? rawBounds, Size screenSize) {
-    if (rawBounds != null && rawBounds.width > 1 && rawBounds.height > 1) {
-      return rawBounds;
-    }
-    return _fixedTrayAnchor(screenSize);
-  }
-
-  Rect _fixedTrayAnchor(Size screenSize) {
-    return Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
-  }
-
-  Future<Rect> _computeActivityPromptFrame() async {
-    final screenSize = await _screenSize();
-    final frame = computeActivityPromptFrame(
-      screenSize: screenSize,
-      promptSize: NativeActivityWindow.windowSize,
-    );
-    return clampFrameToScreen(frame, screenSize);
-  }
-
-  Future<void> _handleIncomingIpcMessage(
-    String? method,
-    dynamic arguments,
-  ) async {
-    try {
-      switch (method) {
-        case 'miniReady':
-          final fromWindowId = arguments is Map ? arguments['fromWindowId'] as String? : null;
-          if (_miniPanelWindow.windowId == fromWindowId) {
-            _miniPanelWindow.followerReady = true;
-            if (_leaderBloc != null) {
-              await _broadcastSnapshotTo(_miniPanelWindow, _leaderBloc!.state);
-            }
-          }
-
-        case 'openMainWindow':
-          await WindowsTrayService().restoreWindow();
-          if (arguments is Map) {
-            final route = arguments['route'] as String?;
-            if (route != null) {
-              _navigationStreamController.add(route);
-            }
-          }
-
-        case 'requestActivityPrompt':
-          await toggleActivityPrompt();
-
-        case 'miniClosed':
-          final fromWindowIdClosed = arguments is Map ? arguments['fromWindowId'] as String? : null;
-          if (_miniPanelWindow.windowId == fromWindowIdClosed) {
-            _miniPanelWindow.followerReady = false;
-          }
-
-        case 'dispatchAction':
-          if (arguments != null) {
-            final actionMap = Map<String, dynamic>.from(arguments as Map);
-            final action = TimerAction.fromJson(actionMap);
-            _handleFollowerAction(action);
-          }
-
-        case 'broadcastSnapshot':
-          if (arguments != null) {
-            final snapshotMap = Map<String, dynamic>.from(
-              jsonDecode(arguments as String),
-            );
-            final snapshot = TimerSnapshot.fromJson(snapshotMap);
-            _followerCubit?.updateFromSnapshot(snapshot);
-          }
-      }
-    } catch (e) {
-      debugPrint('WindowsDesktopService: IPC message handling failed - $e');
-    }
-  }
 
   void _handleFollowerAction(TimerAction action) {
     if (_leaderBloc == null) return;
@@ -501,11 +312,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
     if (action.type == TimerActionType.start) {
       if (isCurrentlyRunning) {
-        // flutter_bloc processes different event types concurrently, so
-        // adding TimeTrackerStarted immediately would race against the
-        // in-flight TimeTrackerStopped handler and see isRunning=true,
-        // returning as a no-op. Instead, wait for the bloc to emit a
-        // non-running state before dispatching the start.
         _leaderBloc!.add(TimeTrackerStopped());
         _leaderBloc!.stream
             .firstWhere((s) => !s.isRunning)
@@ -537,53 +343,131 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
   }
 
-  void _broadcastSnapshotIfReady(TimeTrackerBlocState state) {
-    _pendingBroadcast = state;
-    _broadcastDebounce?.cancel();
-    _broadcastDebounce = Timer(_broadcastDebounceDelay, _flushBroadcast);
-  }
+  /// Builds a [MiniPanelDisplayState] from the current BLoC state and the
+  /// project/task catalogue. Badge colours are computed here (on the Dart/
+  /// Flutter side) so the GDI painter needs no Flutter imports.
+  MiniPanelDisplayState _buildDisplayState(TimeTrackerBlocState state) {
+    final activeEntry = state.activeEntryOrNull;
 
-  Future<void> _flushBroadcast() async {
-    if (_broadcastInFlight) return;
-    _broadcastInFlight = true;
-    try {
-      while (_pendingBroadcast != null) {
-        final toSend = _pendingBroadcast!;
-        _pendingBroadcast = null;
-        if (_miniPanelWindow.followerReady && _miniPanelWindow.windowId != null) {
-          await _broadcastSnapshotTo(_miniPanelWindow, toSend);
-        }
-      }
-    } finally {
-      _broadcastInFlight = false;
+    String? activeTitle;
+    String? activeSubtitle;
+    if (activeEntry != null) {
+      final task = _projectTaskState?.tasks
+          .firstWhereOrNull((t) => t.id == activeEntry.taskId);
+      final project = _projectTaskState?.projects
+          .firstWhereOrNull((p) => p.id == activeEntry.projectId);
+      activeTitle = (activeEntry.comment?.isNotEmpty == true)
+          ? activeEntry.comment
+          : (task?.title ?? project?.name ?? 'Untitled');
+      activeSubtitle = project?.name;
     }
-  }
 
-  Future<void> _broadcastSnapshotTo(
-    ManagedPopoverWindow window,
-    TimeTrackerBlocState state,
-  ) async {
-    final snapshot = TimerSnapshot(
+    // Deduplicated recent entries, newest-first, skipping the active one.
+    final seen = <String>{};
+    final recentEntries = <MiniPanelEntry>[];
+
+    for (final entry in state.allEntries) {
+      if (entry.id == activeEntry?.id) continue;
+      final key =
+          '${entry.projectId}|${entry.taskId}|${entry.comment ?? ''}';
+      if (!seen.add(key)) continue;
+      if (recentEntries.length >= MiniPanelMetrics.maxEntries) break;
+
+      final task = _projectTaskState?.tasks
+          .firstWhereOrNull((t) => t.id == entry.taskId);
+      final project = _projectTaskState?.projects
+          .firstWhereOrNull((p) => p.id == entry.projectId);
+
+      final title = (entry.comment?.isNotEmpty == true)
+          ? entry.comment!
+          : (task?.title ?? project?.name ?? 'Untitled');
+
+      final idForColor = entry.taskId ?? entry.projectId ?? entry.id;
+      final (bgColor, fgColor) = BadgeUtils.getBadgeColor(idForColor);
+      final initials = task != null
+          ? BadgeUtils.getTaskInitials(task.title, project?.name ?? '')
+          : (project != null
+              ? BadgeUtils.getProjectInitials(project.name)
+              : '--');
+
+      recentEntries.add(MiniPanelEntry(
+        id: entry.id,
+        title: title,
+        subtitle: project?.name,
+        projectId: entry.projectId,
+        taskId: entry.taskId,
+        comment: entry.comment,
+        badgeBg: _toColorRef(bgColor),
+        badgeFg: _toColorRef(fgColor),
+        badgeText: initials,
+      ));
+    }
+
+    return MiniPanelDisplayState(
       isRunning: state.isRunning,
-      activeEntry: state.activeEntryOrNull,
-      entries: state.allEntries,
-      tasks: _projectTaskState?.tasks ?? [],
-      projects: _projectTaskState?.projects ?? [],
-      timestamp: DateTime.now().millisecondsSinceEpoch,
+      activeTitle: activeTitle,
+      activeSubtitle: activeSubtitle,
+      activeComment: activeEntry?.comment,
+      timerStartAt: activeEntry?.startAt,
+      entries: recentEntries,
+      statusLine: 'Worklog Studio',
     );
+  }
 
+  /// Converts a Flutter [Color] to a Win32 COLORREF (0x00BBGGRR).
+  static int _toColorRef(Color c) {
+    final r = (c.r * 255.0).round().clamp(0, 255);
+    final g = (c.g * 255.0).round().clamp(0, 255);
+    final b = (c.b * 255.0).round().clamp(0, 255);
+    return r | (g << 8) | (b << 16);
+  }
+
+  Future<Size> _screenSize() async {
     try {
-      final jsonStr = jsonEncode(snapshot.toJson());
-      await WindowController.fromWindowId(window.windowId!).invokeMethod('broadcastSnapshot', jsonStr);
+      final display = await screenRetriever.getPrimaryDisplay();
+      return display.size;
     } catch (e) {
-      debugPrint('WindowsDesktopService: failed to broadcast snapshot to ${window.role} - $e');
+      debugPrint(
+          'WindowsDesktopService: getPrimaryDisplay failed, falling back - $e');
+      final view = PlatformDispatcher.instance.views.first;
+      return view.physicalSize / view.devicePixelRatio;
     }
+  }
+
+  Future<(int, int)> _trayAnchorPoint() async {
+    final rawBounds = await trayManager.getBounds();
+    final screenSize = await _screenSize();
+    final bounds = _sanitizeTrayBounds(rawBounds, screenSize);
+    return (
+      (bounds.left + bounds.width / 2).round(),
+      bounds.top.round(),
+    );
+  }
+
+  Rect _sanitizeTrayBounds(Rect? rawBounds, Size screenSize) {
+    if (rawBounds != null && rawBounds.width > 1 && rawBounds.height > 1) {
+      return rawBounds;
+    }
+    return _fixedTrayAnchor(screenSize);
+  }
+
+  Rect _fixedTrayAnchor(Size screenSize) =>
+      Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
+
+  Future<Rect> _computeActivityPromptFrame() async {
+    final screenSize = await _screenSize();
+    final frame = computeActivityPromptFrame(
+      screenSize: screenSize,
+      promptSize: NativeActivityWindow.windowSize,
+    );
+    return clampFrameToScreen(frame, screenSize);
   }
 
   // ── Test seams ─────────────────────────────────────────────────────────────
 
   @visibleForTesting
-  Rect fixedTrayAnchorForTesting(Size screenSize) => _fixedTrayAnchor(screenSize);
+  Rect fixedTrayAnchorForTesting(Size screenSize) =>
+      _fixedTrayAnchor(screenSize);
 
   @visibleForTesting
   Rect sanitizeTrayBoundsForTesting(Rect? rawBounds, Size screenSize) =>
@@ -592,17 +476,17 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @visibleForTesting
   void setLeaderBlocForTesting(TimeTrackerBloc bloc) => _leaderBloc = bloc;
 
-  @visibleForTesting
-  void setFollowerCubitForTesting(MiniTrackerCubit cubit) =>
-      _followerCubit = cubit;
-
-  @visibleForTesting
-  ManagedPopoverWindow get miniPanelWindowForTesting => _miniPanelWindow;
-
+  /// Simulates an incoming action from the mini panel (for testing
+  /// [_handleFollowerAction] without a real Win32 window).
   @visibleForTesting
   Future<void> handleIncomingIpcMessageForTesting(
     String method,
     dynamic arguments,
-  ) =>
-      _handleIncomingIpcMessage(method, arguments);
+  ) async {
+    if (method == 'dispatchAction' && arguments != null) {
+      final action =
+          TimerAction.fromJson(Map<String, dynamic>.from(arguments as Map));
+      _handleFollowerAction(action);
+    }
+  }
 }

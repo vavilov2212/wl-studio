@@ -7,7 +7,7 @@ import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart'
 import '../helpers/test_fakes.dart';
 
 void main() {
-  group('WindowsDesktopService IPC message handling', () {
+  group('WindowsDesktopService action dispatch', () {
     late FakeClock clock;
     late FakeTimeEntryRepository repo;
     late TimeTrackerBloc bloc;
@@ -43,7 +43,8 @@ void main() {
       expect(bloc.state.activeEntryOrNull?.comment, 'hello');
     });
 
-    test('dispatchAction(start) while running stops old entry and starts new one', () async {
+    test('dispatchAction(start) while running stops old entry and starts new one',
+        () async {
       await service.handleIncomingIpcMessageForTesting('dispatchAction', {
         'type': 'start',
         'projectId': 'p1',
@@ -88,13 +89,12 @@ void main() {
         'type': 'stop',
       });
 
-      // No event was added, so the bloc should still be in its initial idle
-      // state - give the event loop a tick to prove no transition happened.
       await Future<void>.delayed(Duration.zero);
       expect(bloc.state.isRunning, isFalse);
     });
 
-    test('dispatchAction(updateComment) updates the running entry comment', () async {
+    test('dispatchAction(updateComment) updates the running entry comment',
+        () async {
       await service.handleIncomingIpcMessageForTesting('dispatchAction', {
         'type': 'start',
         'projectId': 'p1',
@@ -115,7 +115,8 @@ void main() {
       expect(bloc.state.isRunning, isTrue);
     });
 
-    test('dispatchAction(updateComment) is a no-op when nothing is running', () async {
+    test('dispatchAction(updateComment) is a no-op when nothing is running',
+        () async {
       await service.handleIncomingIpcMessageForTesting('dispatchAction', {
         'type': 'updateComment',
         'comment': 'ignored',
@@ -123,45 +124,6 @@ void main() {
 
       await Future<void>.delayed(Duration.zero);
       expect(bloc.state.isRunning, isFalse);
-    });
-  });
-
-  group('WindowsDesktopService leader-side window-aware routing', () {
-    late WindowsDesktopService leaderService;
-
-    setUp(() {
-      leaderService = WindowsDesktopService();
-      leaderService.miniPanelWindowForTesting.windowId = '101';
-      leaderService.miniPanelWindowForTesting.followerReady = false;
-    });
-
-    test('miniReady from the mini panel window marks it ready', () async {
-      await leaderService.handleIncomingIpcMessageForTesting(
-        'miniReady',
-        {'fromWindowId': '101'},
-      );
-
-      expect(leaderService.miniPanelWindowForTesting.followerReady, isTrue);
-    });
-
-    test('miniClosed from the mini panel clears its readiness', () async {
-      leaderService.miniPanelWindowForTesting.followerReady = true;
-
-      await leaderService.handleIncomingIpcMessageForTesting(
-        'miniClosed',
-        {'fromWindowId': '101'},
-      );
-
-      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
-    });
-
-    test('miniReady from an unknown window id is a harmless no-op', () async {
-      await leaderService.handleIncomingIpcMessageForTesting(
-        'miniReady',
-        {'fromWindowId': '999'},
-      );
-
-      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
     });
   });
 }

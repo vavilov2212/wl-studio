@@ -316,7 +316,7 @@ class NativeActivityWindow {
         0,
         editClass,
         editEmpty,
-        win32.WS_CHILD | win32.WS_VISIBLE | win32.WS_BORDER |
+        win32.WS_CHILD | win32.WS_VISIBLE |
             win32.ES_LEFT | win32.ES_AUTOHSCROLL,
         0, 0, 1, 1,
         _hwnd!,
