@@ -68,25 +68,14 @@ abstract interface class IDesktopPlatformService {
   /// No-op unless the current process is the macOS tray-popover follower.
   void dispatchAction(covariant dynamic action);
 
-  // ── Activity prompt (Windows popover follower only, this iteration) ──────
+  // ── Activity prompt ───────────────────────────────────────────────────────
 
   /// Ask the leader to open the dedicated activity prompt window.
   ///
-  /// Called from a follower/popover. Windows-only this iteration - no-op
-  /// on platforms without that window (macOS's equivalent is deferred to a
-  /// follow-up spec).
+  /// Called from a follower/popover (e.g. the mini panel's button). On
+  /// Windows the activity prompt is a native Win32 window owned by the leader
+  /// process, so only an IPC request is needed from the follower side.
   void requestActivityPrompt();
-
-  /// Ask the leader to accept/commit the activity prompt's current comment
-  /// edit and close it - the same effect as the global accept hotkey, but
-  /// triggered by a local in-window key (Enter) while the prompt has actual
-  /// OS keyboard focus, rather than a system-wide hotkey.
-  void requestAcceptComment();
-
-  /// Ask the leader to discard the activity prompt's current comment edit
-  /// and close it - the same effect as the global dismiss hotkey, but
-  /// triggered by a local in-window key (Escape).
-  void requestDismissComment();
 
   // ── Startup role detection ────────────────────────────────────────────────
 

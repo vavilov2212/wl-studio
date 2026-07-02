@@ -7,16 +7,18 @@ import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
 
+/// Commands sent from the leader to the mini panel follower's cubit so the
+/// mini panel widget can respond to hotkeys and IPC-triggered focus changes
+/// without requiring the widget to poll or use a separate channel.
 enum MiniPanelCommand {
   /// Seeds the comment field text and selection without requesting OS keyboard
-  /// focus - used when a passive trigger (the reminder timer) shows the
-  /// activity window. Text is ready so the user can start typing the moment
-  /// they explicitly bring the window into focus (toggle hotkey), but the
-  /// window must not steal focus from whatever the user is currently doing.
+  /// focus. Used when a passive trigger (e.g. a reminder timer) shows the
+  /// panel. Text is ready so the user can start typing the moment they
+  /// explicitly bring the window into focus.
   seedComment,
   /// Seeds the comment field text, select-all, AND requests Flutter/OS
-  /// keyboard focus - used when the user explicitly activates the window
-  /// via the toggle hotkey or the mini panel button.
+  /// keyboard focus - used when the user explicitly activates the panel
+  /// via the toggle hotkey or a button.
   focusComment,
   acceptComment,
   dismissComment,
@@ -63,28 +65,18 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
 
   final _commandController = StreamController<MiniPanelCommand>.broadcast();
-  final _activityPromptStatusController =
-      StreamController<ActivityPromptStatus>.broadcast();
 
+  /// Command stream consumed by [MiniPanel] to respond to leader-initiated
+  /// focus and commit events (e.g. hotkeys, IPC triggers).
   Stream<MiniPanelCommand> get commands => _commandController.stream;
-
-  /// How/why the activity prompt window was opened - see
-  /// `ActivityPromptPanel`, the only consumer of this stream.
-  Stream<ActivityPromptStatus> get activityPromptStatus =>
-      _activityPromptStatusController.stream;
 
   void emitCommand(MiniPanelCommand command) {
     _commandController.add(command);
   }
 
-  void emitActivityPromptStatus(ActivityPromptStatus status) {
-    _activityPromptStatusController.add(status);
-  }
-
   @override
   Future<void> close() {
     _commandController.close();
-    _activityPromptStatusController.close();
     return super.close();
   }
 
@@ -150,26 +142,10 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     );
   }
 
-  /// Opens the dedicated activity prompt window (see
-  /// `ActivityPromptPanel`) - a no-op when nothing is currently being
-  /// tracked, mirroring the leader-side guard in
-  /// `WindowsDesktopService.showActivityPrompt()`.
+  /// Asks the leader to open or toggle the native activity prompt window.
+  /// A no-op when nothing is currently being tracked.
   void requestActivityPrompt() {
     if (!state.isRunning) return;
     DesktopServiceRegistry.instance.requestActivityPrompt();
-  }
-
-  /// Asks the leader to accept the activity prompt's current edit and
-  /// close it - used by a local Enter keypress inside `ActivityPromptPanel`
-  /// itself (when the window already has OS keyboard focus), as opposed to
-  /// the global accept hotkey reaching the same leader-side method.
-  void requestAcceptComment() {
-    DesktopServiceRegistry.instance.requestAcceptComment();
-  }
-
-  /// Asks the leader to discard the activity prompt's current edit and
-  /// close it - the local-Escape counterpart to [requestAcceptComment].
-  void requestDismissComment() {
-    DesktopServiceRegistry.instance.requestDismissComment();
   }
 }

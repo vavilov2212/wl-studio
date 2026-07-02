@@ -88,9 +88,7 @@ Future<void> run(List<String> args) async {
     debugPrint('Successfully resolved engine role: $role');
     debugPrint('runApp starting with role: $role');
 
-    if (role == 'tray:activity') {
-      runApp(const ActivityPromptApp());
-    } else if (role == 'tray') {
+    if (role == 'tray') {
       runApp(const MiniApp());
     } else {
       runApp(const MainApp());

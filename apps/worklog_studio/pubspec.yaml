@@ -87,6 +87,8 @@ dependencies:
 
 dependency_overrides:
   uuid: ^4.5.2
+  desktop_multi_window:
+    path: ../../vendor/desktop_multi_window
 
 dev_dependencies:
   flutter_test:

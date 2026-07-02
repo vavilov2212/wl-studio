@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
-import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/core/services/desktop/no_op_desktop_service.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
@@ -11,8 +10,6 @@ class _RecordingDesktopService extends NoOpDesktopService {
 
   final List<dynamic> dispatched = [];
   int requestActivityPromptCalls = 0;
-  int requestAcceptCommentCalls = 0;
-  int requestDismissCommentCalls = 0;
 
   @override
   void dispatchAction(covariant dynamic action) {
@@ -22,16 +19,6 @@ class _RecordingDesktopService extends NoOpDesktopService {
   @override
   void requestActivityPrompt() {
     requestActivityPromptCalls++;
-  }
-
-  @override
-  void requestAcceptComment() {
-    requestAcceptCommentCalls++;
-  }
-
-  @override
-  void requestDismissComment() {
-    requestDismissCommentCalls++;
   }
 }
 
@@ -189,19 +176,4 @@ void main() {
     });
   });
 
-  group('MiniTrackerCubit.requestAcceptComment', () {
-    test('asks the desktop service to accept regardless of running state', () {
-      cubit.requestAcceptComment();
-
-      expect(desktopService.requestAcceptCommentCalls, 1);
-    });
-  });
-
-  group('MiniTrackerCubit.requestDismissComment', () {
-    test('asks the desktop service to dismiss regardless of running state', () {
-      cubit.requestDismissComment();
-
-      expect(desktopService.requestDismissCommentCalls, 1);
-    });
-  });
 }

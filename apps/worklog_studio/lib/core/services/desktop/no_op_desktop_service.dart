@@ -55,12 +55,6 @@ class NoOpDesktopService implements IDesktopPlatformService {
   void requestActivityPrompt() {}
 
   @override
-  void requestAcceptComment() {}
-
-  @override
-  void requestDismissComment() {}
-
-  @override
   Future<String> resolveStartupRole(List<String> args) async => 'main';
 
   @override

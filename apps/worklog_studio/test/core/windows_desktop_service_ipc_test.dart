@@ -1,11 +1,7 @@
 // ignore_for_file: depend_on_referenced_packages
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/windows_desktop_service.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
-import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
 import '../helpers/test_fakes.dart';
@@ -45,6 +41,29 @@ void main() {
       expect(bloc.state.activeEntryOrNull?.projectId, 'p1');
       expect(bloc.state.activeEntryOrNull?.taskId, 't1');
       expect(bloc.state.activeEntryOrNull?.comment, 'hello');
+    });
+
+    test('dispatchAction(start) while running stops old entry and starts new one', () async {
+      await service.handleIncomingIpcMessageForTesting('dispatchAction', {
+        'type': 'start',
+        'projectId': 'p1',
+        'taskId': 't1',
+        'comment': 'old',
+      });
+      await bloc.stream.firstWhere((s) => s.isRunning);
+
+      await service.handleIncomingIpcMessageForTesting('dispatchAction', {
+        'type': 'start',
+        'projectId': 'p1',
+        'taskId': 't1',
+        'comment': 'new',
+      });
+      await bloc.stream.firstWhere(
+        (s) => s.isRunning && s.activeEntryOrNull?.comment == 'new',
+      );
+
+      expect(bloc.state.isRunning, isTrue);
+      expect(bloc.state.activeEntryOrNull?.comment, 'new');
     });
 
     test('dispatchAction(stop) stops a running entry', () async {
@@ -107,118 +126,6 @@ void main() {
     });
   });
 
-  group('WindowsDesktopService follower-side command forwarding', () {
-    late WindowsDesktopService followerService;
-    late MiniTrackerCubit followerCubit;
-
-    setUp(() {
-      followerService = WindowsDesktopService();
-      followerCubit = MiniTrackerCubit();
-      followerService.setFollowerCubitForTesting(followerCubit);
-    });
-
-    tearDown(() async {
-      await followerCubit.close();
-    });
-
-    test('focusComment forwards to the follower cubit as a command', () async {
-      final received = <MiniPanelCommand>[];
-      final sub = followerCubit.commands.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting('focusComment', null);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, [MiniPanelCommand.focusComment]);
-      await sub.cancel();
-    });
-
-    test('acceptComment forwards to the follower cubit as a command', () async {
-      final received = <MiniPanelCommand>[];
-      final sub = followerCubit.commands.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting('acceptComment', null);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, [MiniPanelCommand.acceptComment]);
-      await sub.cancel();
-    });
-
-    test('dismissComment forwards to the follower cubit as a command', () async {
-      final received = <MiniPanelCommand>[];
-      final sub = followerCubit.commands.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting('dismissComment', null);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, [MiniPanelCommand.dismissComment]);
-      await sub.cancel();
-    });
-
-    test('autoDismissComment forwards to the follower cubit as a command', () async {
-      final received = <MiniPanelCommand>[];
-      final sub = followerCubit.commands.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting('autoDismissComment', null);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, [MiniPanelCommand.autoDismissComment]);
-      await sub.cancel();
-    });
-
-    test('seedComment forwards to the follower cubit as a seedComment command', () async {
-      // seedComment is sent for passive (reminder-triggered) shows: it seeds
-      // the text field without requesting OS keyboard focus, so the window
-      // appears on top without interrupting whatever the user is doing.
-      final received = <MiniPanelCommand>[];
-      final sub = followerCubit.commands.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting('seedComment', null);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, [MiniPanelCommand.seedComment]);
-      await sub.cancel();
-    });
-
-    test('activityPromptStatus forwards the parsed status to the follower cubit', () async {
-      final received = <ActivityPromptStatus>[];
-      final sub = followerCubit.activityPromptStatus.listen(received.add);
-      final autoDismissAt = DateTime(2025, 1, 1, 9, 0, 20);
-
-      await followerService.handleIncomingIpcMessageForTesting(
-        'activityPromptStatus',
-        jsonEncode(
-          ActivityPromptStatus(
-            source: ActivityPromptSource.reminder,
-            autoDismissAt: autoDismissAt,
-          ).toJson(),
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, hasLength(1));
-      expect(received.single.source, ActivityPromptSource.reminder);
-      expect(received.single.autoDismissAt, autoDismissAt);
-      await sub.cancel();
-    });
-
-    test('activityPromptStatus with no autoDismissAt parses as idle', () async {
-      final received = <ActivityPromptStatus>[];
-      final sub = followerCubit.activityPromptStatus.listen(received.add);
-
-      await followerService.handleIncomingIpcMessageForTesting(
-        'activityPromptStatus',
-        jsonEncode(
-          const ActivityPromptStatus(source: ActivityPromptSource.manual).toJson(),
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received.single.source, ActivityPromptSource.manual);
-      expect(received.single.autoDismissAt, isNull);
-      await sub.cancel();
-    });
-  });
-
   group('WindowsDesktopService leader-side window-aware routing', () {
     late WindowsDesktopService leaderService;
 
@@ -226,33 +133,19 @@ void main() {
       leaderService = WindowsDesktopService();
       leaderService.miniPanelWindowForTesting.windowId = '101';
       leaderService.miniPanelWindowForTesting.followerReady = false;
-      leaderService.activityWindowForTesting.windowId = '202';
-      leaderService.activityWindowForTesting.followerReady = false;
     });
 
-    test('miniReady from the mini panel window marks only that window ready', () async {
+    test('miniReady from the mini panel window marks it ready', () async {
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniReady',
         {'fromWindowId': '101'},
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isTrue);
-      expect(leaderService.activityWindowForTesting.followerReady, isFalse);
     });
 
-    test('miniReady from the activity window marks only that window ready', () async {
-      await leaderService.handleIncomingIpcMessageForTesting(
-        'miniReady',
-        {'fromWindowId': '202'},
-      );
-
-      expect(leaderService.activityWindowForTesting.followerReady, isTrue);
-      expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
-    });
-
-    test('miniClosed from a window clears only that window\'s readiness', () async {
+    test('miniClosed from the mini panel clears its readiness', () async {
       leaderService.miniPanelWindowForTesting.followerReady = true;
-      leaderService.activityWindowForTesting.followerReady = true;
 
       await leaderService.handleIncomingIpcMessageForTesting(
         'miniClosed',
@@ -260,7 +153,6 @@ void main() {
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
-      expect(leaderService.activityWindowForTesting.followerReady, isTrue);
     });
 
     test('miniReady from an unknown window id is a harmless no-op', () async {
@@ -270,7 +162,6 @@ void main() {
       );
 
       expect(leaderService.miniPanelWindowForTesting.followerReady, isFalse);
-      expect(leaderService.activityWindowForTesting.followerReady, isFalse);
     });
   });
 }

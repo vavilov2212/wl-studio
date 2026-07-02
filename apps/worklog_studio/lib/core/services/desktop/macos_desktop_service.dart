@@ -177,18 +177,6 @@ class MacOSDesktopService implements IDesktopPlatformService {
   }
 
   @override
-  void requestAcceptComment() {
-    // Deferred along with requestActivityPrompt - no separate activity
-    // prompt window exists on macOS yet for this to act on.
-  }
-
-  @override
-  void requestDismissComment() {
-    // Deferred along with requestActivityPrompt - no separate activity
-    // prompt window exists on macOS yet for this to act on.
-  }
-
-  @override
   Future<String> resolveStartupRole(List<String> args) async {
     try {
       final engineInfo = await _channel

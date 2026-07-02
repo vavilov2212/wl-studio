@@ -12,6 +12,7 @@ import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
 import 'package:worklog_studio/core/services/desktop/managed_popover_window.dart';
+import 'package:worklog_studio/core/services/desktop/native_activity_window.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
 import 'package:worklog_studio/core/services/reminder_service.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_settings_repository.dart';
@@ -24,12 +25,13 @@ import 'package:worklog_studio/state/project_task_state.dart';
 
 /// Windows implementation of [IDesktopPlatformService].
 ///
-/// Owns a secondary `desktop_multi_window` engine that hosts the mini
-/// tracker popover, mirroring the role [MacOSDesktopService] plays for its
-/// native NSPanel popover - but using the `desktop_multi_window` plugin's
-/// own inter-window channel instead of a hand-rolled native `MethodChannel`.
-///
-/// This file contains zero macOS-specific code.
+/// Owns:
+/// - A [ManagedPopoverWindow] for the mini-tracker popover (Flutter engine,
+///   [desktop_multi_window]).
+/// - A [NativeActivityWindow] for the activity comment prompt - a pure Win32
+///   HWND + EDIT control with no secondary Flutter engine, eliminating the
+///   EGL context management crashes (flutter/flutter#155685) that plagued the
+///   original [desktop_multi_window]-based approach.
 class WindowsDesktopService implements IDesktopPlatformService {
   WindowsDesktopService._();
 
@@ -61,37 +63,31 @@ class WindowsDesktopService implements IDesktopPlatformService {
     alwaysOnTop: true,
   );
 
-  late final ManagedPopoverWindow _activityWindow = ManagedPopoverWindow(
-    role: 'activity',
-    computeFrame: _computeActivityPromptFrame,
-    getMainWindowId: () => _ownWindowId,
-    frameless: true,
-    alwaysOnTop: true,
+  late final NativeActivityWindow _nativeActivityWindow = NativeActivityWindow(
+    onAccept: _onActivityAccept,
+    onDismiss: _onActivityDismiss,
   );
-
-  ManagedPopoverWindow? _windowForId(String? windowId) {
-    if (windowId == null) return null;
-    if (_miniPanelWindow.windowId == windowId) return _miniPanelWindow;
-    if (_activityWindow.windowId == windowId) return _activityWindow;
-    return null;
-  }
-
-  ActivityPromptStatus? _pendingActivityStatus;
-  ActivityPromptSource _lastActivityPromptSource = ActivityPromptSource.manual;
 
   Timer? _prewarmWatchdog;
   static const _prewarmCheckInterval = Duration(seconds: 1);
 
+  /// Debounces rapid back-to-back BLoC emissions (e.g. stop+start restart
+  /// sequence) into a single broadcast so the mini panel Flutter engine does
+  /// not receive two render triggers in quick succession. Two rapid renders on
+  /// a cold EGL surface trigger flutter/flutter#155685 ACCESS_VIOLATION.
+  Timer? _broadcastDebounce;
+  static const _broadcastDebounceDelay = Duration(milliseconds: 80);
+
   /// Prevents concurrent `_broadcastSnapshotTo` calls from the async BLoC
-  /// stream listener. Without this guard, rapid bloc state changes (e.g. stop
-  /// then start 200 ms apart from `restartWithComment`) can queue multiple
-  /// concurrent `DesktopMultiWindow.invokeMethod` calls to the same window,
-  /// which the native plugin is not required to serialize and which has been
-  /// observed to crash the host process. The latest state that arrives while a
-  /// broadcast is already in-flight is buffered and sent as soon as the
-  /// in-flight call completes.
+  /// stream listener. The latest state that arrives while a broadcast is
+  /// already in-flight is buffered and sent once the in-flight call completes.
   bool _broadcastInFlight = false;
   TimeTrackerBlocState? _pendingBroadcast;
+
+  /// Prevents concurrent executions of [acceptCurrentComment]. The global
+  /// hotkey can fire multiple times in rapid succession; each one would
+  /// otherwise start a new accept cycle while the first is still running.
+  bool _acceptInFlight = false;
 
   /// Exposed for unit tests only.
   @visibleForTesting
@@ -152,7 +148,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _reminderService = ReminderService(
       bloc: bloc,
       getSetting: _settingsRepository.getString,
-      isPopoverOpen: () => _activityWindow.isVisible,
+      isPopoverOpen: () => _nativeActivityWindow.isVisible,
       onFire: () => showActivityPrompt(source: ActivityPromptSource.reminder),
       onAutoDismiss: autoDismissCurrentComment,
     );
@@ -162,11 +158,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
     GetIt.I.registerSingleton<ReminderService>(_reminderService!);
 
-    // Boot the popover engine now, hidden, so the *first* open is instant
-    // instead of paying the multi-second Firebase/DB cold-boot cost the
-    // moment the user actually asks for it.
+    // Pre-warm the mini panel engine so the first open is instant.
     await _miniPanelWindow.ensureExists();
-    await _activityWindow.ensureExists();
     _startPrewarmWatchdog();
   }
 
@@ -207,76 +200,46 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   Future<void> showPopover() => _miniPanelWindow.show();
 
-  /// Shows the activity prompt - topmost, but without taking OS keyboard
-  /// focus. The comment field is seeded and select-all-ready (see
-  /// [requestFocusComment]) so that whenever the user does explicitly bring
-  /// it into focus (the toggle hotkey, via [toggleActivityPrompt]), typing
-  /// immediately replaces the existing text - but a passive trigger like
-  /// the reminder never steals input focus from whatever the user is
-  /// currently doing. A no-op if nothing is currently being tracked - there
-  /// is nothing to comment on.
-  ///
-  /// [source] is forwarded to the follower (see [ActivityPromptStatus]) so
-  /// it can tell the user how/why it was opened - [ActivityPromptSource.
-  /// reminder] also schedules a visible auto-dismiss countdown matching
-  /// [ReminderService.autoDismissDelay].
+  /// Shows the activity comment prompt - topmost, but without taking OS
+  /// keyboard focus unless [source] is [ActivityPromptSource.manual] and the
+  /// caller explicitly calls [toggleActivityPrompt] which then calls
+  /// [NativeActivityWindow.activate]. A no-op if nothing is currently
+  /// being tracked.
   Future<void> showActivityPrompt({
     ActivityPromptSource source = ActivityPromptSource.manual,
   }) async {
     if (_leaderBloc?.state.isRunning != true) return;
-    await _activityWindow.show(activate: false);
-    await requestSeedComment();
-    _lastActivityPromptSource = source;
-    await _sendActivityPromptStatus(
-      ActivityPromptStatus(
-        source: source,
-        autoDismissAt: source == ActivityPromptSource.reminder
-            ? DateTime.now().add(ReminderService.autoDismissDelay)
-            : null,
-      ),
+    final currentEntry = _leaderBloc?.state.activeEntryOrNull;
+    final currentComment = currentEntry?.comment ?? '';
+    final frame = await _computeActivityPromptFrame();
+    final autoDismissAt = source == ActivityPromptSource.reminder
+        ? DateTime.now().add(ReminderService.autoDismissDelay)
+        : null;
+    _nativeActivityWindow.show(
+      currentComment: currentComment,
+      frame: frame,
+      activate: false,
+      autoDismissAt: autoDismissAt,
     );
   }
 
-  /// The target of the toggle hotkey - three states, not just two, since
-  /// [showActivityPrompt] (used by the reminder too) can leave the window
-  /// visible without OS focus:
-  /// - hidden -> show it and explicitly grab OS focus (the user just asked
-  ///   for it via a real hotkey press, so [ManagedPopoverWindow.activate]
-  ///   is safe here);
-  /// - visible but not focused (e.g. the reminder put it there) -> just
-  ///   grab focus, don't close it. This counts as acknowledging a
-  ///   reminder-opened prompt, so its 20s auto-dismiss is cancelled - once
-  ///   the user has actually looked at it, it should stay open until they
-  ///   explicitly close it, not vanish out from under them mid-edit;
-  /// - visible and already focused -> close it, mirroring the mini panel's
-  ///   old toggle-close behavior (nothing unsaved is ever lost either way).
+  /// Toggle hotkey target - three states:
+  /// - hidden -> show and grab OS focus (user just asked for it);
+  /// - visible but not focused (reminder put it there) -> grab focus and
+  ///   cancel the auto-dismiss countdown;
+  /// - visible and already focused -> close it.
   Future<void> toggleActivityPrompt() async {
-    await _activityWindow.reconcile();
-    if (!_activityWindow.isVisible) {
+    if (!_nativeActivityWindow.isVisible) {
       await showActivityPrompt();
-      _activityWindow.activate();
-      await requestFocusComment();
-    } else if (!_activityWindow.isForeground) {
-      _activityWindow.activate();
+      _nativeActivityWindow.activate();
       _reminderService?.cancelAutoDismiss();
-      await requestFocusComment();
-      await _sendActivityPromptStatus(
-        ActivityPromptStatus(source: _lastActivityPromptSource, autoDismissAt: null),
-      );
+    } else if (!_nativeActivityWindow.isForeground) {
+      _nativeActivityWindow.activate();
+      _reminderService?.cancelAutoDismiss();
+      _nativeActivityWindow.cancelCountdown();
     } else {
       _reminderService?.cancelAutoDismiss();
-      await _activityWindow.hide();
-    }
-  }
-
-  /// Sends [status] to the activity follower if it's ready, or defers it
-  /// for replay once `miniReady` arrives - see [_handleIncomingIpcMessage]'s
-  /// `'miniReady'` case. Mirrors [_pendingFocusComment]'s deferral pattern.
-  Future<void> _sendActivityPromptStatus(ActivityPromptStatus status) async {
-    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
-      await _invokeWindow(_activityWindow, 'activityPromptStatus', jsonEncode(status.toJson()));
-    } else {
-      _pendingActivityStatus = status;
+      _nativeActivityWindow.hide();
     }
   }
 
@@ -284,84 +247,85 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _prewarmWatchdog?.cancel();
     _prewarmWatchdog = Timer.periodic(_prewarmCheckInterval, (_) async {
       await _miniPanelWindow.checkAndRewarm();
-      await _activityWindow.checkAndRewarm();
     });
   }
 
   @override
   Future<void> hidePopover() => _miniPanelWindow.hide();
 
-  bool _pendingSeedComment = false;
-  bool _pendingFocusComment = false;
-
-  /// Asks the activity-prompt follower to seed its comment field text and
-  /// select-all, WITHOUT requesting OS keyboard focus. Used for passive
-  /// (reminder-triggered) shows where the window must not interrupt the
-  /// user's current task - text is ready so that the first keystroke after
-  /// the user explicitly brings the window into focus replaces, not
-  /// inserts into, the existing comment. Defers if the follower isn't ready
-  /// yet; [_pendingFocusComment] takes priority over this in the replay
-  /// (if the user presses the toggle hotkey before `miniReady` arrives).
-  Future<void> requestSeedComment() async {
-    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
-      await _invokeWindow(_activityWindow, 'seedComment', null);
-    } else {
-      _pendingSeedComment = true;
-    }
-  }
-
-  /// Asks the activity-prompt follower to put its comment field into edit
-  /// mode and request keyboard focus. If it isn't ready yet (e.g. it was
-  /// just created and hasn't sent `miniReady`), the request is deferred
-  /// and replayed once `miniReady` arrives - see
-  /// [_handleIncomingIpcMessage]'s `'miniReady'` case.
-  /// Takes priority over a pending [requestSeedComment] in the replay.
-  Future<void> requestFocusComment() async {
-    if (_activityWindow.followerReady && _activityWindow.windowId != null) {
-      await _invokeWindow(_activityWindow, 'focusComment', null);
-    } else {
-      _pendingFocusComment = true;
-    }
-  }
-
-  /// Tells the activity-prompt follower to commit its current comment
-  /// edit (if any), then hides the window. The actual
-  /// `TimerAction.updateComment` dispatch (if the comment changed) arrives
-  /// asynchronously afterward over the existing `dispatchAction` channel -
-  /// the window's engine stays alive while hidden, so this is safe even
-  /// though we don't wait for it here.
+  /// Reads the current comment text from the native EDIT control, hides the
+  /// window, then restarts the timer if the comment changed.
   Future<void> acceptCurrentComment() async {
+    if (_acceptInFlight) return;
+    _acceptInFlight = true;
     _reminderService?.cancelAutoDismiss();
-    await _invokeWindow(_activityWindow, 'acceptComment', null);
-    await _activityWindow.hide();
+    try {
+      final currentEntry = _leaderBloc?.state.activeEntryOrNull;
+      final currentComment = currentEntry?.comment ?? '';
+      final newComment = _nativeActivityWindow.getText();
+      _nativeActivityWindow.hide();
+      if (newComment != currentComment) {
+        _handleFollowerAction(
+          TimerAction(
+            type: TimerActionType.start,
+            projectId: currentEntry?.projectId,
+            taskId: currentEntry?.taskId,
+            comment: newComment,
+          ),
+        );
+      }
+    } finally {
+      _acceptInFlight = false;
+    }
   }
 
-  /// Tells the activity-prompt follower to discard its current comment
-  /// edit (reverting the field to the last persisted value), then hides
-  /// the window.
+  /// Hides the activity prompt, discarding any unsaved edit.
   Future<void> dismissCurrentComment() async {
     _reminderService?.cancelAutoDismiss();
-    await _invokeWindow(_activityWindow, 'dismissComment', null);
-    await _activityWindow.hide();
+    _nativeActivityWindow.hide();
   }
 
-  /// Tells the activity-prompt follower the reminder timed out
-  /// automatically (as opposed to a user-initiated dismiss). Unlike
-  /// [dismissCurrentComment], this preserves any unsaved comment edit by
-  /// committing it instead of discarding it - see
-  /// [MiniPanelCommand.autoDismissComment].
+  /// Auto-dismiss path: commits any unsaved edit (unlike [dismissCurrentComment]
+  /// which discards), matching the intent of the old [MiniPanelCommand.
+  /// autoDismissComment] behavior.
   Future<void> autoDismissCurrentComment() async {
-    await _invokeWindow(_activityWindow, 'autoDismissComment', null);
-    await _activityWindow.hide();
+    final currentEntry = _leaderBloc?.state.activeEntryOrNull;
+    final currentComment = currentEntry?.comment ?? '';
+    final newComment = _nativeActivityWindow.getText();
+    _nativeActivityWindow.hide();
+    if (newComment != currentComment) {
+      _handleFollowerAction(
+        TimerAction(
+          type: TimerActionType.start,
+          projectId: currentEntry?.projectId,
+          taskId: currentEntry?.taskId,
+          comment: newComment,
+        ),
+      );
+    }
   }
 
-  Future<void> _invokeWindow(ManagedPopoverWindow window, String method, dynamic arguments) async {
-    if (window.windowId == null) return;
-    try {
-      await WindowController.fromWindowId(window.windowId!).invokeMethod(method, arguments);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to invoke "$method" on ${window.role} - $e');
+  // Called by [NativeActivityWindow.onAccept] after the window is hidden.
+  void _onActivityAccept(String comment) {
+    _acceptInFlight = false;
+    _reminderService?.cancelAutoDismiss();
+    final currentEntry = _leaderBloc?.state.activeEntryOrNull;
+    final currentComment = currentEntry?.comment ?? '';
+    if (comment != currentComment) {
+      _handleFollowerAction(
+        TimerAction(
+          type: TimerActionType.start,
+          projectId: currentEntry?.projectId,
+          taskId: currentEntry?.taskId,
+          comment: comment,
+        ),
+      );
     }
+  }
+
+  // Called by [NativeActivityWindow.onDismiss] - window already hidden.
+  void _onActivityDismiss() {
+    _reminderService?.cancelAutoDismiss();
   }
 
   void _invokeMain(String method, [dynamic arguments]) {
@@ -400,33 +364,12 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   @override
-  void requestAcceptComment() {
-    if (!_isPopover) return;
-    try {
-      _invokeMain('requestAcceptComment', null);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to request accept comment - $e');
-    }
-  }
-
-  @override
-  void requestDismissComment() {
-    if (!_isPopover) return;
-    try {
-      _invokeMain('requestDismissComment', null);
-    } catch (e) {
-      debugPrint('WindowsDesktopService: failed to request dismiss comment - $e');
-    }
-  }
-
-  @override
   Future<String> resolveStartupRole(List<String> args) async {
     if (args.firstOrNull == 'multi_window' && args.length >= 2) {
       _ownWindowId = args[1];
       final payload = _parseFollowerPayload(args.length >= 3 ? args[2] : '{}');
       _mainWindowId = payload['mainWindowId'] as String?;
-      final role = payload['role'] as String? ?? 'miniPanel';
-      return role == 'activity' ? 'tray:activity' : 'tray';
+      return 'tray';
     }
     return 'main';
   }
@@ -443,21 +386,19 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   void dispose() {
     _prewarmWatchdog?.cancel();
+    _broadcastDebounce?.cancel();
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();
+    _nativeActivityWindow.dispose();
     WindowsTrayService().dispose();
     _navigationStreamController.close();
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
-  /// `PlatformDispatcher.instance.views.first` reports the *leader engine's
-  /// own view* (the main app window's client area), not the monitor's true
-  /// resolution - the two only coincide by accident when the main window
-  /// happens to be maximized. `screen_retriever` queries the actual display
-  /// directly, so popovers center/clamp against the real screen regardless
-  /// of whatever size the main window currently is.
+  /// `screen_retriever` queries the actual display directly, so popovers
+  /// center/clamp against the real screen regardless of the main window size.
   Future<Size> _screenSize() async {
     try {
       final display = await screenRetriever.getPrimaryDisplay();
@@ -469,9 +410,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
   }
 
-  /// Used by [showPopover] - the user just clicked the tray icon or
-  /// pressed the toggle hotkey, so a live tray-icon position is worth
-  /// asking for.
   Future<Rect> _computeFrameNearTray() async {
     final rawBounds = await trayManager.getBounds();
     final screenSize = await _screenSize();
@@ -482,11 +420,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
     return clampFrameToScreen(frame, screenSize);
   }
 
-  /// `trayManager.getBounds()` only catches the fully-degenerate
-  /// (near-zero) case - a plausible-looking but still wrong rect (wrong
-  /// X, or wrong Y entirely off the taskbar) slips through this check.
-  /// Falls back to a fixed corner anchor when bounds are suspicious.
-  /// The mini panel uses this fallback when the live tray query looks bad.
   Rect _sanitizeTrayBounds(Rect? rawBounds, Size screenSize) {
     if (rawBounds != null && rawBounds.width > 1 && rawBounds.height > 1) {
       return rawBounds;
@@ -502,16 +435,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
     final screenSize = await _screenSize();
     final frame = computeActivityPromptFrame(
       screenSize: screenSize,
-      promptSize: _activityPromptSize,
+      promptSize: NativeActivityWindow.windowSize,
     );
     return clampFrameToScreen(frame, screenSize);
   }
-
-  // 100 logical pixels (the original design size) is 4px too short for the
-  // panel's actual content (TextField + gap + status caption, against the
-  // container's real padding) - confirmed by a RenderFlex overflow assertion
-  // in manual testing. 120 leaves real margin instead of a bare minimum.
-  static const _activityPromptSize = Size(420, 120);
 
   Future<void> _handleIncomingIpcMessage(
     String? method,
@@ -521,30 +448,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
       switch (method) {
         case 'miniReady':
           final fromWindowId = arguments is Map ? arguments['fromWindowId'] as String? : null;
-          final readyWindow = _windowForId(fromWindowId);
-          if (readyWindow != null) {
-            readyWindow.followerReady = true;
+          if (_miniPanelWindow.windowId == fromWindowId) {
+            _miniPanelWindow.followerReady = true;
             if (_leaderBloc != null) {
-              await _broadcastSnapshotTo(readyWindow, _leaderBloc!.state);
-            }
-            if (readyWindow == _activityWindow) {
-              if (_pendingFocusComment) {
-                _pendingFocusComment = false;
-                _pendingSeedComment = false;
-                await _invokeWindow(_activityWindow, 'focusComment', null);
-              } else if (_pendingSeedComment) {
-                _pendingSeedComment = false;
-                await _invokeWindow(_activityWindow, 'seedComment', null);
-              }
-              if (_pendingActivityStatus != null) {
-                final status = _pendingActivityStatus!;
-                _pendingActivityStatus = null;
-                await _invokeWindow(
-                  _activityWindow,
-                  'activityPromptStatus',
-                  jsonEncode(status.toJson()),
-                );
-              }
+              await _broadcastSnapshotTo(_miniPanelWindow, _leaderBloc!.state);
             }
           }
 
@@ -560,36 +467,11 @@ class WindowsDesktopService implements IDesktopPlatformService {
         case 'requestActivityPrompt':
           await toggleActivityPrompt();
 
-        case 'requestAcceptComment':
-          await acceptCurrentComment();
-
-        case 'requestDismissComment':
-          await dismissCurrentComment();
-
         case 'miniClosed':
           final fromWindowIdClosed = arguments is Map ? arguments['fromWindowId'] as String? : null;
-          _windowForId(fromWindowIdClosed)?.followerReady = false;
-
-        case 'activityPromptStatus':
-          if (arguments is String) {
-            final map = Map<String, dynamic>.from(jsonDecode(arguments));
-            _followerCubit?.emitActivityPromptStatus(ActivityPromptStatus.fromJson(map));
+          if (_miniPanelWindow.windowId == fromWindowIdClosed) {
+            _miniPanelWindow.followerReady = false;
           }
-
-        case 'seedComment':
-          _followerCubit?.emitCommand(MiniPanelCommand.seedComment);
-
-        case 'focusComment':
-          _followerCubit?.emitCommand(MiniPanelCommand.focusComment);
-
-        case 'acceptComment':
-          _followerCubit?.emitCommand(MiniPanelCommand.acceptComment);
-
-        case 'dismissComment':
-          _followerCubit?.emitCommand(MiniPanelCommand.dismissComment);
-
-        case 'autoDismissComment':
-          _followerCubit?.emitCommand(MiniPanelCommand.autoDismissComment);
 
         case 'dispatchAction':
           if (arguments != null) {
@@ -619,16 +501,22 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
     if (action.type == TimerActionType.start) {
       if (isCurrentlyRunning) {
+        // flutter_bloc processes different event types concurrently, so
+        // adding TimeTrackerStarted immediately would race against the
+        // in-flight TimeTrackerStopped handler and see isRunning=true,
+        // returning as a no-op. Instead, wait for the bloc to emit a
+        // non-running state before dispatching the start.
         _leaderBloc!.add(TimeTrackerStopped());
-        Future.delayed(const Duration(milliseconds: 200), () {
-          _leaderBloc!.add(
-            TimeTrackerStarted(
-              projectId: action.projectId,
-              taskId: action.taskId,
-              comment: action.comment,
-            ),
-          );
-        });
+        _leaderBloc!.stream
+            .firstWhere((s) => !s.isRunning)
+            .then((_) => _leaderBloc?.add(
+                  TimeTrackerStarted(
+                    projectId: action.projectId,
+                    taskId: action.taskId,
+                    comment: action.comment,
+                  ),
+                ))
+            .catchError((_) {});
       } else {
         _leaderBloc!.add(
           TimeTrackerStarted(
@@ -649,22 +537,22 @@ class WindowsDesktopService implements IDesktopPlatformService {
     }
   }
 
-  Future<void> _broadcastSnapshotIfReady(TimeTrackerBlocState state) async {
-    if (_broadcastInFlight) {
-      _pendingBroadcast = state;
-      return;
-    }
+  void _broadcastSnapshotIfReady(TimeTrackerBlocState state) {
+    _pendingBroadcast = state;
+    _broadcastDebounce?.cancel();
+    _broadcastDebounce = Timer(_broadcastDebounceDelay, _flushBroadcast);
+  }
+
+  Future<void> _flushBroadcast() async {
+    if (_broadcastInFlight) return;
     _broadcastInFlight = true;
     try {
-      TimeTrackerBlocState? toSend = state;
-      while (toSend != null) {
-        for (final window in [_miniPanelWindow, _activityWindow]) {
-          if (window.followerReady && window.windowId != null) {
-            await _broadcastSnapshotTo(window, toSend);
-          }
-        }
-        toSend = _pendingBroadcast;
+      while (_pendingBroadcast != null) {
+        final toSend = _pendingBroadcast!;
         _pendingBroadcast = null;
+        if (_miniPanelWindow.followerReady && _miniPanelWindow.windowId != null) {
+          await _broadcastSnapshotTo(_miniPanelWindow, toSend);
+        }
       }
     } finally {
       _broadcastInFlight = false;
@@ -710,9 +598,6 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @visibleForTesting
   ManagedPopoverWindow get miniPanelWindowForTesting => _miniPanelWindow;
-
-  @visibleForTesting
-  ManagedPopoverWindow get activityWindowForTesting => _activityWindow;
 
   @visibleForTesting
   Future<void> handleIncomingIpcMessageForTesting(

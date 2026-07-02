@@ -69,7 +69,7 @@ class ManagedPopoverWindow {
   /// been destroyed and a new one will be created on next [show]).
   int? _cachedHwnd;
 
-  static const _flutterWindowClass = 'FLUTTER_RUNNER_WIN32_WINDOW';
+  static const _flutterWindowClass = 'FLUTTER_MULTI_WINDOW_WIN32_WINDOW';
 
   int? _nativeHandle() => _cachedHwnd;
 
@@ -151,6 +151,13 @@ class ManagedPopoverWindow {
   void _applyAlwaysOnTop() {
     final hwnd = _nativeHandle();
     if (hwnd == null) return;
+    // Skip the call if HWND_TOPMOST is already set. SetWindowPos with
+    // HWND_TOPMOST always fires WM_WINDOWPOSCHANGED synchronously via
+    // SendMessage, which re-enters the Win32 message loop on the same
+    // thread. Skipping redundant calls eliminates the re-entrancy risk
+    // during the 1 Hz watchdog tick.
+    final exStyle = win32.GetWindowLongPtr(hwnd, win32.GWL_EXSTYLE);
+    if (exStyle & win32.WS_EX_TOPMOST != 0) return;
     final result = win32.SetWindowPos(
       hwnd,
       win32.HWND_TOPMOST,
@@ -164,6 +171,16 @@ class ManagedPopoverWindow {
       'ManagedPopoverWindow($role): SetWindowPos(HWND_TOPMOST) on hwnd=$hwnd '
       'result=$result${result == 0 ? " GetLastError=${win32.GetLastError()}" : ""}',
     );
+  }
+
+  void _setCloak(int hwnd, bool cloak) {
+    final value = calloc<Int32>();
+    try {
+      value.value = cloak ? 1 : 0;
+      win32.DwmSetWindowAttribute(hwnd, win32.DWMWA_CLOAK, value.cast(), sizeOf<Int32>());
+    } finally {
+      calloc.free(value);
+    }
   }
 
   void _applyFrame(int hwnd, Rect frame) {
@@ -322,7 +339,16 @@ class ManagedPopoverWindow {
       final hwnd = _nativeHandle();
       if (hwnd != null) {
         _applyFrame(hwnd, frame);
-        win32.ShowWindow(hwnd, activate ? win32.SW_SHOW : win32.SW_SHOWNA);
+        // Remove DWM cloak set by our hide() for programmatic hides.
+        _setCloak(hwnd, false);
+        // ShowWindow is only needed when the window is not yet visible at the
+        // Win32 level: on the very first show, or after an X-button close
+        // (intercepted by our WM_CLOSE patch as SW_HIDE, so IsWindowVisible
+        // returns FALSE). Programmatic hides use DWMWA_CLOAK and never call
+        // SW_HIDE, so IsWindowVisible() stays TRUE - no ShowWindow needed.
+        if (win32.IsWindowVisible(hwnd) == win32.FALSE) {
+          win32.ShowWindow(hwnd, activate ? win32.SW_SHOW : win32.SW_SHOWNA);
+        }
       } else {
         // Couldn't resolve the hwnd yet - fall back to the plugin's show(),
         // which may activate when we didn't want it to, but still shows the
@@ -347,8 +373,20 @@ class ManagedPopoverWindow {
   /// updates) to this window would silently defer forever after the very
   /// first show/hide cycle, since nothing would ever set it back to `true`
   /// short of the window being destroyed and recreated from scratch.
+  ///
+  /// Uses DWM cloaking ([DWMWA_CLOAK]) instead of `ShowWindow(SW_HIDE)`.
+  /// `SW_HIDE` sends `WM_SHOWWINDOW(FALSE)` synchronously to the window's
+  /// message queue, which signals the Flutter engine to suspend its GPU
+  /// thread render surface. If the GPU thread is mid-frame when that signal
+  /// arrives, it reads from an already-freed surface handle (observed as
+  /// ACCESS_VIOLATION in flutter_windows.dll at address 0xFFFF...FFFF).
+  /// `DWMWA_CLOAK` is a DWM compositor flag only - the engine never sees it
+  /// and its GPU thread keeps running against a valid, stable render surface.
   Future<void> hide() async {
-    if (windowId != null) {
+    final hwnd = _nativeHandle();
+    if (hwnd != null) {
+      _setCloak(hwnd, true);
+    } else if (windowId != null) {
       try {
         await WindowController.fromWindowId(windowId!).hide();
       } catch (e) {
@@ -365,7 +403,8 @@ class ManagedPopoverWindow {
   /// `reconcile()` calls, not by any native close callback, so right after
   /// a close-via-X it stays stuck at `true` forever - trusting it here
   /// would make this check skip itself permanently the moment it's needed
-  /// most.
+  /// most. This method also syncs [isVisible] against the real Win32 state
+  /// to recover from exactly that stuck-true case.
   Future<void> checkAndRewarm() async {
     if (windowId == null) {
       await ensureExists();
@@ -378,6 +417,16 @@ class ManagedPopoverWindow {
       followerReady = false;
       await ensureExists();
       return;
+    }
+    // If Dart thinks the window is visible but Win32 disagrees (e.g. the
+    // user clicked the native X button, which our WM_CLOSE patch intercepts
+    // with SW_HIDE without updating Dart state), sync isVisible down.
+    // Without this, toggleActivityPrompt() would take the "already visible"
+    // branch forever and never re-show the window.
+    final hwnd = _nativeHandle();
+    if (hwnd != null && isVisible && win32.IsWindowVisible(hwnd) == win32.FALSE) {
+      debugPrint('ManagedPopoverWindow($role): syncing isVisible=false (native window is hidden)');
+      isVisible = false;
     }
     // HWND_TOPMOST is "best effort" on Windows - activating a different,
     // ordinary window can still visually cover a topmost-but-unfocused

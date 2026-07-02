@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
@@ -141,40 +140,6 @@ class TimerSnapshot {
 }
 
 enum ActivityPromptSource { reminder, manual }
-
-/// Tells the activity prompt follower how/why it was opened, so it can show
-/// the user what's going on instead of leaving them guessing.
-class ActivityPromptStatus {
-  final ActivityPromptSource source;
-
-  /// When this prompt will auto-dismiss itself if left untouched, or `null`
-  /// if no auto-dismiss is pending - either a deliberate (hotkey/button)
-  /// open, or a reminder-opened prompt the user has already acknowledged
-  /// by bringing it into focus.
-  final DateTime? autoDismissAt;
-
-  const ActivityPromptStatus({required this.source, this.autoDismissAt});
-
-  Map<String, dynamic> toJson() {
-    return {
-      'source': source.name,
-      'autoDismissAt': autoDismissAt?.millisecondsSinceEpoch,
-    };
-  }
-
-  static ActivityPromptStatus fromJson(Map<String, dynamic> json) {
-    final autoDismissAtMs = json['autoDismissAt'] as int?;
-    return ActivityPromptStatus(
-      source: ActivityPromptSource.values.firstWhere(
-        (e) => e.name == json['source'],
-        orElse: () => ActivityPromptSource.manual,
-      ),
-      autoDismissAt: autoDismissAtMs != null
-          ? DateTime.fromMillisecondsSinceEpoch(autoDismissAtMs)
-          : null,
-    );
-  }
-}
 
 enum TimerActionType { start, stop, updateComment }
 

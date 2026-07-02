@@ -58,23 +58,17 @@ void main() {
       final service = WindowsDesktopService();
       expect(service.miniPanelWindowForTesting.alwaysOnTop, isTrue);
     });
-
-    test('activity window is configured as always-on-top and frameless', () {
-      final service = WindowsDesktopService();
-      expect(service.activityWindowForTesting.alwaysOnTop, isTrue);
-      expect(service.activityWindowForTesting.frameless, isTrue);
-    });
   });
 
   group('ManagedPopoverWindow HWND cache', () {
     test('cachedHwnd starts as null', () {
       final service = WindowsDesktopService();
-      expect(service.activityWindowForTesting.cachedHwndForTesting, isNull);
+      expect(service.miniPanelWindowForTesting.cachedHwndForTesting, isNull);
     });
 
     test('resetWindowStateForTesting clears windowId, isVisible and cachedHwnd', () {
       final service = WindowsDesktopService();
-      final window = service.activityWindowForTesting;
+      final window = service.miniPanelWindowForTesting;
 
       window.setCachedHwndForTesting(12345);
       window.windowId = '99';
@@ -106,19 +100,7 @@ void main() {
       expect(role, 'main');
     });
 
-    test('returns tray:activity when the payload role is activity', () async {
-      final service = WindowsDesktopService();
-
-      final role = await service.resolveStartupRole([
-        'multi_window',
-        '9',
-        '{"role":"activity"}',
-      ]);
-
-      expect(role, 'tray:activity');
-    });
-
-    test('returns plain tray when the payload role is miniPanel', () async {
+    test('returns tray for any multi_window payload role', () async {
       final service = WindowsDesktopService();
 
       final role = await service.resolveStartupRole([
