@@ -60,10 +60,11 @@ jobs:
     name: Create Version Tag
     runs-on: ubuntu-latest
     outputs:
-      version:    ${{ steps.parse.outputs.version }}
-      tag:        ${{ steps.parse.outputs.tag }}
-      prerelease: ${{ steps.parse.outputs.prerelease }}
-      tag_exists: ${{ steps.check.outputs.exists }}
+      version:      ${{ steps.parse.outputs.version }}
+      build_number: ${{ steps.parse.outputs.build_number }}
+      tag:          ${{ steps.parse.outputs.tag }}
+      prerelease:   ${{ steps.parse.outputs.prerelease }}
+      tag_exists:   ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,9 +85,14 @@ jobs:
           else
             PRERELEASE=false
           fi
-          echo "version=$VERSION"       >> $GITHUB_OUTPUT
-          echo "tag=$TAG"               >> $GITHUB_OUTPUT
-          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          BUILD_NUMBER=$(grep '^version:' apps/worklog_studio/pubspec.yaml \
+            | sed 's/version: //' \
+            | cut -d'+' -f2 \
+            | tr -d '[:space:]')
+          echo "version=$VERSION"             >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER"   >> $GITHUB_OUTPUT
+          echo "tag=$TAG"                     >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE"       >> $GITHUB_OUTPUT
           echo "Version: $VERSION | Tag: $TAG | Pre-release: $PRERELEASE"
 
       - name: Check if tag already exists
@@ -171,6 +177,28 @@ jobs:
         with:
           name: windows-release
           path: ${{ env.ZIP_NAME }}
+          retention-days: 1
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version   = "${{ needs.tag.outputs.version }}"
+          $sourceDir = Resolve-Path "apps/worklog_studio/build/windows/x64/runner/Release"
+          $issScript = "apps/worklog_studio/installer/worklog_studio.iss"
+          $outputDir = New-Item -ItemType Directory -Force -Path "installer_output" |
+                         Select-Object -ExpandProperty FullName
+          iscc "/DAppVersion=$version" "/DSourceDir=$sourceDir" "/O$outputDir" $issScript
+          echo "INSTALLER_NAME=worklog_studio_setup_$version.exe" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: installer_output/${{ env.INSTALLER_NAME }}
           retention-days: 1
 
   # ──────────────────────────────────────────────────────────
@@ -258,6 +286,11 @@ jobs:
         with:
           name: windows-release
 
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
@@ -283,6 +316,7 @@ jobs:
           body_path:  changelog.md
           files: |
             worklog_studio_windows_${{ needs.tag.outputs.version }}.zip
+            worklog_studio_setup_${{ needs.tag.outputs.version }}.exe
             worklog_studio_macos_${{ needs.tag.outputs.version }}.zip
           draft:      false
           prerelease: ${{ needs.tag.outputs.prerelease }}
