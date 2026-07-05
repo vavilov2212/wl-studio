@@ -320,3 +320,42 @@ jobs:
             worklog_studio_macos_${{ needs.tag.outputs.version }}.zip
           draft:      false
           prerelease: ${{ needs.tag.outputs.prerelease }}
+
+      - name: Update appcast_windows.xml
+        run: |
+          VERSION="${{ needs.tag.outputs.version }}"
+          BUILD_NUMBER="${{ needs.tag.outputs.build_number }}"
+          INSTALLER="worklog_studio_setup_${VERSION}.exe"
+          SIZE=$(stat -c%s "$INSTALLER")
+          URL="https://github.com/vavilov2212/worklog_studio/releases/download/v${VERSION}/${INSTALLER}"
+          DATE=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
+
+          cat > apps/worklog_studio/release/appcast_windows.xml << APPCAST
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+          <channel>
+            <title>Worklog Studio Windows Updates</title>
+            <link>https://github.com/vavilov2212/worklog_studio</link>
+            <description>Latest updates for Worklog Studio (Windows)</description>
+            <language>en</language>
+            <item>
+              <title>Version ${VERSION}</title>
+              <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v${VERSION}</sparkle:releaseNotesLink>
+              <pubDate>${DATE}</pubDate>
+              <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
+              <enclosure
+                url="${URL}"
+                sparkle:version="${BUILD_NUMBER}"
+                sparkle:shortVersionString="${VERSION}"
+                length="${SIZE}"
+                type="application/octet-stream"/>
+            </item>
+          </channel>
+          </rss>
+          APPCAST
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/worklog_studio/release/appcast_windows.xml
+          git commit -m "release: update appcast_windows.xml for v${VERSION}"
+          git push origin HEAD:${{ github.ref_name }}
