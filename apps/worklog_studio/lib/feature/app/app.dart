@@ -48,7 +48,10 @@ class MiniApp extends StatelessWidget {
         theme: appEnvironment.config.lightTheme,
         darkTheme: appEnvironment.config.lightTheme,
         home: const Scaffold(
-          backgroundColor: Colors.transparent,
+          // macOS NSPanel popover does not support DWM/layered transparency
+          // the way the main window does - use MiniPanel's own card color
+          // for an opaque background.
+          backgroundColor: Color(0xFFf8fafc),
           body: MiniPanel(),
         ),
       ),

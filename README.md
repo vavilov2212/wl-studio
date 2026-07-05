@@ -177,43 +177,13 @@ cd apps\worklog_studio
 
 ---
 
-## 🎨 App Icons
+## 🛠 Tooling
 
-The app ships two icon variants: **prod** (default, committed as the live icon) and **dev** (same artwork with a red "DEV" ribbon). Both platforms' native build systems are not flavor-aware, so the live icon files (`windows\runner\resources\app_icon.ico` and `macos\Runner\Assets.xcassets\AppIcon.appiconset\*.png`) must be swapped on disk before building/running the target flavor.
+Platform-specific scripts for running tests, bumping versions, packaging releases, and managing icon assets:
 
-There's a separate, native switcher script per platform — no cross-platform runtime dependency required:
-- **Windows**: `tool/windows/select_app_icon.ps1` (plain PowerShell, ships with Windows)
-- **macOS**: `tool/macos/select_app_icon.sh` (plain bash, ships with macOS)
-
-Switching the icon is automated:
-- **VS Code debugger (F5)**: `.vscode/launch.json` runs a `preLaunchTask` (`select-app-icon-dev`/`select-app-icon-prod` in `.vscode/tasks.json`) before every launch, which picks the right script for your OS automatically.
-- **Packaged builds**: `tool/macos/build.sh` and the CI release workflow already call the matching script based on the version being built. Windows packaging now happens only in CI — the local `tool/windows/bump.ps1` only bumps the version and runs tests, it doesn't build, so there's no local Windows build step to wire this into.
-- **Git commits**: a pre-commit hook (`.githooks/pre-commit`) force-resets the live icon files back to prod before every commit, so a forgotten `-Flavor dev` switch from a local debug session never gets committed by accident. `fvm exec melos bootstrap` wires this up automatically (`git config core.hooksPath .githooks` runs as a post-bootstrap hook, see the `melos:` section in the root `pubspec.yaml`) — no manual step needed.
-
-### When to run this manually
-Only needed when running `flutter run`/`flutter build` directly from a terminal instead of the VS Code debugger:
-- Before `flutter run -d windows --flavor development` (switch to dev icon):
-  ```powershell
-  powershell apps/worklog_studio/tool/windows/select_app_icon.ps1 -Flavor dev
-  ```
-- Before `flutter run -d macos --flavor development`:
-  ```bash
-  bash apps/worklog_studio/tool/macos/select_app_icon.sh dev
-  ```
-- Pass `prod`/`-Flavor prod` the same way to switch back (or restore after a dev session).
-- `tool/macos/build.sh` and the CI release workflow already call this automatically based on the version being built — no manual step needed for packaged releases. Windows packaging happens only in CI now.
-
-### When to regenerate the icon artwork
-Only needed if the source artwork changes (`assets/branding/app_icon_prod_master.png`). After updating the prod master:
-```powershell
-pwsh apps/worklog_studio/tool/windows/generate_dev_icon_master.ps1   # re-draws the DEV ribbon over the new prod master
-pwsh apps/worklog_studio/tool/windows/generate_dev_icon_set.ps1      # regenerates AppIconDev.appiconset + app_icon_dev.ico
-```
-The prod-side `AppIconProd.appiconset` / `app_icon_prod.ico` backups must be updated manually (copy the new live prod files over them) since they are the restore source for `select_app_icon.ps1 -Flavor prod`.
-
-Tray icons (`assets/app_icon_idle.ico`, `assets/app_icon_running.ico`) are also committed binaries — regenerate them locally with `pwsh apps/worklog_studio/tool/windows/generate_tray_icons.ps1` after editing `assets/app_icon_idle.png` / `assets/app_icon_running.png`. This is not run in CI since the `.ico` outputs are deterministic and already committed.
-
-The tray icon also gets a DEV marker (small amber badge dot, since "DEV" text isn't legible at tray size) — `app_icon_idle_dev.{png,ico}` / `app_icon_running_dev.{png,ico}`, regenerated via `pwsh apps/worklog_studio/tool/windows/generate_dev_tray_icons.ps1`. The active flavor (`Flavor.development`/`Flavor.production`) picks the right asset at runtime — no manual swap needed, unlike the app/dock icon. macOS's idle tray state reuses the same `AppIcon.appiconset` as the dock icon, so it already shows the DEV ribbon for free once `select_app_icon.sh -Flavor dev` has been run; only the "running" tray state needed a dedicated dev asset (`AppDelegate.swift`).
+- [Windows Scripts](apps/worklog_studio/tool/windows/README.md) - test runner, bump/publish/release, app icons, tray icons
+- [macOS Scripts](apps/worklog_studio/tool/macos/README.md) - release guide, build and signing workflow
+- [Crash Reporting](apps/worklog_studio/docs/crash-reporting.md) - local minidump capture, WinDbg analysis, upgrade path to Sentry/BugSplat
 
 ---
 
@@ -230,11 +200,6 @@ The app stores its data in a local SQLite file (`worklog.db`) under the OS appli
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📦 Releases & Development
-For information on building, packaging, and the automatic update process, please refer to the [Release Guide](apps/worklog_studio/tool/README.md).
 
 ---
 

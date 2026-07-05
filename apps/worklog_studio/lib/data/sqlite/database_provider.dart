@@ -10,7 +10,7 @@ import 'db_create.dart';
 
 class DatabaseProvider {
   static const _dbName = 'worklog.db';
-  static const _dbVersion = 2; // Incremented for migration
+  static const _dbVersion = 3; // Incremented for app_settings table
 
   static Database? _db;
   static Future<Database>? _initFuture;
@@ -155,10 +155,18 @@ class DatabaseProvider {
   ) async {
     if (oldVersion < 2) {
       await db.execute(
-        '''CREATE UNIQUE INDEX IF NOT EXISTS idx_single_running_entry 
-           ON time_entries(status) 
+        '''CREATE UNIQUE INDEX IF NOT EXISTS idx_single_running_entry
+           ON time_entries(status)
            WHERE status = 'running';''',
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+          CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          );
+        ''');
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:l/l.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/core/environment/dotenv.dart';
+import 'package:worklog_studio/core/services/crash_logger.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/entity/session/data/repository/session_storage_repository.dart';
@@ -28,61 +29,71 @@ import 'package:worklog_studio/core/services/idle_monitor/no_op_idle_monitor.dar
 import 'package:worklog_studio/core/services/idle_monitor/platform_idle_monitor.dart';
 
 Future<void> run(List<String> args) async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Set up the Flutter framework error hook before binding initialisation so
+  // framework-level errors are also captured by the crash logger.
+  FlutterError.onError = (details) {
+    logCrash(details.exception, details.stack ?? StackTrace.empty);
+  };
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Firebase already initialized: $e');
-  }
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔑 ВАЖНО: для desktop / VM
-  if (!kIsWeb &&
-      (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
-  );
-
-  if (kIsWeb) {
-    usePathUrlStrategy();
-  }
-
-  await _initDependencies();
-  _initRepositories();
-
-  // Initialise the desktop service singleton once — platform resolved inside
-  // the factory, no inline Platform.isXxx checks needed here.
-  DesktopServiceRegistry.init();
-
-  try {
-    if (!kIsWeb) {
-      await getIt<UserRepository>();
-      await _initBackupService();
-      await DatabaseProvider.getDatabase();
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      debugPrint('Firebase already initialized: $e');
     }
-  } catch (e, st) {
-    l.e('Failed to bootstrap DB on startup', st);
-  }
 
-  // Role detection is now owned by the platform service itself.
-  final role = await DesktopServiceRegistry.instance.resolveStartupRole();
-  debugPrint('Successfully resolved engine role: $role');
+    // 🔑 ВАЖНО: для desktop / VM
+    if (!kIsWeb &&
+        (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
 
-  final isPopover = role == 'tray';
-  debugPrint('runApp starting with role: $role');
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+    );
 
-  if (isPopover) {
-    runApp(const MiniApp());
-  } else {
-    runApp(const MainApp());
-  }
+    if (kIsWeb) {
+      usePathUrlStrategy();
+    }
+
+    await _initDependencies();
+    _initRepositories();
+
+    DesktopServiceRegistry.init();
+
+    // Follower engines (miniPanel, activity) share the same OS process as the
+    // leader but must not open SQLite or run backup: three engines opening the
+    // same DB file simultaneously risks lock contention, and copying the DB
+    // from a follower races the leader's active writes.
+    final isFollower = args.firstOrNull == 'multi_window';
+    if (!isFollower) {
+      try {
+        if (!kIsWeb) {
+          getIt<UserRepository>();
+          await _initBackupService();
+          await DatabaseProvider.getDatabase();
+        }
+      } catch (e, st) {
+        l.e('Failed to bootstrap DB on startup', st);
+      }
+    }
+
+    final role = await DesktopServiceRegistry.instance.resolveStartupRole(args);
+    debugPrint('Successfully resolved engine role: $role');
+    debugPrint('runApp starting with role: $role');
+
+    if (role == 'tray') {
+      runApp(const MiniApp());
+    } else {
+      runApp(const MainApp());
+    }
+  }, (error, stack) => logCrash(error, stack));
 }
 
 Future<void> _initDependencies() async {
@@ -114,7 +125,7 @@ void _initRepositories() {
     getIt.registerSingleton(AppBarService());
     getIt.registerSingleton<DrawerService>(DrawerService());
 
-    // Register IdleMonitor — only macOS has a native channel implementation.
+    // Register IdleMonitor - only macOS has a native channel implementation.
     // Windows/Linux/web get a silent no-op so start/stop calls are safe.
     getIt.registerLazySingleton<IdleMonitor>(
       () => (!kIsWeb && Platform.isMacOS)

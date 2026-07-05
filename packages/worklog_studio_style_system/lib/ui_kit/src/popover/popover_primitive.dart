@@ -4,6 +4,12 @@ import 'popover_controller.dart';
 
 /// PRIMITIVE: Отвечает ТОЛЬКО за Overlay и позиционирование.
 /// Никаких стилей, теней и рамок.
+///
+/// Positioning uses a flip+shift strategy (the same idea as Floating UI's
+/// `flip`/`shift` middleware): [targetAnchor]/[followerAnchor] describe the
+/// *preferred* side, but if the popover would overflow the window on that
+/// side, it flips to the opposite side, and as a last resort gets shifted
+/// back into the viewport so it is always fully visible.
 class PopoverPrimitive extends StatefulWidget {
   final Widget trigger; // Кнопка, инпут или иконка
   final WidgetBuilder contentBuilder; // То, что всплывает
@@ -38,10 +44,10 @@ class PopoverPrimitive extends StatefulWidget {
 }
 
 class _PopoverPrimitiveState extends State<PopoverPrimitive> {
-  final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   late PopoverController _controller;
   late Object _internalTapRegionGroupId;
+  final GlobalKey _triggerKey = GlobalKey();
 
   @override
   void initState() {
@@ -84,45 +90,54 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
     _controller.isOpen ? _show() : _hide();
   }
 
+  Rect? _anchorRect(RenderBox overlayBox) {
+    final triggerBox = _triggerKey.currentContext?.findRenderObject();
+    if (triggerBox is! RenderBox || !triggerBox.attached) return null;
+    final topLeft = triggerBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    return Rect.fromLTWH(
+      topLeft.dx,
+      topLeft.dy,
+      triggerBox.size.width,
+      triggerBox.size.height,
+    );
+  }
+
   void _show() {
     if (_overlayEntry != null) return;
 
-    // Получаем размер триггера, чтобы подогнать ширину (нужно для Select)
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    final triggerWidth = renderBox?.size.width ?? 200.0;
-    final minWidth = widget.minWidth;
-    final effectiveWidth = widget.matchTriggerWidth
-        ? (minWidth != null && minWidth > triggerWidth ? minWidth : triggerWidth)
-        : widget.width;
-
     _overlayEntry = OverlayEntry(
       builder: (context) {
+        final overlayBox = Overlay.of(context).context.findRenderObject();
+        final anchorRect = overlayBox is RenderBox
+            ? _anchorRect(overlayBox)
+            : null;
+        if (anchorRect == null) return const SizedBox.shrink();
+
         return Stack(
           children: [
-            // Сам Popover
-            CompositedTransformFollower(
-              link: _layerLink,
-              showWhenUnlinked: false,
-              targetAnchor: widget.targetAnchor,
-              followerAnchor: widget.followerAnchor,
-              offset: widget.offset,
-              child: Align(
-                alignment: widget.followerAnchor,
-                child: SizedBox(
-                  width: effectiveWidth,
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: TapRegion(
-                      groupId: _internalTapRegionGroupId,
-                      onTapOutside: (_) {
-                        if (widget.onRequestClose != null) {
-                          widget.onRequestClose!();
-                        } else {
-                          _controller.hide();
-                        }
-                      },
-                      child: widget.contentBuilder(context),
-                    ),
+            Positioned.fill(
+              child: CustomSingleChildLayout(
+                delegate: _PopoverLayoutDelegate(
+                  anchorRect: anchorRect,
+                  offset: widget.offset,
+                  targetAnchor: widget.targetAnchor,
+                  followerAnchor: widget.followerAnchor,
+                  width: widget.width,
+                  matchTriggerWidth: widget.matchTriggerWidth,
+                  minWidth: widget.minWidth,
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: TapRegion(
+                    groupId: _internalTapRegionGroupId,
+                    onTapOutside: (_) {
+                      if (widget.onRequestClose != null) {
+                        widget.onRequestClose!();
+                      } else {
+                        _controller.hide();
+                      }
+                    },
+                    child: widget.contentBuilder(context),
                   ),
                 ),
               ),
@@ -143,7 +158,130 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
   Widget build(BuildContext context) {
     return TapRegion(
       groupId: _internalTapRegionGroupId,
-      child: CompositedTransformTarget(link: _layerLink, child: widget.trigger),
+      child: KeyedSubtree(key: _triggerKey, child: widget.trigger),
     );
+  }
+}
+
+/// Lays the popover out against [anchorRect] (the trigger's bounds in the
+/// Overlay's coordinate space), preferring the side described by
+/// [targetAnchor]/[followerAnchor] but flipping to the opposite side when
+/// there isn't enough room, then clamping (shifting) the result back inside
+/// the viewport so the popover never renders off-screen.
+class _PopoverLayoutDelegate extends SingleChildLayoutDelegate {
+  static const double _screenMargin = 8;
+
+  final Rect anchorRect;
+  final Offset offset;
+  final Alignment targetAnchor;
+  final Alignment followerAnchor;
+  final double? width;
+  final bool matchTriggerWidth;
+  final double? minWidth;
+
+  _PopoverLayoutDelegate({
+    required this.anchorRect,
+    required this.offset,
+    required this.targetAnchor,
+    required this.followerAnchor,
+    required this.width,
+    required this.matchTriggerWidth,
+    required this.minWidth,
+  });
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final maxWidth = (constraints.maxWidth - _screenMargin * 2).clamp(
+      0.0,
+      constraints.maxWidth,
+    );
+    final maxHeight = (constraints.maxHeight - _screenMargin * 2).clamp(
+      0.0,
+      constraints.maxHeight,
+    );
+
+    double minWidthValue = 0;
+    double maxWidthValue = maxWidth;
+
+    if (matchTriggerWidth) {
+      minWidthValue = anchorRect.width;
+      if (minWidth != null && minWidth! > minWidthValue) {
+        minWidthValue = minWidth!;
+      }
+      minWidthValue = minWidthValue.clamp(0.0, maxWidth);
+      maxWidthValue = minWidthValue;
+    } else if (width != null) {
+      minWidthValue = width!.clamp(0.0, maxWidth);
+      maxWidthValue = minWidthValue;
+    }
+
+    return BoxConstraints(
+      minWidth: minWidthValue,
+      maxWidth: maxWidthValue,
+      minHeight: 0,
+      maxHeight: maxHeight,
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final preferBelow = targetAnchor.y >= 0;
+    final preferRightAligned = followerAnchor.x > 0;
+
+    final spaceBelow = size.height - _screenMargin - anchorRect.bottom;
+    final spaceAbove = anchorRect.top - _screenMargin;
+
+    bool placeBelow = preferBelow;
+    if (preferBelow && childSize.height > spaceBelow && spaceAbove > spaceBelow) {
+      placeBelow = false;
+    } else if (!preferBelow && childSize.height > spaceAbove && spaceBelow > spaceAbove) {
+      placeBelow = true;
+    }
+
+    double y = placeBelow
+        ? anchorRect.bottom + offset.dy
+        : anchorRect.top - childSize.height - offset.dy;
+
+    final referenceX = targetAnchor.x <= 0 ? anchorRect.left : anchorRect.right;
+    final spaceRight = size.width - _screenMargin - anchorRect.left;
+    final spaceLeft = anchorRect.right - _screenMargin;
+
+    bool alignRight = preferRightAligned;
+    if (!preferRightAligned && childSize.width > spaceRight && spaceLeft > spaceRight) {
+      alignRight = true;
+    } else if (preferRightAligned && childSize.width > spaceLeft && spaceRight > spaceLeft) {
+      alignRight = false;
+    }
+
+    double x = alignRight
+        ? referenceX - childSize.width + offset.dx
+        : referenceX + offset.dx;
+
+    final minX = _screenMargin;
+    final maxX = (size.width - _screenMargin - childSize.width).clamp(
+      minX,
+      double.infinity,
+    );
+    final minY = _screenMargin;
+    final maxY = (size.height - _screenMargin - childSize.height).clamp(
+      minY,
+      double.infinity,
+    );
+
+    x = x.clamp(minX, maxX);
+    y = y.clamp(minY, maxY);
+
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_PopoverLayoutDelegate oldDelegate) {
+    return anchorRect != oldDelegate.anchorRect ||
+        offset != oldDelegate.offset ||
+        targetAnchor != oldDelegate.targetAnchor ||
+        followerAnchor != oldDelegate.followerAnchor ||
+        width != oldDelegate.width ||
+        matchTriggerWidth != oldDelegate.matchTriggerWidth ||
+        minWidth != oldDelegate.minWidth;
   }
 }

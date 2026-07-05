@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
@@ -6,6 +6,8 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/history_filters.dart';
+import 'package:worklog_studio/domain/history_sort.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/page_ui_preferences.dart';
 import 'package:worklog_studio/state/drawer_host_controller.dart';
@@ -16,6 +18,7 @@ import 'package:worklog_studio/feature/common/presentation/components/ws_initial
 import 'components/time_entry_card.dart';
 import 'components/time_entry_actions_cell.dart';
 import 'components/history_filter_bar.dart';
+import 'components/history_sort_bar.dart';
 
 enum HistoryViewMode { cards, table }
 
@@ -28,6 +31,8 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final GlobalKey _selectedRowKey = GlobalKey();
+  // Basic structure for tracking scroll notifications
+  final ValueNotifier<String> _scrollMessage = ValueNotifier<String>('Idle');
 
   @override
   void initState() {
@@ -63,32 +68,203 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
     final resolvedEntries = context
         .watch<EntityResolver>()
         .getResolvedTimeEntries();
     final prefs = context.watch<PageUiPreferences>();
     final drawer = context.watch<DrawerHostController>();
-    final selectedEntry =
-        drawer.kind == DrawerEntityKind.timeEntry ? drawer.timeEntry : null;
+    final selectedEntry = drawer.kind == DrawerEntityKind.timeEntry
+        ? drawer.timeEntry
+        : null;
     final isFilterExpanded =
         prefs.historyFilterExpandedOverride ?? prefs.historyFilters.isActive;
+    final isSortExpanded = prefs.historySortExpandedOverride ?? false;
 
-    return TimeEntryList(
-      entries: resolvedEntries,
-      selectedEntry: selectedEntry,
-      selectedRowKey: _selectedRowKey,
-      onEntrySelected: _handleEntrySelected,
-      onCreateEntry: _handleCreateEntry,
-      viewMode: prefs.historyViewMode,
-      onViewModeChanged: (mode) =>
-          context.read<PageUiPreferences>().setHistoryViewMode(mode),
-      filters: prefs.historyFilters,
-      onFiltersChanged: (f) =>
-          context.read<PageUiPreferences>().setHistoryFilters(f),
-      isFilterExpanded: isFilterExpanded,
-      onFilterExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setHistoryFilterExpandedOverride(!isFilterExpanded),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        if (notification is ScrollUpdateNotification) {
+          final isNearTop = notification.metrics.pixels <= 50.0;
+          final target = isNearTop ? 'Idle' : 'Scrolling...';
+          if (_scrollMessage.value != target) _scrollMessage.value = target;
+        }
+        return false;
+      },
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacings.x2l),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Time history', style: theme.commonTextStyles.h3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: theme.spacings.lg,
+                  children: [
+                    PrimaryButton(
+                      onTap: () => context
+                          .read<PageUiPreferences>()
+                          .setHistoryKpiStripVisible(
+                            !prefs.historyKpiStripVisible,
+                          ),
+                      leftIconWidget: Icon(Icons.insights_rounded, size: 16),
+                      type: prefs.historyKpiStripVisible
+                          ? ButtonType.secondary
+                          : ButtonType.ghost,
+                      size: ButtonSize.sm,
+                    ),
+                    SegmentedToggle<HistoryViewMode>(
+                      value: prefs.historyViewMode,
+                      onChanged: (mode) => context
+                          .read<PageUiPreferences>()
+                          .setHistoryViewMode(mode),
+                      options: const [
+                        SegmentedToggleOption(
+                          value: HistoryViewMode.cards,
+                          icon: Icons.view_agenda_rounded,
+                        ),
+                        SegmentedToggleOption(
+                          value: HistoryViewMode.table,
+                          icon: Icons.table_rows_rounded,
+                        ),
+                      ],
+                    ),
+                    PrimaryButton(
+                      onTap: _handleCreateEntry,
+                      title: 'New Entry', // TODO: l10n
+                      leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                      size: ButtonSize.sm,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: theme.spacings.lg),
+            // KPI strip - collapses while scrolling or when hidden by the user.
+            // Animates with the same SizeTransition+FadeTransition pattern used
+            // elsewhere in the app (drawers, confirmation panels).
+            ValueListenableBuilder<String>(
+              valueListenable: _scrollMessage,
+              builder: (context, scrollValue, _) {
+                final showStrip =
+                    prefs.historyKpiStripVisible &&
+                    scrollValue != 'Scrolling...';
+
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                final todayEntries = resolvedEntries.where((e) {
+                  final d = DateTime(
+                    e.startAt.year,
+                    e.startAt.month,
+                    e.startAt.day,
+                  );
+                  return d == today;
+                });
+                final todayDur = todayEntries.fold<Duration>(
+                  Duration.zero,
+                  (p, e) => p + e.entry.duration(now),
+                );
+                final weekStart = today.subtract(
+                  Duration(days: today.weekday - 1),
+                );
+                final weekEntries = resolvedEntries.where((e) {
+                  return !e.startAt.isBefore(weekStart);
+                });
+                final weekDur = weekEntries.fold<Duration>(
+                  Duration.zero,
+                  (p, e) => p + e.entry.duration(now),
+                );
+                final unassigned = resolvedEntries
+                    .where((e) => e.task == null)
+                    .length;
+
+                String fmtDur(Duration d) =>
+                    '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) => SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: showStrip
+                      ? Column(
+                          key: const ValueKey('kpi_strip'),
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _KpiChip(
+                                  label: 'Today', // TODO: l10n
+                                  value: fmtDur(todayDur),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'This week', // TODO: l10n
+                                  value: fmtDur(weekDur),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'Efficiency', // TODO: l10n
+                                  value: '94%',
+                                  valueColor: palette.accent.success,
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                _KpiChip(
+                                  label: 'Unassigned', // TODO: l10n
+                                  value: '$unassigned',
+                                  valueColor: unassigned > 0
+                                      ? palette.accent.warning
+                                      : palette.text.secondary,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: theme.spacings.lg),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                );
+              },
+            ),
+            Expanded(
+              child: TimeEntryList(
+                entries: resolvedEntries,
+                selectedEntry: selectedEntry,
+                selectedRowKey: _selectedRowKey,
+                onEntrySelected: _handleEntrySelected,
+                onCreateEntry: _handleCreateEntry,
+                viewMode: prefs.historyViewMode,
+                onViewModeChanged: (mode) =>
+                    context.read<PageUiPreferences>().setHistoryViewMode(mode),
+                filters: prefs.historyFilters,
+                onFiltersChanged: (f) =>
+                    context.read<PageUiPreferences>().setHistoryFilters(f),
+                isFilterExpanded: isFilterExpanded,
+                onFilterExpandedToggle: () => context
+                    .read<PageUiPreferences>()
+                    .setHistoryFilterExpandedOverride(!isFilterExpanded),
+                sortField: prefs.historySortField,
+                sortDirection: prefs.historySortDirection,
+                onSortFieldChanged: (field) => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortField(field),
+                onSortDirectionChanged: (direction) => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortDirection(direction),
+                isSortExpanded: isSortExpanded,
+                onSortExpandedToggle: () => context
+                    .read<PageUiPreferences>()
+                    .setHistorySortExpandedOverride(!isSortExpanded),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -105,6 +281,12 @@ class TimeEntryList extends StatelessWidget {
   final ValueChanged<HistoryFilters> onFiltersChanged;
   final bool isFilterExpanded;
   final VoidCallback onFilterExpandedToggle;
+  final HistorySortField sortField;
+  final SortDirection sortDirection;
+  final ValueChanged<HistorySortField> onSortFieldChanged;
+  final ValueChanged<SortDirection> onSortDirectionChanged;
+  final bool isSortExpanded;
+  final VoidCallback onSortExpandedToggle;
 
   const TimeEntryList({
     super.key,
@@ -119,6 +301,12 @@ class TimeEntryList extends StatelessWidget {
     required this.onFiltersChanged,
     required this.isFilterExpanded,
     required this.onFilterExpandedToggle,
+    required this.sortField,
+    required this.sortDirection,
+    required this.onSortFieldChanged,
+    required this.onSortDirectionChanged,
+    required this.isSortExpanded,
+    required this.onSortExpandedToggle,
   });
 
   @override
@@ -127,178 +315,90 @@ class TimeEntryList extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     final filteredEntries = applyHistoryFilters(entries, filters);
+    final sortedEntries = applyHistorySort(
+      filteredEntries,
+      sortField,
+      sortDirection,
+    );
+    final isGroupedByDate = sortField == HistorySortField.date;
 
-    // Sort entries: latest first
-    final sortedEntries = List<ResolvedTimeEntry>.from(filteredEntries)
-      ..sort((a, b) {
-        // Active entries always at the top
-        if (a.isRunning && !b.isRunning) return -1;
-        if (!a.isRunning && b.isRunning) return 1;
-        return b.startAt.compareTo(a.startAt);
-      });
-
-    // Group by date
+    // Group by date (only meaningful when sorted by date; otherwise rendered flat)
     final Map<DateTime, List<ResolvedTimeEntry>> groupedEntries = {};
-    for (final resolvedEntry in sortedEntries) {
-      final entry = resolvedEntry.entry;
-      final date = DateTime(
-        entry.startAt.year,
-        entry.startAt.month,
-        entry.startAt.day,
-      );
-      if (!groupedEntries.containsKey(date)) {
-        groupedEntries[date] = [];
+    if (isGroupedByDate) {
+      for (final resolvedEntry in sortedEntries) {
+        final entry = resolvedEntry.entry;
+        final date = DateTime(
+          entry.startAt.year,
+          entry.startAt.month,
+          entry.startAt.day,
+        );
+        groupedEntries.putIfAbsent(date, () => []).add(resolvedEntry);
       }
-      groupedEntries[date]!.add(resolvedEntry);
     }
 
-    final sortedDates = groupedEntries.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final sortedDates = isGroupedByDate
+        ? (groupedEntries.keys.toList()..sort(
+            (a, b) => sortDirection == SortDirection.desc
+                ? b.compareTo(a)
+                : a.compareTo(b),
+          ))
+        : <DateTime>[];
 
     return Padding(
-      padding: EdgeInsets.all(theme.spacings.x2l),
+      padding: EdgeInsets.all(theme.spacings.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Time history', style: theme.commonTextStyles.h3),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: theme.spacings.lg,
-                children: [
-                  SegmentedToggle<HistoryViewMode>(
-                    value: viewMode,
-                    onChanged: onViewModeChanged,
-                    options: const [
-                      SegmentedToggleOption(
-                        value: HistoryViewMode.cards,
-                        icon: Icons.view_agenda_rounded,
-                      ),
-                      SegmentedToggleOption(
-                        value: HistoryViewMode.table,
-                        icon: Icons.table_rows_rounded,
-                      ),
-                    ],
-                  ),
-                  PrimaryButton(
-                    onTap: onCreateEntry,
-                    title: 'New Entry',
-                    leftIcon: WorklogStudioAssets.vectors.plus24Svg,
-                    size: ButtonSize.sm,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: theme.spacings.lg),
-          // KPI strip
-          Builder(
-            builder: (context) {
-              final allEntries = context.select(
-                (TimeTrackerBloc bloc) => bloc.state.allEntries,
-              );
-              final now = DateTime.now();
-              final today = DateTime(now.year, now.month, now.day);
-              final todayEntries = entries.where((e) {
-                final d = DateTime(
-                  e.startAt.year,
-                  e.startAt.month,
-                  e.startAt.day,
-                );
-                return d == today;
-              });
-              final todayDur = todayEntries.fold<Duration>(
-                Duration.zero,
-                (p, e) => p + e.entry.duration(now),
-              );
-              final weekStart = today.subtract(
-                Duration(days: today.weekday - 1),
-              );
-              final weekEntries = entries.where((e) {
-                return !e.startAt.isBefore(weekStart);
-              });
-              final weekDur = weekEntries.fold<Duration>(
-                Duration.zero,
-                (p, e) => p + e.entry.duration(now),
-              );
-              final unassigned = entries
-                  .where((e) => e.task == null)
-                  .length;
-
-              String fmtDur(Duration d) =>
-                  '${d.inHours}h ${d.inMinutes.remainder(60)}m';
-
-              return Row(
-                children: [
-                  _KpiChip(label: 'Today', value: fmtDur(todayDur)),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(label: 'This week', value: fmtDur(weekDur)),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(
-                    label: 'Efficiency',
-                    value: '94%',
-                    valueColor: palette.accent.success,
-                  ),
-                  SizedBox(width: theme.spacings.sm),
-                  _KpiChip(
-                    label: 'Unassigned',
-                    value: '$unassigned',
-                    valueColor: unassigned > 0
-                        ? palette.accent.warning
-                        : palette.text.secondary,
-                  ),
-                ],
-              );
-            },
-          ),
-          SizedBox(height: theme.spacings.lg),
           TableToolbar(
             isFilterExpanded: isFilterExpanded,
             onFilterTap: onFilterExpandedToggle,
             activeFilterCount: filters.activeCount,
+            isSortExpanded: isSortExpanded,
+            onSortTap: onSortExpandedToggle,
           ),
+          if (isSortExpanded) ...[
+            SizedBox(height: theme.spacings.sm),
+            HistorySortBar(
+              field: sortField,
+              direction: sortDirection,
+              onFieldChanged: onSortFieldChanged,
+              onDirectionChanged: onSortDirectionChanged,
+            ),
+          ],
           if (isFilterExpanded) ...[
             SizedBox(height: theme.spacings.sm),
             Builder(
               builder: (context) {
                 final resolver = context.watch<EntityResolver>();
-                final taskOptions = resolver
-                    .getResolvedTasks()
-                    .map((t) {
-                      final colors = BadgeUtils.getBadgeColor(t.id);
-                      return SelectOption(
-                        value: t.id,
-                        label: t.title,
-                        leading: WsInitialBadge(
-                          initials: BadgeUtils.getTaskInitials(
-                            t.title,
-                            t.projectName,
-                          ),
-                          backgroundColor: colors.$1,
-                          textColor: colors.$2,
-                          size: WsInitialBadgeSize.small,
-                        ),
-                      );
-                    })
-                    .toList();
-                final projectOptions = resolver
-                    .getResolvedProjects()
-                    .map((p) {
-                      final colors = BadgeUtils.getBadgeColor(p.id);
-                      return SelectOption(
-                        value: p.id,
-                        label: p.name,
-                        leading: WsInitialBadge(
-                          initials: BadgeUtils.getProjectInitials(p.name),
-                          backgroundColor: colors.$1,
-                          textColor: colors.$2,
-                          size: WsInitialBadgeSize.small,
-                        ),
-                      );
-                    })
-                    .toList();
+                final taskOptions = resolver.getResolvedTasks().map((t) {
+                  final colors = BadgeUtils.getBadgeColor(t.id);
+                  return SelectOption(
+                    value: t.id,
+                    label: t.title,
+                    leading: WsInitialBadge(
+                      initials: BadgeUtils.getTaskInitials(
+                        t.title,
+                        t.projectName,
+                      ),
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                      size: WsInitialBadgeSize.small,
+                    ),
+                  );
+                }).toList();
+                final projectOptions = resolver.getResolvedProjects().map((p) {
+                  final colors = BadgeUtils.getBadgeColor(p.id);
+                  return SelectOption(
+                    value: p.id,
+                    label: p.name,
+                    leading: WsInitialBadge(
+                      initials: BadgeUtils.getProjectInitials(p.name),
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                      size: WsInitialBadgeSize.small,
+                    ),
+                  );
+                }).toList();
                 return HistoryFilterBar(
                   filters: filters,
                   onChanged: onFiltersChanged,
@@ -314,106 +414,133 @@ class TimeEntryList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ...sortedDates.map((date) {
-                    final dailyEntries = groupedEntries[date]!;
-                    final totalDuration = dailyEntries.fold<Duration>(
-                      Duration.zero,
-                      (prev, resolvedEntry) =>
-                          prev + resolvedEntry.entry.duration(DateTime.now()),
-                    );
+                  if (isGroupedByDate)
+                    ...sortedDates.map((date) {
+                      final dailyEntries = groupedEntries[date]!;
+                      final totalDuration = dailyEntries.fold<Duration>(
+                        Duration.zero,
+                        (prev, resolvedEntry) =>
+                            prev + resolvedEntry.entry.duration(DateTime.now()),
+                      );
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(
-                            left: theme.spacings.xxs,
-                            bottom: theme.spacings.sm,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: theme.spacings.md,
-                                  vertical: theme.spacings.xxs,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: theme.spacings.xxs,
+                              bottom: theme.spacings.sm,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: theme.spacings.md,
+                                    vertical: theme.spacings.xxs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette.background.surface,
+                                    border: Border.all(
+                                      color: palette.border.primary,
+                                    ),
+                                    borderRadius: theme.radiuses.pill.circular,
+                                  ),
+                                  child: Text(
+                                    _formatDateHeader(date),
+                                    style: theme.commonTextStyles.labelSmall
+                                        .copyWith(color: palette.text.primary),
+                                  ),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: palette.background.surface,
-                                  border: Border.all(
+                                SizedBox(width: theme.spacings.sm),
+                                Icon(
+                                  Icons.history_outlined,
+                                  color: palette.text.muted,
+                                  size: 14,
+                                ),
+                                SizedBox(width: theme.spacings.xxs),
+                                Text(
+                                  _formatDuration(totalDuration),
+                                  style: theme.commonTextStyles.labelSmall
+                                      .copyWith(color: palette.text.muted),
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                Expanded(
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
                                     color: palette.border.primary,
                                   ),
-                                  borderRadius:
-                                      theme.radiuses.pill.circular,
                                 ),
-                                child: Text(
-                                  _formatDateHeader(date),
-                                  style: theme.commonTextStyles.labelSmall
-                                      .copyWith(
-                                        color: palette.text.primary,
-                                      ),
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.sm),
-                              Icon(
-                                Icons.history_outlined,
-                                color: palette.text.muted,
-                                size: 14,
-                              ),
-                              SizedBox(width: theme.spacings.xxs),
-                              Text(
-                                _formatDuration(totalDuration),
-                                style: theme.commonTextStyles.labelSmall
-                                    .copyWith(
-                                      color: palette.text.muted,
-                                    ),
-                              ),
-                              SizedBox(width: theme.spacings.sm),
-                              Expanded(
-                                child: Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: palette.border.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (viewMode == HistoryViewMode.cards)
-                          Column(
-                            spacing: theme.spacings.md,
-                            children: dailyEntries.map((resolvedEntry) {
-                              final entry = resolvedEntry.entry;
-                              final isSelected = selectedEntry?.id == entry.id;
-
-                              return TimeEntryCard(
-                                key: isSelected ? selectedRowKey : null,
-                                resolvedEntry: resolvedEntry,
-                                isSelected: isSelected,
-                                onTap: () => onEntrySelected(entry),
-                              );
-                            }).toList(),
-                          )
-                        else
-                          WsTable<ResolvedTimeEntry>(
-                            showHeader: true,
-                            data: dailyEntries,
-                            selectedItem: dailyEntries.firstWhereOrNull(
-                              (e) => e.entry.id == selectedEntry?.id,
+                              ],
                             ),
-                            rowKeyBuilder: (item) =>
-                                item.entry.id == selectedEntry?.id
-                                    ? selectedRowKey
-                                    : null,
-                            onRowTap: (item) => onEntrySelected(item.entry),
-                            isSelected: (item, selected) =>
-                                item.entry.id == selected?.entry.id,
-                            columns: _getTableColumns(theme),
                           ),
-                        SizedBox(height: theme.spacings.xl),
-                      ],
-                    );
-                  }),
+                          if (viewMode == HistoryViewMode.cards)
+                            Column(
+                              spacing: theme.spacings.md,
+                              children: dailyEntries.map((resolvedEntry) {
+                                final entry = resolvedEntry.entry;
+                                final isSelected =
+                                    selectedEntry?.id == entry.id;
+
+                                return TimeEntryCard(
+                                  key: isSelected ? selectedRowKey : null,
+                                  resolvedEntry: resolvedEntry,
+                                  isSelected: isSelected,
+                                  onTap: () => onEntrySelected(entry),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            WsTable<ResolvedTimeEntry>(
+                              showHeader: true,
+                              data: dailyEntries,
+                              selectedItem: dailyEntries.firstWhereOrNull(
+                                (e) => e.entry.id == selectedEntry?.id,
+                              ),
+                              rowKeyBuilder: (item) =>
+                                  item.entry.id == selectedEntry?.id
+                                  ? selectedRowKey
+                                  : null,
+                              onRowTap: (item) => onEntrySelected(item.entry),
+                              isSelected: (item, selected) =>
+                                  item.entry.id == selected?.entry.id,
+                              columns: _getTableColumns(theme),
+                            ),
+                          SizedBox(height: theme.spacings.xl),
+                        ],
+                      );
+                    })
+                  else if (viewMode == HistoryViewMode.cards)
+                    Column(
+                      spacing: theme.spacings.md,
+                      children: sortedEntries.map((resolvedEntry) {
+                        final entry = resolvedEntry.entry;
+                        final isSelected = selectedEntry?.id == entry.id;
+                        return TimeEntryCard(
+                          key: isSelected ? selectedRowKey : null,
+                          resolvedEntry: resolvedEntry,
+                          isSelected: isSelected,
+                          onTap: () => onEntrySelected(entry),
+                        );
+                      }).toList(),
+                    )
+                  else
+                    WsTable<ResolvedTimeEntry>(
+                      showHeader: true,
+                      data: sortedEntries,
+                      selectedItem: sortedEntries.firstWhereOrNull(
+                        (e) => e.entry.id == selectedEntry?.id,
+                      ),
+                      rowKeyBuilder: (item) =>
+                          item.entry.id == selectedEntry?.id
+                          ? selectedRowKey
+                          : null,
+                      onRowTap: (item) => onEntrySelected(item.entry),
+                      isSelected: (item, selected) =>
+                          item.entry.id == selected?.entry.id,
+                      columns: _getTableColumns(theme),
+                    ),
                   // Footer
                   if (entries.isNotEmpty)
                     Container(
@@ -556,9 +683,7 @@ class TimeEntryList extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             softWrap: true,
             style: theme.commonTextStyles.caption.copyWith(
-              color: hasComment
-                  ? palette.text.secondary
-                  : palette.text.muted,
+              color: hasComment ? palette.text.secondary : palette.text.muted,
               fontStyle: hasComment ? null : FontStyle.italic,
             ),
           );
@@ -616,9 +741,7 @@ class TimeEntryList extends StatelessWidget {
         alignment: Alignment.centerRight,
         fixedWidth: 48,
         builder: (context, item, isHovered) {
-          return TimeEntryActionsCell(
-            resolvedEntry: item,
-          );
+          return TimeEntryActionsCell(resolvedEntry: item);
         },
       ),
     ];
@@ -647,8 +770,18 @@ class TimeEntryList extends StatelessWidget {
     final targetDate = DateTime(date.year, date.month, date.day);
 
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final dateString = '${months[date.month - 1]} ${date.day}';
 
@@ -672,11 +805,7 @@ class _KpiChip extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _KpiChip({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _KpiChip({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -715,4 +844,3 @@ class _KpiChip extends StatelessWidget {
     );
   }
 }
-

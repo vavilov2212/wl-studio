@@ -42,8 +42,15 @@ Future<void> onCreate(Database db, int version) async {
     'CREATE INDEX idx_time_entries_start_at ON time_entries(start_at);',
   );
   await db.execute(
-    '''CREATE UNIQUE INDEX IF NOT EXISTS idx_single_running_entry 
-         ON time_entries(status) 
+    '''CREATE UNIQUE INDEX IF NOT EXISTS idx_single_running_entry
+         ON time_entries(status)
          WHERE status = 'running';''',
   );
+
+  await db.execute('''
+      CREATE TABLE app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    ''');
 }

@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_app_check
   firebase_auth
   firebase_core
+  hotkey_manager_windows
   screen_retriever_windows
   tray_manager
   window_manager

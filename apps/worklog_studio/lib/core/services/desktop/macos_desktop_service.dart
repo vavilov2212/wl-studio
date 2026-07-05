@@ -170,7 +170,14 @@ class MacOSDesktopService implements IDesktopPlatformService {
   }
 
   @override
-  Future<String> resolveStartupRole() async {
+  void requestActivityPrompt() {
+    // Deferred to a follow-up spec - macOS's mini panel already has its
+    // own inline comment editor and does not have a separate activity
+    // prompt window yet.
+  }
+
+  @override
+  Future<String> resolveStartupRole(List<String> args) async {
     try {
       final engineInfo = await _channel
           .invokeMapMethod<String, dynamic>('getEngineInfo')

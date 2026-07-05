@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide DrawerHeader;
+import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -119,6 +119,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
       isOpen: widget.isOpen,
       onClose: widget.onClose,
       mode: widget.mode,
+      backgroundColor: palette.background.canvas,
       header: DrawerHeader(
         onClose: widget.onClose,
         onDelete: _isNew
@@ -215,18 +216,43 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                             createdAt: widget.project!.createdAt,
                           ),
                         ],
-                        // Name Input
-                        InlineField(
-                          label: 'Project name',
-                          value: _nameController.text,
-                          placeholder: 'Enter project name...',
-                          controller: _nameFieldController,
-                          textController: _nameController,
-                          editWidget: PrimaryInput(
-                            label: null,
-                            hintText: 'Enter project name...',
-                            controller: _nameController,
-                            autofocus: true,
+                        LabeledDivider(label: 'Assignment'),
+                        SizedBox(height: theme.spacings.lg),
+                        BaseCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Name Input
+                              InlineField(
+                                label: 'Project name',
+                                value: _nameController.text,
+                                placeholder: 'Enter project name...',
+                                controller: _nameFieldController,
+                                textController: _nameController,
+                                editWidget: PrimaryInput(
+                                  label: null,
+                                  hintText: 'Enter project name...',
+                                  controller: _nameController,
+                                  autofocus: true,
+                                ),
+                              ),
+                              SizedBox(height: theme.spacings.lg),
+                              InlineField(
+                                label: 'Description',
+                                value: _descriptionController.text,
+                                placeholder: 'Add a description...',
+                                controller: _descriptionFieldController,
+                                textController: _descriptionController,
+                                isTextArea: true,
+                                viewModeMaxLines: 3,
+                                editWidget: TextArea(
+                                  label: null,
+                                  hintText: 'Add a description...',
+                                  controller: _descriptionController,
+                                  autofocus: true,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -239,64 +265,53 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: theme.spacings.x2l),
-                          LabeledDivider(label: 'Notes'),
-                          SizedBox(height: theme.spacings.lg),
-                          InlineField(
-                            label: 'Description',
-                            value: _descriptionController.text,
-                            placeholder: 'Add a description...',
-                            controller: _descriptionFieldController,
-                            textController: _descriptionController,
-                            isTextArea: true,
-                            viewModeMaxLines: 3,
-                            editWidget: TextArea(
-                              label: null,
-                              hintText: 'Add a description...',
-                              controller: _descriptionController,
-                              autofocus: true,
-                            ),
-                          ),
                           if (!_isNew) ...[
                             SizedBox(height: theme.spacings.x2l),
                             LabeledDivider(label: 'Overview'),
                             SizedBox(height: theme.spacings.lg),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _MetricCard(
-                                    title: 'TOTAL TIME',
-                                    value:
-                                        '${widget.project!.totalHours.toInt()}:15',
-                                    unit: 'h',
-                                    subtitle: '+12% from last week',
-                                    subtitleColor: palette.accent.success,
-                                    icon: Icons.trending_up,
+                            BaseCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _MetricCard(
+                                          title: 'TOTAL TIME',
+                                          value:
+                                              '${widget.project!.totalHours.toInt()}:15',
+                                          unit: 'h',
+                                          subtitle: '+12% from last week',
+                                          subtitleColor: palette.accent.success,
+                                          icon: Icons.trending_up,
+                                        ),
+                                      ),
+                                      SizedBox(width: theme.spacings.lg),
+                                      Expanded(
+                                        child: _MetricCard(
+                                          title: 'BILLABLE AMOUNT',
+                                          value:
+                                              '\$${_formatCurrency(widget.project!.billableAmount)}',
+                                          subtitle:
+                                              '\$${widget.project!.averageRate.toInt()}/hr average rate',
+                                          subtitleColor: palette.text.secondary,
+                                          icon: Icons.payments_outlined,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: theme.spacings.lg),
-                                Expanded(
-                                  child: _MetricCard(
-                                    title: 'BILLABLE AMOUNT',
+                                  SizedBox(height: theme.spacings.lg),
+                                  _MetricCard(
+                                    title: 'BUDGET LEFT',
                                     value:
-                                        '\$${_formatCurrency(widget.project!.billableAmount)}',
-                                    subtitle:
-                                        '\$${widget.project!.averageRate.toInt()}/hr average rate',
-                                    subtitleColor: palette.text.secondary,
-                                    icon: Icons.payments_outlined,
+                                        '\$${_formatCurrency(widget.project!.budgetLeft)}',
+                                    subtitle: 'Approaching limit',
+                                    subtitleColor: palette.accent.danger,
+                                    icon: Icons.warning_amber_rounded,
+                                    fullWidth: true,
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: theme.spacings.lg),
-                            _MetricCard(
-                              title: 'BUDGET LEFT',
-                              value:
-                                  '\$${_formatCurrency(widget.project!.budgetLeft)}',
-                              subtitle: 'Approaching limit',
-                              subtitleColor: palette.accent.danger,
-                              icon: Icons.warning_amber_rounded,
-                              fullWidth: true,
+                                ],
+                              ),
                             ),
                             SizedBox(height: theme.spacings.x3l),
                             LabeledDivider(label: 'Associated Tasks'),
@@ -319,7 +334,8 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                               Column(
                                 spacing: theme.spacings.lg,
                                 children: projectTasks.map((task) {
-                                  final duration = context
+                                  final duration =
+                                      context
                                           .watch<EntityResolver>()
                                           .getResolvedTask(task.id)
                                           ?.duration(DateTime.now()) ??

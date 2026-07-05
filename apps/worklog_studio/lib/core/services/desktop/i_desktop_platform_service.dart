@@ -68,13 +68,23 @@ abstract interface class IDesktopPlatformService {
   /// No-op unless the current process is the macOS tray-popover follower.
   void dispatchAction(covariant dynamic action);
 
+  // ── Activity prompt ───────────────────────────────────────────────────────
+
+  /// Ask the leader to open the dedicated activity prompt window.
+  ///
+  /// Called from a follower/popover (e.g. the mini panel's button). On
+  /// Windows the activity prompt is a native Win32 window owned by the leader
+  /// process, so only an IPC request is needed from the follower side.
+  void requestActivityPrompt();
+
   // ── Startup role detection ────────────────────────────────────────────────
 
-  /// Resolve the startup role of this process.
+  /// Resolve the startup role of this process from its raw startup [args].
   ///
-  /// Returns `'tray'` when the process was launched as the macOS popover
-  /// engine; `'main'` otherwise.  Always returns `'main'` on Windows.
-  Future<String> resolveStartupRole();
+  /// Returns `'tray'` when this process is a secondary popover engine
+  /// (macOS only); `'main'` otherwise. Implementations that have no
+  /// secondary-engine concept (Windows, no-op) always return `'main'`.
+  Future<String> resolveStartupRole(List<String> args);
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 

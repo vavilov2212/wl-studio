@@ -1,9 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
+
+/// Commands sent from the leader to the mini panel follower's cubit so the
+/// mini panel widget can respond to hotkeys and IPC-triggered focus changes
+/// without requiring the widget to poll or use a separate channel.
+enum MiniPanelCommand {
+  /// Seeds the comment field text and selection without requesting OS keyboard
+  /// focus. Used when a passive trigger (e.g. a reminder timer) shows the
+  /// panel. Text is ready so the user can start typing the moment they
+  /// explicitly bring the window into focus.
+  seedComment,
+  /// Seeds the comment field text, select-all, AND requests Flutter/OS
+  /// keyboard focus - used when the user explicitly activates the panel
+  /// via the toggle hotkey or a button.
+  focusComment,
+  acceptComment,
+  dismissComment,
+  autoDismissComment,
+}
 
 class MiniTrackerState {
   final bool isRunning;
@@ -44,6 +64,22 @@ class MiniTrackerState {
 class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
 
+  final _commandController = StreamController<MiniPanelCommand>.broadcast();
+
+  /// Command stream consumed by [MiniPanel] to respond to leader-initiated
+  /// focus and commit events (e.g. hotkeys, IPC triggers).
+  Stream<MiniPanelCommand> get commands => _commandController.stream;
+
+  void emitCommand(MiniPanelCommand command) {
+    _commandController.add(command);
+  }
+
+  @override
+  Future<void> close() {
+    _commandController.close();
+    return super.close();
+  }
+
   void updateFromSnapshot(TimerSnapshot snapshot) {
     if (snapshot.timestamp < state.lastTimestamp) return;
     emit(
@@ -80,5 +116,36 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
     DesktopServiceRegistry.instance.dispatchAction(
       TimerAction(type: TimerActionType.stop),
     );
+  }
+
+  void updateComment(String comment) {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.dispatchAction(
+      TimerAction(type: TimerActionType.updateComment, comment: comment),
+    );
+  }
+
+  /// Stops the current time entry and starts a fresh one with the same
+  /// project and task but a new comment. Unlike [startTimer], this bypasses
+  /// the "already tracking same task" guard - the caller has determined that
+  /// the comment change represents a new activity, so a new entry boundary
+  /// is always required.
+  void restartWithComment(String? projectId, String? taskId, String comment) {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.dispatchAction(
+      TimerAction(
+        type: TimerActionType.start,
+        projectId: projectId,
+        taskId: taskId,
+        comment: comment,
+      ),
+    );
+  }
+
+  /// Asks the leader to open or toggle the native activity prompt window.
+  /// A no-op when nothing is currently being tracked.
+  void requestActivityPrompt() {
+    if (!state.isRunning) return;
+    DesktopServiceRegistry.instance.requestActivityPrompt();
   }
 }

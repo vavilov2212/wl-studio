@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
@@ -6,6 +8,8 @@ import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:collection/collection.dart';
@@ -24,6 +28,11 @@ class _MiniPanelState extends State<MiniPanel> {
   String _query = '';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _commentController = TextEditingController();
+  final InlineFieldController _commentFieldController =
+      InlineFieldController();
+  final FocusNode _commentFocusNode = FocusNode();
+  StreamSubscription<MiniPanelCommand>? _commandSub;
 
   @override
   void initState() {
@@ -31,6 +40,10 @@ class _MiniPanelState extends State<MiniPanel> {
     _searchFocusNode.addListener(() {
       setState(() {});
     });
+    _commentFieldController.addListener(_onCommentEditModeChanged);
+    _commandSub = context.read<MiniTrackerCubit>().commands.listen(
+      _handleCommand,
+    );
     Future.delayed(const Duration(milliseconds: 50), () {
       if (mounted) setState(() => _isVisible = true);
     });
@@ -40,7 +53,56 @@ class _MiniPanelState extends State<MiniPanel> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _commentController.dispose();
+    _commentFieldController.removeListener(_onCommentEditModeChanged);
+    _commentFieldController.dispose();
+    _commentFocusNode.dispose();
+    _commandSub?.cancel();
     super.dispose();
+  }
+
+  void _onCommentEditModeChanged() {
+    if (!mounted) return;
+    if (!_commentFieldController.isEditing) {
+      final cubit = context.read<MiniTrackerCubit>();
+      if ((cubit.state.activeEntry?.comment ?? '') != _commentController.text) {
+        cubit.updateComment(_commentController.text);
+      }
+    }
+  }
+
+  void _handleCommand(MiniPanelCommand command) {
+    if (!mounted) return;
+    switch (command) {
+      case MiniPanelCommand.seedComment:
+        // seedComment is directed at the activity window only; the mini
+        // panel has no passive-seed flow and can ignore it.
+        break;
+      case MiniPanelCommand.focusComment:
+        _commentFieldController.enterEditMode(_commentController.text);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _commentFocusNode.requestFocus();
+        });
+      case MiniPanelCommand.acceptComment:
+        _commentFieldController.handleEditorCommit(_commentController.text);
+      case MiniPanelCommand.dismissComment:
+        final persisted =
+            context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
+        _commentController.text = persisted;
+        _commentFieldController.handleEditorCancel();
+      case MiniPanelCommand.autoDismissComment:
+        final persisted =
+            context.read<MiniTrackerCubit>().state.activeEntry?.comment ?? '';
+        if (_commentController.text != persisted) {
+          // There's an unsaved edit - an automatic timeout should not
+          // silently discard it the way a user-initiated dismiss does, so
+          // commit it instead.
+          _commentFieldController.handleEditorCommit(_commentController.text);
+        } else {
+          _commentController.text = persisted;
+          _commentFieldController.handleEditorCancel();
+        }
+    }
   }
 
   Widget _buildActiveSession(
@@ -64,6 +126,13 @@ class _MiniPanelState extends State<MiniPanel> {
           ),
         ],
       );
+    }
+
+    if (!_commentFieldController.isEditing) {
+      final persisted = activeEntry.comment ?? '';
+      if (_commentController.text != persisted) {
+        _commentController.text = persisted;
+      }
     }
 
     final task = activeEntry.taskId != null
@@ -150,6 +219,32 @@ class _MiniPanelState extends State<MiniPanel> {
                         },
                       ),
                     ],
+                  ),
+                  SizedBox(height: theme.spacings.lg),
+                  InlineField(
+                    label: 'Comment',
+                    value: _commentController.text,
+                    placeholder: 'Add a comment...',
+                    controller: _commentFieldController,
+                    textController: _commentController,
+                    isTextArea: true,
+                    viewModeMaxLines: 2,
+                    editWidget: TextArea(
+                      label: null,
+                      hintText: 'Add a comment...',
+                      controller: _commentController,
+                      focusNode: _commentFocusNode,
+                      autofocus: true,
+                    ),
+                  ),
+                  SizedBox(height: theme.spacings.sm),
+                  PrimaryButton(
+                    type: ButtonType.ghost,
+                    size: ButtonSize.sm,
+                    leftIconWidget: const Icon(Icons.chat_bubble_outline, size: 14),
+                    onTap: () {
+                      context.read<MiniTrackerCubit>().requestActivityPrompt();
+                    },
                   ),
                 ],
               ),
@@ -621,6 +716,10 @@ class _MiniPanelState extends State<MiniPanel> {
           opacity: _isVisible ? 1.0 : 0.0,
           child: Container(
             margin: const EdgeInsets.all(0),
+            // Without an explicit width this shrink-wraps to its widest
+            // child instead of filling the popover window, leaving the
+            // remainder of the window unpainted.
+            width: double.infinity,
             decoration: BoxDecoration(
               color: Color(0xFFf8fafc),
               borderRadius: BorderRadius.circular(theme.spacings.md),
@@ -723,24 +822,27 @@ class _MiniPanelState extends State<MiniPanel> {
                     child: Container(
                       decoration: BoxDecoration(color: Color(0xFFf8fafc)),
                       child: _query.isEmpty
-                          ? Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: theme.spacings.lg,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildActiveSession(
-                                    isRunning,
-                                    activeEntry,
-                                    state,
-                                    theme,
-                                    context,
-                                  ),
-                                  SizedBox(height: theme.spacings.lg),
-                                  _buildRecentActivity(state, theme),
-                                ],
+                          ? SingleChildScrollView(
+                              physics: const ClampingScrollPhysics(),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: theme.spacings.lg,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildActiveSession(
+                                      isRunning,
+                                      activeEntry,
+                                      state,
+                                      theme,
+                                      context,
+                                    ),
+                                    SizedBox(height: theme.spacings.lg),
+                                    _buildRecentActivity(state, theme),
+                                  ],
+                                ),
                               ),
                             )
                           : SingleChildScrollView(

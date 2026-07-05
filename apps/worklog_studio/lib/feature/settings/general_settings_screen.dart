@@ -8,14 +8,14 @@ import 'package:worklog_studio/data/sqlite/database_provider.dart';
 import 'package:worklog_studio/domain/backup.dart';
 import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+class GeneralSettingsScreen extends StatefulWidget {
+  const GeneralSettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<GeneralSettingsScreen> createState() => _GeneralSettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _isBackingUp = false;
   String? _dbDirPath;
   String? _backupsDirPath;
@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Settings', style: theme.commonTextStyles.displayLarge),
+          Text('General', style: theme.commonTextStyles.displayLarge), // TODO: l10n
           SizedBox(height: theme.spacings.x2l),
           Row(
             children: [

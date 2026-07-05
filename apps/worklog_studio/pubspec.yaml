@@ -18,7 +18,7 @@ resolution: workspace
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.10+62
+version: 1.0.11+80
 
 environment:
   sdk: ^3.10.1
@@ -70,12 +70,19 @@ dependencies:
   
   # Helpers
   intl: ^0.20.2
-  vector_svg: 
+  vector_svg:
     path: ../../packages/vector_svg
   path_provider: ^2.1.5
   collection: ^1.19.1
   window_manager: ^0.4.3
   tray_manager: ^0.2.3
+  hotkey_manager: ^0.2.3
+  win32: ^5.15.0
+  ffi: ^2.1.4
+  screen_retriever: ^0.2.0
+
+  # Charts
+  fl_chart: ^0.69.2
 
 dependency_overrides:
   uuid: ^4.5.2
@@ -152,6 +159,24 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
