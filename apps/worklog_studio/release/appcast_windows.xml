@@ -6,15 +6,15 @@
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
-    <title>Version 1.0.12-dev.2</title>
-    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.12-dev.2</sparkle:releaseNotesLink>
-    <pubDate>Sun, 05 Jul 2026 14:48:46 GMT</pubDate>
+    <title>Version 1.0.12-dev.3</title>
+    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.12-dev.3</sparkle:releaseNotesLink>
+    <pubDate>Sat, 05 Jul 2026 15:45:35 GMT</pubDate>
     <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
-      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.12-dev.2/worklog_studio_setup_1.0.12-dev.2.exe"
-      sparkle:version="82"
-      sparkle:shortVersionString="1.0.12-dev.2"
-      length="14522709"
+      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.12-dev.3/worklog_studio_setup_1.0.12-dev.3.exe"
+      sparkle:version="83"
+      sparkle:shortVersionString="1.0.12-dev.3"
+      length="14528614"
       type="application/octet-stream"/>
   </item>
 </channel>
