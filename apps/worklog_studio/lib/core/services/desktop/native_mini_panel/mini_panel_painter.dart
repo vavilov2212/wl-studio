@@ -1,4 +1,6 @@
 import 'dart:ffi';
+import 'dart:io';
+
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' as win32;
 
@@ -18,64 +20,118 @@ const _psSolid = 0;
 const _psNull = 5;
 
 // Font weight constants (not exported by win32 package).
-const _fwLight = 300;
 const _fwNormal = 400;
+const _fwSemiBold = 600;
 const _fwBold = 700;
 
-// COLORREF palette (0x00BBGGRR).
-const _cBg = 0x00F8F6F4;           // canvas background
-const _cHeaderBg = 0x00FFFFFF;      // header and section bg
-const _cSessionBg = 0x00FFFFFF;
-const _cItemBg = 0x00F8F6F4;
-const _cItemBgHover = 0x00EEE9E5;
-const _cBorder = 0x00DBD4CE;        // separator lines
-const _cTextPrimary = 0x001C1E21;   // #21201C
-const _cTextSecondary = 0x005B5550; // muted body
-const _cTextMuted = 0x009C9389;     // captions, labels
-const _cAccent = 0x00A55F18;        // blue-ish accent (links)
-// #16A34A in RGB → R=0x16 G=0xA3 B=0x4A → COLORREF = 0x004AA316
-const _cGreenColorRef = 0x004AA316;
-const _cGreenHover = 0x003D8015;    // darker green for hover
-const _cRedColorRef = 0x002626DC;   // #DC2626 → R=DC G=26 B=26 → 0x002626DC
-const _cRedHover = 0x001C1CB9;
-const _cFooterBg = 0x00EEE5DB;      // light warm tint
-const _cTimerText = 0x004AA316;     // large timer = green
-const _cBtnTextLight = 0x00FFFFFF;  // text on colored buttons
+// AddFontResourceEx flag: font visible only to this process.
+const _frPrivate = 0x10;
+
+// SelectClipRgn is not exported by the win32 package; bind it directly.
+final _selectClipRgn = DynamicLibrary.open('gdi32.dll').lookupFunction<
+    Int32 Function(IntPtr hdc, IntPtr hrgn),
+    int Function(int hdc, int hrgn)>('SelectClipRgn');
+
+// COLORREF palette (0x00BBGGRR) mirroring the style system's
+// lightColorsPalette tokens (colors_palette.dart).
+const _cCanvas = 0x00F1F4F5; // background.canvas #F5F4F1
+const _cSurface = 0x00FFFFFF; // background.surface #FFFFFF
+const _cSurfaceMuted = 0x00EAECEE; // background.surfaceMuted #EEECEA
+const _cBorder = 0x00DBE0E2; // border.primary #E2E0DB
+const _cTextPrimary = 0x00211E1C; // text.primary #1C1E21
+const _cTextSecondary = 0x0063554B; // text.secondary #4B5563
+const _cTextSecondary2 = 0x0074675E; // text.secondary2 #5E6774
+const _cTextMuted = 0x00AFA39C; // text.muted #9CA3AF
+const _cAccent = 0x00A55F18; // accent.primary #185FA5
+const _cAccentMuted = 0x00FBF1E6; // accent.primaryMuted #E6F1FB
+const _cDanger = 0x002626DC; // accent.danger #DC2626
+const _cDangerHover = 0x001C1CB9; // darker danger for hover #B91C1C
+const _cWhite = 0x00FFFFFF;
+
+/// COLORREF of border.primary, exposed for the DWM window border.
+const miniPanelBorderColorRef = _cBorder;
+
+/// COLORREF of background.canvas, exposed for the window class background
+/// brush so the first frame doesn't flash white.
+const miniPanelCanvasColorRef = _cCanvas;
+
+/// Tokens exposed for the tooltip popup window.
+const miniPanelSurfaceColorRef = _cSurface;
+const miniPanelTextPrimaryColorRef = _cTextPrimary;
 
 /// Font handles bundled together. All fonts are owned and freed by the caller.
+///
+/// Headings use the app's bundled Nunito Sans (loaded process-private from
+/// the Flutter asset bundle); body text uses Segoe UI as the stand-in for
+/// the style system's Inter (which is not bundled).
 class MiniPanelFonts {
   const MiniPanelFonts({
+    required this.title,
+    required this.timer,
     required this.body,
-    required this.bodyBold,
     required this.caption,
-    required this.timerLarge,
     required this.label,
     required this.icon,
   });
 
-  final int body;       // Segoe UI 11pt
-  final int bodyBold;   // Segoe UI Bold 11pt
-  final int caption;    // Segoe UI 9pt
-  final int timerLarge; // Segoe UI 24pt
-  final int label;      // Segoe UI Bold 9pt (section labels)
-  final int icon;       // Segoe MDL2 Assets 13pt (header action buttons)
+  final int title; // Nunito Sans SemiBold 20px (commonTextStyles.title)
+  final int timer; // Nunito Sans SemiBold 30px (commonTextStyles.h2-ish)
+  final int body; // Segoe UI 15px (body2)
+  final int caption; // Segoe UI 12px (caption)
+  final int label; // Segoe UI Bold 11px (overline section labels)
+  final int icon; // Segoe MDL2 Assets 14px (header action button)
+
+  static bool _appFontsLoaded = false;
+  static String _headingFace = 'Segoe UI';
 
   static MiniPanelFonts create() {
+    _ensureAppFonts();
     return MiniPanelFonts(
+      title: _createFont(_headingFace, -20, _fwSemiBold),
+      timer: _createFont(_headingFace, -30, _fwSemiBold),
       body: _createFont('Segoe UI', -15, _fwNormal),
-      bodyBold: _createFont('Segoe UI', -15, _fwBold),
       caption: _createFont('Segoe UI', -12, _fwNormal),
-      timerLarge: _createFont('Segoe UI', -32, _fwLight),
       label: _createFont('Segoe UI', -11, _fwBold),
-      icon: _createFont('Segoe MDL2 Assets', -13, _fwNormal),
+      icon: _createFont('Segoe MDL2 Assets', -14, _fwNormal),
     );
   }
 
+  /// Loads the style system's bundled Nunito Sans TTFs into this process so
+  /// GDI can use them. Falls back to Segoe UI when the assets are missing.
+  static void _ensureAppFonts() {
+    if (_appFontsLoaded) return;
+    _appFontsLoaded = true;
+
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    final fontDir = '$exeDir\\data\\flutter_assets\\packages'
+        '\\worklog_studio_style_system\\fonts\\nunito_sans';
+    const files = [
+      'NunitoSans-Regular.ttf',
+      'NunitoSans-SemiBold.ttf',
+      'NunitoSans-Bold.ttf',
+    ];
+
+    var loaded = 0;
+    for (final file in files) {
+      final path = '$fontDir\\$file';
+      if (!File(path).existsSync()) continue;
+      final pPath = path.toNativeUtf16();
+      try {
+        if (win32.AddFontResourceEx(pPath, _frPrivate, nullptr) > 0) {
+          loaded++;
+        }
+      } finally {
+        calloc.free(pPath);
+      }
+    }
+    if (loaded > 0) _headingFace = 'Nunito Sans';
+  }
+
   void destroy() {
+    win32.DeleteObject(title);
+    win32.DeleteObject(timer);
     win32.DeleteObject(body);
-    win32.DeleteObject(bodyBold);
     win32.DeleteObject(caption);
-    win32.DeleteObject(timerLarge);
     win32.DeleteObject(label);
     win32.DeleteObject(icon);
   }
@@ -117,17 +173,13 @@ abstract final class MiniPanelPainter {
     final oldBitmap = win32.SelectObject(memDC, bitmap);
 
     try {
-      _fillRect(memDC, 0, 0, w, h, _cBg);
+      _fillRect(memDC, 0, 0, w, h, _cCanvas);
       _paintHeader(memDC, layout, fonts, hoveredHit);
       if (state.isRunning) {
-        _paintSession(memDC, layout, state, fonts, hoveredHit);
+        _paintSessionCard(memDC, layout, state, fonts, hoveredHit);
       }
       if (state.entries.isNotEmpty) {
-        _paintListLabel(memDC, layout, fonts);
-        _paintListItems(memDC, layout, state, fonts, hoveredHit);
-      }
-      if (state.entries.length > MiniPanelMetrics.maxVisibleItems) {
-        _paintScrollArrows(memDC, layout, hoveredHit);
+        _paintListCard(memDC, layout, state, fonts, hoveredHit);
       }
       _paintFooter(memDC, layout, state, fonts);
 
@@ -137,6 +189,27 @@ abstract final class MiniPanelPainter {
       win32.DeleteObject(bitmap);
       win32.DeleteDC(memDC);
       win32.ReleaseDC(hwnd, screenDC);
+    }
+  }
+
+  /// Measures the single-line pixel width of [text] in [font] (a HFONT).
+  /// Used to decide whether truncated text needs a tooltip.
+  static int measureTextWidth(int font, String text) {
+    final hdc = win32.GetDC(win32.NULL);
+    if (hdc == 0) return 0;
+    final rect = calloc<win32.RECT>();
+    final pText = text.toNativeUtf16();
+    try {
+      final oldFont = win32.SelectObject(hdc, font);
+      // DT_CALCRECT (0x400): no drawing, just expand rect.right to fit.
+      win32.DrawText(hdc, pText, -1, rect,
+          0x400 | _dtSingleLine | _dtNoPrefix);
+      win32.SelectObject(hdc, oldFont);
+      return rect.ref.right - rect.ref.left;
+    } finally {
+      calloc.free(rect);
+      calloc.free(pText);
+      win32.ReleaseDC(win32.NULL, hdc);
     }
   }
 
@@ -150,132 +223,121 @@ abstract final class MiniPanelPainter {
     MiniPanelFonts fonts,
     HitRect? hovered,
   ) {
-    final w = layout.clientW;
-    const h = MiniPanelMetrics.headerH;
-
-    _fillRect(hdc, 0, 0, w, h, _cHeaderBg);
-    _drawHLine(hdc, 0, h - 1, w, _cBorder);
-
-    // "Worklog Studio" label - leave room for two right-side buttons
-    win32.SelectObject(hdc, fonts.bodyBold);
-    _drawText(hdc, 'Worklog Studio', MiniPanelMetrics.padH, 0, w - 80, h,
-        _cTextPrimary, _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
-
-    // Close button (far right): MDL2 U+E711 Cancel
-    _paintHeaderBtn(hdc, layout, fonts, hovered, MiniPanelHit.closeBtn,
-        '');
-
-    // Open main-app button (left of close): MDL2 U+E8A5 OpenWith
-    _paintHeaderBtn(hdc, layout, fonts, hovered, MiniPanelHit.openMainBtn,
-        '');
-  }
-
-  static void _paintHeaderBtn(
-    int hdc,
-    MiniPanelLayout layout,
-    MiniPanelFonts fonts,
-    HitRect? hovered,
-    MiniPanelHit hit,
-    String glyph,
-  ) {
-    final btn = layout.hitRects.firstWhere(
-      (r) => r.hit == hit,
-      orElse: () => HitRect(hit: hit, x1: 0, y1: 0, x2: 0, y2: 0),
-    );
-    final isHovered = hovered?.hit == hit;
-    _fillRoundRect(hdc, btn.x1, btn.y1, btn.x2, btn.y2, 4,
-        isHovered ? _cItemBgHover : _cHeaderBg, _cBorder);
+    // Open main-app button (ghost icon button): MDL2 U+E7F4 TVMonitor (desktop monitor)
+    final btn = _findRect(layout, MiniPanelHit.openMainBtn);
+    final isHovered = hovered?.hit == MiniPanelHit.openMainBtn;
+    if (isHovered) {
+      _fillRoundRect(hdc, btn.x1, btn.y1, btn.x2, btn.y2,
+          MiniPanelMetrics.radiusControl, _cSurfaceMuted, _cBorder);
+    }
     win32.SelectObject(hdc, fonts.icon);
-    _drawText(hdc, glyph, btn.x1, btn.y1, btn.x2, btn.y2, _cTextSecondary,
+    _drawText(hdc, '', btn.x1, btn.y1, btn.x2, btn.y2, _cTextSecondary,
         _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
   }
 
-  static void _paintSession(
+  static void _paintSessionCard(
     int hdc,
     MiniPanelLayout layout,
     MiniPanelDisplayState state,
     MiniPanelFonts fonts,
     HitRect? hovered,
   ) {
-    final w = layout.clientW;
     final top = layout.sessionTop;
-    const sh = MiniPanelMetrics.sessionH;
-    const pad = MiniPanelMetrics.padH;
-    const padV = MiniPanelMetrics.padV;
+    final bottom = top + MiniPanelMetrics.sessionCardH;
+    _fillRoundRect(hdc, layout.cardX1, top, layout.cardX2, bottom,
+        MiniPanelMetrics.radiusCard, _cSurface, _cBorder);
 
-    _fillRect(hdc, 0, top, w, top + sh, _cSessionBg);
-    _drawHLine(hdc, 0, top + sh - 1, w, _cBorder);
+    final x1 = layout.contentX1;
+    final x2 = layout.contentX2;
 
-    // Row 1: title + stop button
-    final isStopHovered = hovered?.hit == MiniPanelHit.stopBtn;
-    final stopHit = layout.hitRects.firstWhere(
-      (r) => r.hit == MiniPanelHit.stopBtn,
-      orElse: () => HitRect(
-          hit: MiniPanelHit.stopBtn, x1: 0, y1: 0, x2: 0, y2: 0),
-    );
-    _fillRoundRect(hdc, stopHit.x1, stopHit.y1, stopHit.x2, stopHit.y2,
-        MiniPanelMetrics.btnRadius,
-        isStopHovered ? _cRedHover : _cRedColorRef, _cRedColorRef);
+    // Overline label
+    win32.SelectObject(hdc, fonts.label);
+    _drawText(hdc, 'ACTIVE SESSION', x1, top + MiniPanelMetrics.sessionLabelY,
+        x2, top + MiniPanelMetrics.sessionLabelY + 14, _cAccent,
+        _dtLeft | _dtSingleLine | _dtNoPrefix);
+
+    // Task / project / comment - always three lines with a clear visual
+    // hierarchy (dark title, medium-gray project, light muted comment),
+    // muted placeholders when a value is missing, ellipsized when too long.
+    const ellipsized = _dtLeft | _dtSingleLine | _dtEndEllipsis | _dtNoPrefix;
+
+    win32.SelectObject(hdc, fonts.title);
+    _drawText(hdc, state.activeTitle ?? 'No task', x1,
+        top + MiniPanelMetrics.sessionTitleY, x2,
+        top + MiniPanelMetrics.sessionTitleY + MiniPanelMetrics.sessionTitleH,
+        state.activeTitle != null ? _cTextPrimary : _cTextMuted, ellipsized);
+
     win32.SelectObject(hdc, fonts.caption);
-    _drawText(hdc, 'Stop', stopHit.x1, stopHit.y1, stopHit.x2, stopHit.y2,
-        _cBtnTextLight, _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
+    _drawText(hdc, state.activeSubtitle ?? 'No project', x1,
+        top + MiniPanelMetrics.sessionSubtitleY, x2,
+        top +
+            MiniPanelMetrics.sessionSubtitleY +
+            MiniPanelMetrics.sessionSubtitleH,
+        state.activeSubtitle != null ? _cTextSecondary : _cTextMuted,
+        ellipsized);
 
-    final titleR = stopHit.x1 - pad;
-    win32.SelectObject(hdc, fonts.bodyBold);
-    _drawText(hdc, state.activeTitle ?? '', pad, top + padV, titleR,
-        top + padV + 20, _cTextPrimary,
-        _dtLeft | _dtSingleLine | _dtEndEllipsis | _dtNoPrefix);
+    _drawText(hdc, state.activeComment ?? 'No comment', x1,
+        top + MiniPanelMetrics.sessionCommentY, x2,
+        top +
+            MiniPanelMetrics.sessionCommentY +
+            MiniPanelMetrics.sessionCommentH,
+        _cTextMuted, ellipsized);
 
-    // Row 2: started-at line
+    // Timer row: elapsed time left, stop icon button right
+    final stopHit = _findRect(layout, MiniPanelHit.stopBtn);
     if (state.timerStartAt != null) {
-      win32.SelectObject(hdc, fonts.caption);
-      _drawText(
-          hdc, _fmtStartTime(state.timerStartAt!),
-          pad, top + padV + 22, w - pad, top + padV + 40,
-          _cTextMuted,
-          _dtLeft | _dtSingleLine | _dtNoPrefix);
+      win32.SelectObject(hdc, fonts.timer);
+      _drawText(hdc, _fmtElapsed(state.timerStartAt!), x1,
+          top + MiniPanelMetrics.sessionTimerY, stopHit.x1 - 8,
+          top + MiniPanelMetrics.sessionTimerY + MiniPanelMetrics.sessionTimerH,
+          _cTextPrimary,
+          _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
     }
 
-    // Row 3: large elapsed timer (centered)
-    if (state.timerStartAt != null) {
-      final elapsed = _fmtElapsed(state.timerStartAt!);
-      win32.SelectObject(hdc, fonts.timerLarge);
-      _drawText(hdc, elapsed, pad, top + padV + 44, w - pad, top + padV + 90,
-          _cTimerText,
-          _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
-    }
+    // Stop icon button: danger rounded square with a white stop glyph,
+    // matching the main window's danger PrimaryButton with Icons.stop.
+    final isStopHovered = hovered?.hit == MiniPanelHit.stopBtn;
+    _fillRoundRect(hdc, stopHit.x1, stopHit.y1, stopHit.x2, stopHit.y2,
+        MiniPanelMetrics.radiusCard,
+        isStopHovered ? _cDangerHover : _cDanger,
+        isStopHovered ? _cDangerHover : _cDanger);
+    final scx = (stopHit.x1 + stopHit.x2) ~/ 2;
+    final scy = (stopHit.y1 + stopHit.y2) ~/ 2;
+    _fillRoundRect(hdc, scx - 6, scy - 6, scx + 6, scy + 6, 2, _cWhite, _cWhite);
 
-    // Row 4: "Switch Activity" link
-    final switchHit = layout.hitRects.firstWhere(
-      (r) => r.hit == MiniPanelHit.switchActivity,
-      orElse: () => HitRect(
-          hit: MiniPanelHit.switchActivity, x1: 0, y1: 0, x2: 0, y2: 0),
-    );
+    // "Switch Activity" link
+    final switchHit = _findRect(layout, MiniPanelHit.switchActivity);
     final isSwitchHovered = hovered?.hit == MiniPanelHit.switchActivity;
     win32.SelectObject(hdc, fonts.caption);
-    _drawText(hdc, 'Switch Activity', pad,
-        switchHit.y1, w - pad, switchHit.y2,
+    _drawText(hdc, 'Switch Activity', switchHit.x1, switchHit.y1,
+        switchHit.x2, switchHit.y2,
         isSwitchHovered ? _cAccent : _cTextSecondary,
         _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
   }
 
-  static void _paintListLabel(
+  static void _paintListCard(
     int hdc,
     MiniPanelLayout layout,
+    MiniPanelDisplayState state,
     MiniPanelFonts fonts,
+    HitRect? hovered,
   ) {
-    final w = layout.clientW;
-    final top = layout.listLabelTop;
-    const h = MiniPanelMetrics.listLabelH;
-    const pad = MiniPanelMetrics.padH;
+    final top = layout.listCardTop;
+    _fillRoundRect(hdc, layout.cardX1, top, layout.cardX2,
+        layout.listCardBottom, MiniPanelMetrics.radiusCard, _cSurface,
+        _cBorder);
 
-    _fillRect(hdc, 0, top, w, top + h, _cHeaderBg);
-
+    // Overline label
     win32.SelectObject(hdc, fonts.label);
-    _drawText(hdc, 'RECENT TASKS', pad, top, w - pad, top + h,
-        _cTextMuted, _dtLeft | _dtVCenter | _dtSingleLine | _dtNoPrefix);
+    _drawText(hdc, 'RECENT ACTIVITY', layout.contentX1, top + 12,
+        layout.contentX2, top + 12 + 14, _cTextSecondary2,
+        _dtLeft | _dtSingleLine | _dtNoPrefix);
 
-    _drawHLine(hdc, 0, top + h - 1, w, _cBorder);
+    _paintListItems(hdc, layout, state, fonts, hovered);
+
+    if (state.entries.length > MiniPanelMetrics.maxVisibleItems) {
+      _paintScrollArrows(hdc, layout, hovered);
+    }
   }
 
   static void _paintListItems(
@@ -285,14 +347,19 @@ abstract final class MiniPanelPainter {
     MiniPanelFonts fonts,
     HitRect? hovered,
   ) {
-    final w = layout.clientW;
-    const pad = MiniPanelMetrics.padH;
     const badgeD = MiniPanelMetrics.badgeD;
     const itemH = MiniPanelMetrics.itemH;
 
-    // Clip painting to the list area
+    final rowX1 = layout.cardX1 + 8;
+    final rowX2 = layout.cardX2 - 8;
     final listTop = layout.listAreaTop;
     final listBottom = layout.listAreaBottom;
+
+    // Clip scrolled rows to the list band so partially visible rows never
+    // overdraw the card label or the scroll arrows.
+    final clipRgn =
+        win32.CreateRectRgn(layout.cardX1, listTop, layout.cardX2, listBottom);
+    _selectClipRgn(hdc, clipRgn);
 
     for (int i = 0; i < state.entries.length; i++) {
       final entry = state.entries[i];
@@ -302,17 +369,17 @@ abstract final class MiniPanelPainter {
       if (itemY + itemH <= listTop) continue;
       if (itemY >= listBottom) break;
 
-      // Item background
       final isRowHovered = hovered?.hit == MiniPanelHit.startBtn &&
           hovered?.entryIndex == i;
-      final bg = isRowHovered ? _cItemBgHover : _cItemBg;
-      final paintTop = itemY.clamp(listTop, listBottom);
-      final paintBottom = (itemY + itemH).clamp(listTop, listBottom);
-      _fillRect(hdc, 0, paintTop, w, paintBottom, bg);
-      _drawHLine(hdc, pad, itemY + itemH - 1, w - pad, _cBorder);
+
+      // Hover highlight (accent.primaryMuted, radiuses.sm)
+      if (isRowHovered) {
+        _fillRoundRect(hdc, rowX1, itemY + 2, rowX2, itemY + itemH - 2,
+            MiniPanelMetrics.radiusControl, _cAccentMuted, _cAccentMuted);
+      }
 
       // Badge circle
-      const badgeX = pad;
+      final badgeX = layout.contentX1;
       final badgeY = itemY + (itemH - badgeD) ~/ 2;
       _fillEllipse(hdc, badgeX, badgeY, badgeX + badgeD, badgeY + badgeD,
           entry.badgeBg);
@@ -322,43 +389,37 @@ abstract final class MiniPanelPainter {
           _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
 
       // Title and subtitle
-      final textX = pad + badgeD + 8;
-      final btnX = w - pad - MiniPanelMetrics.btnStartW;
-      final textMaxX = btnX - 8;
+      final textX = badgeX + badgeD + 12;
+      final btnX1 = layout.contentX2 - MiniPanelMetrics.playBtnD;
+      final textMaxX = btnX1 - 8;
 
       win32.SelectObject(hdc, fonts.body);
-      _drawText(hdc, entry.title, textX, itemY + 8, textMaxX,
-          itemY + 8 + 18, _cTextPrimary,
+      _drawText(hdc, entry.title, textX, itemY + 8, textMaxX, itemY + 26,
+          _cTextPrimary,
           _dtLeft | _dtSingleLine | _dtEndEllipsis | _dtNoPrefix);
 
       if (entry.subtitle != null) {
         win32.SelectObject(hdc, fonts.caption);
+        // 18px row - anything less clips Cyrillic descenders.
         _drawText(hdc, entry.subtitle!, textX, itemY + 28, textMaxX,
-            itemY + 28 + 16, _cTextMuted,
+            itemY + 46, _cTextMuted,
             _dtLeft | _dtSingleLine | _dtEndEllipsis | _dtNoPrefix);
       }
 
-      // Start button
-      final startHit = layout.hitRects.firstWhere(
-        (r) => r.hit == MiniPanelHit.startBtn && r.entryIndex == i,
-        orElse: () => HitRect(
-            hit: MiniPanelHit.startBtn, x1: 0, y1: 0, x2: 0, y2: 0),
-      );
-      if (startHit.x1 != 0) {
-        // Clamp button to visible area
-        final btnTop = startHit.y1.clamp(listTop, listBottom);
-        final btnBottom = startHit.y2.clamp(listTop, listBottom);
-        if (btnBottom > btnTop) {
-          _fillRoundRect(hdc, startHit.x1, btnTop, startHit.x2, btnBottom,
-              MiniPanelMetrics.btnRadius,
-              isRowHovered ? _cGreenHover : _cGreenColorRef, _cGreenColorRef);
-          win32.SelectObject(hdc, fonts.caption);
-          _drawText(hdc, 'Start', startHit.x1, startHit.y1, startHit.x2,
-              startHit.y2, _cBtnTextLight,
-              _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
-        }
+      // Play icon button: ghost while idle, accent-filled when the row is
+      // hovered - mirrors the main window's ghost/primary PrimaryButton.
+      final btnY1 = itemY + (itemH - MiniPanelMetrics.playBtnD) ~/ 2;
+      final btnY2 = btnY1 + MiniPanelMetrics.playBtnD;
+      if (isRowHovered) {
+        _fillRoundRect(hdc, btnX1, btnY1, layout.contentX2, btnY2,
+            MiniPanelMetrics.radiusControl, _cAccent, _cAccent);
       }
+      _drawPlayTriangle(hdc, btnX1, btnY1, layout.contentX2, btnY2,
+          isRowHovered ? _cWhite : _cTextSecondary);
     }
+
+    _selectClipRgn(hdc, win32.NULL);
+    win32.DeleteObject(clipRgn);
   }
 
   static void _paintScrollArrows(
@@ -366,34 +427,21 @@ abstract final class MiniPanelPainter {
     MiniPanelLayout layout,
     HitRect? hovered,
   ) {
-    final top = layout.scrollBarTop;
-    const h = MiniPanelMetrics.scrollBarH;
-    _fillRect(hdc, 0, top, layout.clientW, top + h, _cHeaderBg);
-    _drawHLine(hdc, 0, top + h - 1, layout.clientW, _cBorder);
-
-    final upHit = layout.hitRects.firstWhere(
-      (r) => r.hit == MiniPanelHit.scrollUp,
-      orElse: () =>
-          HitRect(hit: MiniPanelHit.scrollUp, x1: 0, y1: 0, x2: 0, y2: 0),
-    );
-    final downHit = layout.hitRects.firstWhere(
-      (r) => r.hit == MiniPanelHit.scrollDown,
-      orElse: () =>
-          HitRect(hit: MiniPanelHit.scrollDown, x1: 0, y1: 0, x2: 0, y2: 0),
-    );
+    final upHit = _findRect(layout, MiniPanelHit.scrollUp);
+    final downHit = _findRect(layout, MiniPanelHit.scrollDown);
 
     final isUpHovered = hovered?.hit == MiniPanelHit.scrollUp;
     final isDownHovered = hovered?.hit == MiniPanelHit.scrollDown;
 
-    // Up arrow button
-    _fillRoundRect(hdc, upHit.x1, upHit.y1, upHit.x2, upHit.y2, 4,
-        isUpHovered ? _cItemBgHover : _cHeaderBg, _cBorder);
+    _fillRoundRect(hdc, upHit.x1, upHit.y1, upHit.x2, upHit.y2,
+        MiniPanelMetrics.radiusControl,
+        isUpHovered ? _cSurfaceMuted : _cSurface, _cBorder);
     _drawArrow(hdc, upHit.x1, upHit.y1, upHit.x2, upHit.y2, true,
         isUpHovered ? _cTextPrimary : _cTextSecondary);
 
-    // Down arrow button
-    _fillRoundRect(hdc, downHit.x1, downHit.y1, downHit.x2, downHit.y2, 4,
-        isDownHovered ? _cItemBgHover : _cHeaderBg, _cBorder);
+    _fillRoundRect(hdc, downHit.x1, downHit.y1, downHit.x2, downHit.y2,
+        MiniPanelMetrics.radiusControl,
+        isDownHovered ? _cSurfaceMuted : _cSurface, _cBorder);
     _drawArrow(hdc, downHit.x1, downHit.y1, downHit.x2, downHit.y2, false,
         isDownHovered ? _cTextPrimary : _cTextSecondary);
   }
@@ -407,18 +455,17 @@ abstract final class MiniPanelPainter {
     final w = layout.clientW;
     final top = layout.footerTop;
     const h = MiniPanelMetrics.footerH;
-    const pad = MiniPanelMetrics.padH;
 
+    _fillRect(hdc, 0, top, w, top + h, _cAccentMuted);
     _drawHLine(hdc, 0, top, w, _cBorder);
-    _fillRect(hdc, 0, top + 1, w, top + h, _cFooterBg);
 
     final todayStr = _fmtDuration(state.todayDuration);
     final weekStr = _fmtDuration(state.weekDuration);
-    final statsText = 'Today $todayStr  |  Week $weekStr';
+    final statsText = 'Today $todayStr   |   Week $weekStr';
 
     win32.SelectObject(hdc, fonts.caption);
-    _drawText(hdc, statsText, pad, top, w - pad, top + h,
-        _cTextSecondary, _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
+    _drawText(hdc, statsText, 0, top, w, top + h, _cTextMuted,
+        _dtCenter | _dtVCenter | _dtSingleLine | _dtNoPrefix);
   }
 
   static String _fmtDuration(Duration d) {
@@ -426,6 +473,13 @@ abstract final class MiniPanelPainter {
     final m = d.inMinutes.remainder(60);
     if (h == 0) return '${m}m';
     return '${h}h ${m}m';
+  }
+
+  static HitRect _findRect(MiniPanelLayout layout, MiniPanelHit hit) {
+    return layout.hitRects.firstWhere(
+      (r) => r.hit == hit,
+      orElse: () => HitRect(hit: hit, x1: 0, y1: 0, x2: 0, y2: 0),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -507,6 +561,34 @@ abstract final class MiniPanelPainter {
     }
   }
 
+  /// Draws a filled play triangle centered in the given rect.
+  static void _drawPlayTriangle(
+      int hdc, int x1, int y1, int x2, int y2, int color) {
+    final cx = (x1 + x2) ~/ 2;
+    final cy = (y1 + y2) ~/ 2;
+
+    final brush = win32.CreateSolidBrush(color);
+    final pen = win32.CreatePen(_psNull, 0, color);
+    win32.SelectObject(hdc, brush);
+    win32.SelectObject(hdc, pen);
+
+    final pts = calloc<win32.POINT>(3);
+    try {
+      pts[0].x = cx - 4;
+      pts[0].y = cy - 6;
+      pts[1].x = cx - 4;
+      pts[1].y = cy + 6;
+      pts[2].x = cx + 6;
+      pts[2].y = cy;
+      win32.Polygon(hdc, pts, 3);
+    } finally {
+      calloc.free(pts);
+    }
+
+    win32.DeleteObject(brush);
+    win32.DeleteObject(pen);
+  }
+
   /// Draws a simple up or down arrow using line primitives (Polyline).
   static void _drawArrow(
       int hdc, int x1, int y1, int x2, int y2, bool up, int color) {
@@ -548,13 +630,5 @@ abstract final class MiniPanelPainter {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
-  static String _fmtStartTime(DateTime startAt) {
-    final t = startAt.toLocal();
-    final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
-    final m = t.minute.toString().padLeft(2, '0');
-    final ampm = t.hour < 12 ? 'AM' : 'PM';
-    return 'Started at $h:$m $ampm';
   }
 }

@@ -592,12 +592,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
 
     Widget? leadingWidget;
     if (selectedTask != null) {
-      final project = projectTaskState.projects.firstWhere(
+      final project = projectTaskState.projects.firstWhereOrNull(
         (p) => p.id == selectedTask.projectId,
       );
       final initials = BadgeUtils.getTaskInitials(
         selectedTask.title,
-        project.name,
+        project?.name ?? '',
       );
       final colors = BadgeUtils.getBadgeColor(selectedTask.id);
       leadingWidget = WsInitialBadge(

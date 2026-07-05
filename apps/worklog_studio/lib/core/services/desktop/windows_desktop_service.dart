@@ -356,9 +356,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
           .firstWhereOrNull((t) => t.id == activeEntry.taskId);
       final project = _projectTaskState?.projects
           .firstWhereOrNull((p) => p.id == activeEntry.projectId);
-      activeTitle = (activeEntry.comment?.isNotEmpty == true)
-          ? activeEntry.comment
-          : (task?.title ?? project?.name ?? 'Untitled');
+      // The session card renders task, project, and comment as three
+      // separate lines (with placeholders when missing), so no fallback
+      // chain here - each field carries exactly its own value.
+      activeTitle = task?.title;
       activeSubtitle = project?.name;
     }
 
@@ -418,7 +419,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
       isRunning: state.isRunning,
       activeTitle: activeTitle,
       activeSubtitle: activeSubtitle,
-      activeComment: activeEntry?.comment,
+      activeComment: (activeEntry?.comment?.isNotEmpty == true)
+          ? activeEntry!.comment
+          : null,
       timerStartAt: activeEntry?.startAt,
       entries: recentEntries,
       todayDuration: todayDur,
