@@ -117,6 +117,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       L"vavilov2212",
       L"Worklog Studio",
       ToWide(FLUTTER_VERSION).c_str());
+  win_sparkle_set_app_build_version(std::to_wstring(FLUTTER_VERSION_BUILD).c_str());
   win_sparkle_init();
 
   flutter::DartProject project(L"data");
