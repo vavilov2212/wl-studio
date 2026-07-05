@@ -9,6 +9,7 @@
 
 #include "flutter_window.h"
 #include "utils.h"
+#include "WinSparkle.h"
 
 // Writes a minidump + plain-text sidecar to
 // %LOCALAPPDATA%\WorklogStudio\crashes\ on any unhandled native exception.
@@ -82,6 +83,15 @@ static LONG WINAPI WriteCrashDump(EXCEPTION_POINTERS* ei) {
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
+// Converts a UTF-8 string literal to std::wstring for the WinSparkle wide-char API.
+static std::wstring ToWide(const char* utf8) {
+  int len = ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
+  if (len <= 0) return {};
+  std::wstring wide(static_cast<size_t>(len - 1), L'\0');
+  ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide.data(), len);
+  return wide;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // Register before anything else so crashes during init are also captured.
@@ -96,6 +106,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+  // WinSparkle: configure and start auto-update before the Flutter engine.
+  // The raw GitHub URL is checked on every silent check; updates appear as
+  // soon as CI pushes the updated appcast_windows.xml after a release.
+  win_sparkle_set_appcast_url(
+      "https://raw.githubusercontent.com/vavilov2212/worklog_studio/main"
+      "/apps/worklog_studio/release/appcast_windows.xml");
+  win_sparkle_set_app_details(
+      L"vavilov2212",
+      L"Worklog Studio",
+      ToWide(FLUTTER_VERSION).c_str());
+  win_sparkle_init();
 
   flutter::DartProject project(L"data");
 
@@ -123,5 +145,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoUninitialize();
+  win_sparkle_cleanup();
   return EXIT_SUCCESS;
 }
