@@ -335,32 +335,36 @@ void main() {
       expect(entry.status, TimeEntryStatus.running);
     });
 
-    /// Verifies that [TimeTrackerEvent.started] is silently ignored (no new
-    /// state emitted) when a timer is already running.  This guards against
-    /// rapid double-taps on the Start button: the second tap must not create a
-    /// second running entry or flicker the UI.  The test listens on the stream
-    /// after the bloc is already in the running state and confirms no emission
-    /// follows the duplicate event.
-    test('is a no-op (emits nothing) when timer is already running', () async {
-      repo.seed(_runningEntry());
+    /// Verifies that dispatching [TimeTrackerEvent.started] while a timer is
+    /// already running stops the current timer and starts a new one.
+    /// This is the primary "switch timer" path used by the history page play
+    /// button: pressing play on a stopped entry while another entry is active
+    /// must atomically stop the active entry and begin tracking the new one.
+    test('stops the current timer and starts a new one when called while running', () async {
       final bloc = makeBloc();
       addTearDown(bloc.close);
 
-      // Seed bloc into running state
-      await pump(bloc, const TimeTrackerEvent.loaded());
+      // Start first timer for project p1 / task t1
+      await pump(bloc, const TimeTrackerEvent.started(projectId: 'p1', taskId: 't1'));
       expect(bloc.state.isRunning, isTrue);
 
-      final statesBefore = bloc.state;
-      final emitted = <TimeTrackerBlocState>[];
-      final sub = bloc.stream.listen(emitted.add);
-      addTearDown(sub.cancel);
+      clock.advance(const Duration(minutes: 30));
 
-      // A second start must be swallowed
-      bloc.add(const TimeTrackerEvent.started());
-      await Future<void>.delayed(Duration.zero);
+      // Start a different timer while p1/t1 is still running
+      await pump(bloc, const TimeTrackerEvent.started(projectId: 'p2', taskId: 't2'));
 
-      expect(emitted, isEmpty);
-      expect(bloc.state, statesBefore);
+      // Bloc must still be running, but now tracking p2/t2
+      expect(bloc.state.isRunning, isTrue);
+      final active = bloc.state.activeEntryOrNull!;
+      expect(active.projectId, 'p2');
+      expect(active.taskId, 't2');
+      expect(active.status, TimeEntryStatus.running);
+
+      // p1/t1 entry must now be stopped in the history
+      final all = await service.getAll();
+      final stopped = all.where((e) => e.status == TimeEntryStatus.stopped).toList();
+      expect(stopped.length, 1);
+      expect(stopped.first.projectId, 'p1');
     });
   });
 
