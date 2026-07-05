@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
 <channel>
   <title>Worklog Studio Windows Updates</title>
@@ -6,14 +6,15 @@
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
-    <title>Version 1.0.10-dev.6</title>
-    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.10-dev.6</sparkle:releaseNotesLink>
-    <pubDate>Tue, 23 Jun 2026 12:00:46 GMT</pubDate>
+    <title>Version 1.0.12-dev.2</title>
+    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.12-dev.2</sparkle:releaseNotesLink>
+    <pubDate>Sun, 05 Jul 2026 14:48:46 GMT</pubDate>
+    <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
-      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.10-dev.6/worklog_studio_windows_1.0.10-dev.6.zip"
-      sparkle:version="60"
-      sparkle:shortVersionString="1.0.10-dev.6"
-      length="16725786"
+      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.12-dev.2/worklog_studio_setup_1.0.12-dev.2.exe"
+      sparkle:version="82"
+      sparkle:shortVersionString="1.0.12-dev.2"
+      length="14522709"
       type="application/octet-stream"/>
   </item>
 </channel>
