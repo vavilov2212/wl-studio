@@ -108,11 +108,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   // WinSparkle: configure and start auto-update before the Flutter engine.
-  // The raw GitHub URL is checked on every silent check; updates appear as
-  // soon as CI pushes the updated appcast_windows.xml after a release.
-  win_sparkle_set_appcast_url(
-      "https://raw.githubusercontent.com/vavilov2212/worklog_studio/main"
-      "/apps/worklog_studio/release/appcast_windows.xml");
+  // Dev builds (version contains "-dev.") read from the dev branch so
+  // pre-release appcasts are kept separate from the stable main branch.
+  {
+    const std::string ver(FLUTTER_VERSION);
+    const bool is_dev = ver.find("-dev.") != std::string::npos;
+    const std::string appcast_url =
+        std::string("https://raw.githubusercontent.com/vavilov2212/wl-studio/")
+        + (is_dev ? "dev" : "main")
+        + "/apps/worklog_studio/release/appcast_windows.xml";
+    win_sparkle_set_appcast_url(appcast_url.c_str());
+  }
   win_sparkle_set_app_details(
       L"vavilov2212",
       L"Worklog Studio",

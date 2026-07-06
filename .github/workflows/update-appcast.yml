@@ -14,6 +14,10 @@ on:
       version:
         description: 'Version to set as latest in the appcast (e.g. 1.0.12-dev.3)'
         required: true
+      branch:
+        description: 'Branch whose appcast to update (dev for pre-releases, main for stable)'
+        required: false
+        default: 'main'
 
 jobs:
   update-appcast:
@@ -22,10 +26,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout main
+      - name: Checkout target branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ inputs.branch }}
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
@@ -42,7 +46,7 @@ jobs:
             | tr -d '[:space:]')
 
           INSTALLER="worklog_studio_setup_${VERSION}.exe"
-          URL="https://github.com/vavilov2212/worklog_studio/releases/download/v${VERSION}/${INSTALLER}"
+          URL="https://github.com/vavilov2212/wl-studio/releases/download/v${VERSION}/${INSTALLER}"
 
           # File size and release date from GitHub API - no download needed
           RELEASE=$(curl -sf \
@@ -59,12 +63,12 @@ jobs:
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
 <channel>
   <title>Worklog Studio Windows Updates</title>
-  <link>https://github.com/vavilov2212/worklog_studio</link>
+  <link>https://github.com/vavilov2212/wl-studio</link>
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
     <title>Version ${VERSION}</title>
-    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v${VERSION}</sparkle:releaseNotesLink>
+    <sparkle:releaseNotesLink>https://github.com/vavilov2212/wl-studio/releases/tag/v${VERSION}</sparkle:releaseNotesLink>
     <pubDate>${DATE}</pubDate>
     <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
@@ -80,10 +84,10 @@ APPCAST
 
           echo "Updated appcast: version=${VERSION} build=${BUILD_NUMBER} size=${SIZE}"
 
-      - name: Commit and push to main
+      - name: Commit and push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps/worklog_studio/release/appcast_windows.xml
           git commit -m "release: update appcast_windows.xml for v${{ inputs.version }}"
-          git push origin main
+          git push origin ${{ inputs.branch }}
