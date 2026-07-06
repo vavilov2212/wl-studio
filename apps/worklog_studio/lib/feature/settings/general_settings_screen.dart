@@ -6,7 +6,7 @@ import 'package:worklog_studio/core/services/desktop/reveal_in_file_manager.dart
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
 import 'package:worklog_studio/domain/backup.dart';
-import 'package:worklog_studio_style_system/theme/theme_extension/app_theme_extension.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -19,11 +19,19 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _isBackingUp = false;
   String? _dbDirPath;
   String? _backupsDirPath;
+  String? _version;
 
   @override
   void initState() {
     super.initState();
     _loadDirPaths();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final version = await SparkleBridge.getVersion();
+    if (!mounted) return;
+    setState(() => _version = version);
   }
 
   Future<void> _loadDirPaths() async {
@@ -139,6 +147,30 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('General', style: theme.commonTextStyles.displayLarge), // TODO: l10n
+          SizedBox(height: theme.spacings.md),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Version ', // TODO: l10n
+                style: theme.commonTextStyles.caption.copyWith(
+                  color: theme.colorsPalette.text.secondary,
+                ),
+              ),
+              Text(
+                _version ?? '-',
+                style: theme.commonTextStyles.captionBold.copyWith(
+                  color: theme.colorsPalette.text.primary,
+                ),
+              ),
+              SizedBox(width: theme.spacings.md),
+              TextLink(
+                label: 'Release notes', // TODO: l10n
+                onTap: () => openUrl('https://github.com/vavilov2212/worklog_studio/releases'),
+                style: theme.commonTextStyles.caption,
+              ),
+            ],
+          ),
           SizedBox(height: theme.spacings.x2l),
           Row(
             children: [
