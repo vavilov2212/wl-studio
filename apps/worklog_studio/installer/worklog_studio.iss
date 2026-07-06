@@ -17,7 +17,7 @@ AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-AppUpdatesURL=https://github.com/vavilov2212/worklog_studio/releases
+AppUpdatesURL=https://github.com/vavilov2212/wl-studio/releases
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
@@ -46,6 +46,13 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdi
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+
+[UninstallRun]
+; Force-terminate the app before uninstall so the uninstaller can delete
+; locked files. WM_CLOSE alone won't work because the window is intercepted
+; (minimize-to-tray). /F force-kills; SQLite journals ensure data safety.
+Filename: "{cmd}"; Parameters: "/C taskkill /F /IM {#AppExeName}"; \
+  Flags: runhidden; RunOnceId: "KillApp"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; \
