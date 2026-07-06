@@ -124,6 +124,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       L"Worklog Studio",
       ToWide(FLUTTER_VERSION).c_str());
   win_sparkle_set_app_build_version(std::to_wstring(FLUTTER_VERSION_BUILD).c_str());
+
+  // WM_CLOSE is intercepted by the tray-hide handler so the process would
+  // stay alive and WinSparkle would time out waiting for it to exit.
+  // Registering a shutdown callback bypasses that path entirely.
+  win_sparkle_set_shutdown_request_callback([]() {
+    ::TerminateProcess(::GetCurrentProcess(), 0);
+  });
+
   win_sparkle_init();
 
   flutter::DartProject project(L"data");
