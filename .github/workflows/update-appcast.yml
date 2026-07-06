@@ -1,0 +1,89 @@
+name: Update Appcast (Windows)
+
+# Run this manually when the appcast_windows.xml needs to be updated for
+# an already-existing release — e.g. when the appcast step in release.yml
+# failed or was skipped.
+#
+# It reads the build number from the git tag and the installer file size
+# from the GitHub Releases API, so no build artifacts are needed.
+# The updated appcast is always pushed to main (where WinSparkle reads it).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to set as latest in the appcast (e.g. 1.0.12-dev.3)'
+        required: true
+
+jobs:
+  update-appcast:
+    name: Update appcast_windows.xml
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Build and write appcast entry
+        run: |
+          VERSION="${{ inputs.version }}"
+
+          # Build number from the git tag's pubspec.yaml
+          git fetch --tags
+          BUILD_NUMBER=$(git show "refs/tags/v${VERSION}:apps/worklog_studio/pubspec.yaml" \
+            | grep '^version:' \
+            | sed 's/version: //' \
+            | cut -d'+' -f2 \
+            | tr -d '[:space:]')
+
+          INSTALLER="worklog_studio_setup_${VERSION}.exe"
+          URL="https://github.com/vavilov2212/worklog_studio/releases/download/v${VERSION}/${INSTALLER}"
+
+          # File size and release date from GitHub API - no download needed
+          RELEASE=$(curl -sf \
+            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/vavilov2212/worklog_studio/releases/tags/v${VERSION}")
+
+          SIZE=$(echo "$RELEASE" | jq '.assets[] | select(.name | test("setup")) | .size')
+          PUBLISHED_AT=$(echo "$RELEASE" | jq -r '.published_at')
+          DATE=$(date -d "$PUBLISHED_AT" -u +"%a, %d %b %Y %H:%M:%S GMT")
+
+          cat > apps/worklog_studio/release/appcast_windows.xml << APPCAST
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<channel>
+  <title>Worklog Studio Windows Updates</title>
+  <link>https://github.com/vavilov2212/worklog_studio</link>
+  <description>Latest updates for Worklog Studio (Windows)</description>
+  <language>en</language>
+  <item>
+    <title>Version ${VERSION}</title>
+    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v${VERSION}</sparkle:releaseNotesLink>
+    <pubDate>${DATE}</pubDate>
+    <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
+    <enclosure
+      url="${URL}"
+      sparkle:version="${BUILD_NUMBER}"
+      sparkle:shortVersionString="${VERSION}"
+      length="${SIZE}"
+      type="application/octet-stream"/>
+  </item>
+</channel>
+</rss>
+APPCAST
+
+          echo "Updated appcast: version=${VERSION} build=${BUILD_NUMBER} size=${SIZE}"
+
+      - name: Commit and push to main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/worklog_studio/release/appcast_windows.xml
+          git commit -m "release: update appcast_windows.xml for v${{ inputs.version }}"
+          git push origin main

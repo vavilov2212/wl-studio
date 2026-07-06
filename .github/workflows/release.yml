@@ -355,8 +355,17 @@ jobs:
           </rss>
           APPCAST
 
+          # Always push the appcast to main — that is where WinSparkle reads it
+          # from (the URL in main.cpp is hardcoded to the main branch).
+          # When this job runs from dev we must NOT push HEAD:main (that would
+          # overwrite main with dev). Stash the written file, switch to main,
+          # restore it, then commit only that file.
+          cp apps/worklog_studio/release/appcast_windows.xml /tmp/appcast_windows.xml
+          git fetch origin main
+          git checkout -b _appcast-update origin/main
+          cp /tmp/appcast_windows.xml apps/worklog_studio/release/appcast_windows.xml
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps/worklog_studio/release/appcast_windows.xml
           git commit -m "release: update appcast_windows.xml for v${VERSION}"
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:main
