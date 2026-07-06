@@ -68,7 +68,7 @@ jobs:
             <language>en</language>
             <item>
               <title>Version ${VERSION}</title>
-              <sparkle:releaseNotesLink>https://github.com/vavilov2212/wl-studio/releases/tag/v${VERSION}</sparkle:releaseNotesLink>
+              <sparkle:releaseNotesLink>https://github.com/vavilov2212/wl-studio/releases/download/v${VERSION}/release_notes.html</sparkle:releaseNotesLink>
               <pubDate>${DATE}</pubDate>
               <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
               <enclosure
