@@ -21,3 +21,20 @@ Future<void> revealInFileManager(String path) async {
     // Non-critical: the user can still navigate there manually.
   }
 }
+
+/// Opens [url] in the default OS browser.
+///
+/// Best-effort convenience — failures are swallowed since this is never
+/// part of a critical flow.
+Future<void> openUrl(String url) async {
+  if (kIsWeb) return;
+  try {
+    if (Platform.isWindows) {
+      await Process.run('explorer.exe', [url]);
+    } else if (Platform.isMacOS) {
+      await Process.run('open', [url]);
+    } else if (Platform.isLinux) {
+      await Process.run('xdg-open', [url]);
+    }
+  } catch (_) {}
+}

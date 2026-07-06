@@ -89,13 +89,16 @@ void main() {
 
   testWidgets('switching to bar view renders a BarChart instead of donuts', (tester) async {
     final repository = FakeTimeEntryRepository();
-    final now = DateTime.now();
+    final today = DateTime.now();
+    // Use a fixed mid-morning time so startAt is always within the current week,
+    // regardless of what hour CI runs (avoids Monday-midnight week-boundary failures).
+    final startAt = DateTime(today.year, today.month, today.day, 10, 0);
     repository.seed(TimeEntry(
       id: 'e1',
       projectId: 'p1',
       taskId: 't1',
-      startAt: now.subtract(const Duration(hours: 1)),
-      endAt: now,
+      startAt: startAt,
+      endAt: startAt.add(const Duration(hours: 1)),
       status: TimeEntryStatus.stopped,
     ));
     final bloc = TimeTrackerBloc(
@@ -104,7 +107,7 @@ void main() {
     )..add(const TimeTrackerEvent.loaded());
     final projectState = ProjectTaskState(
       projectRepository: _FakeProjectRepository([
-        Project(id: 'p1', name: 'Project p1', description: '', createdAt: now),
+        Project(id: 'p1', name: 'Project p1', description: '', createdAt: today),
       ]),
       taskRepository: _FakeTaskRepository([
         Task(
@@ -113,7 +116,7 @@ void main() {
           title: 'Task t1',
           description: '',
           status: TaskStatus.open,
-          createdAt: now,
+          createdAt: today,
         ),
       ]),
       clock: SystemClock(),

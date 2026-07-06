@@ -456,6 +456,14 @@ class _Donut extends StatelessWidget {
   }
 }
 
+// Picks a round interval so the Y-axis shows ~4 gridlines regardless of scale.
+double _niceYInterval(double maxY) {
+  if (maxY <= 0) return 1;
+  final raw = maxY / 4;
+  const steps = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0];
+  return steps.firstWhere((v) => v >= raw, orElse: () => (raw / 5).ceil() * 5.0);
+}
+
 class _BarChart extends StatelessWidget {
   final DashboardChartData data;
 
@@ -470,6 +478,7 @@ class _BarChart extends StatelessWidget {
         .map((b) => b.duration.inMinutes / 60)
         .fold<double>(0, (max, v) => v > max ? v : max);
     final chartMaxY = maxHours <= 0 ? 1.0 : maxHours * 1.2;
+    final interval = _niceYInterval(chartMaxY);
 
     return SizedBox(
       height: 220,
@@ -478,12 +487,38 @@ class _BarChart extends StatelessWidget {
           maxY: chartMaxY,
           alignment: BarChartAlignment.spaceAround,
           barTouchData: BarTouchData(enabled: false),
-          gridData: const FlGridData(show: false),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: interval,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: palette.border.primary.withValues(alpha: 0.5),
+              strokeWidth: 1,
+            ),
+          ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 36,
+                interval: interval,
+                getTitlesWidget: (value, meta) {
+                  if (value == 0) return const SizedBox.shrink();
+                  final label = value % 1 == 0
+                      ? '${value.toInt()}h'
+                      : '${value.toStringAsFixed(1)}h';
+                  return Text(
+                    label,
+                    style: theme.commonTextStyles.caption.copyWith(
+                      color: palette.text.muted,
+                    ),
+                  );
+                },
+              ),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,

@@ -9,6 +9,7 @@ This is a Flutter monorepository managed via Melos.
   * *Entry Points:* `apps\worklog_studio\lib\main.dart` and `apps\worklog_studio\lib\main_development.dart`.
 - **UI Kit & Design System:** `packages\worklog_studio_style_system\`
   * *Entry Point:* `packages\worklog_studio_style_system\lib\worklog_studio_style_system.dart` (barrel export file).
+  * **UI Kit Reference:** `packages\worklog_studio_style_system\UI_KIT.md` - read this first on any UI task. Contains all components, props, tokens, and theme architecture. Do not crawl source files to discover what exists; consult this file instead.
 
 ## 2. Environment Constraints (Strictly Windows)
 - The development environment is **Windows**. All filesystem paths must use backslashes (`\`).

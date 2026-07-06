@@ -60,10 +60,11 @@ jobs:
     name: Create Version Tag
     runs-on: ubuntu-latest
     outputs:
-      version:    ${{ steps.parse.outputs.version }}
-      tag:        ${{ steps.parse.outputs.tag }}
-      prerelease: ${{ steps.parse.outputs.prerelease }}
-      tag_exists: ${{ steps.check.outputs.exists }}
+      version:      ${{ steps.parse.outputs.version }}
+      build_number: ${{ steps.parse.outputs.build_number }}
+      tag:          ${{ steps.parse.outputs.tag }}
+      prerelease:   ${{ steps.parse.outputs.prerelease }}
+      tag_exists:   ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,9 +85,14 @@ jobs:
           else
             PRERELEASE=false
           fi
-          echo "version=$VERSION"       >> $GITHUB_OUTPUT
-          echo "tag=$TAG"               >> $GITHUB_OUTPUT
-          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          BUILD_NUMBER=$(grep '^version:' apps/worklog_studio/pubspec.yaml \
+            | sed 's/version: //' \
+            | cut -d'+' -f2 \
+            | tr -d '[:space:]')
+          echo "version=$VERSION"             >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER"   >> $GITHUB_OUTPUT
+          echo "tag=$TAG"                     >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE"       >> $GITHUB_OUTPUT
           echo "Version: $VERSION | Tag: $TAG | Pre-release: $PRERELEASE"
 
       - name: Check if tag already exists
@@ -173,6 +179,28 @@ jobs:
           path: ${{ env.ZIP_NAME }}
           retention-days: 1
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version   = "${{ needs.tag.outputs.version }}"
+          $sourceDir = Resolve-Path "apps/worklog_studio/build/windows/x64/runner/Release"
+          $issScript = "apps/worklog_studio/installer/worklog_studio.iss"
+          $outputDir = New-Item -ItemType Directory -Force -Path "installer_output" |
+                         Select-Object -ExpandProperty FullName
+          iscc "/DAppVersion=$version" "/DSourceDir=$sourceDir" "/O$outputDir" $issScript
+          echo "INSTALLER_NAME=worklog_studio_setup_$version.exe" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: installer_output/${{ env.INSTALLER_NAME }}
+          retention-days: 1
+
   # ──────────────────────────────────────────────────────────
   # JOB 2b: Build macOS binary
   # ──────────────────────────────────────────────────────────
@@ -252,11 +280,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: windows-release
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
@@ -283,6 +317,74 @@ jobs:
           body_path:  changelog.md
           files: |
             worklog_studio_windows_${{ needs.tag.outputs.version }}.zip
+            worklog_studio_setup_${{ needs.tag.outputs.version }}.exe
             worklog_studio_macos_${{ needs.tag.outputs.version }}.zip
           draft:      false
           prerelease: ${{ needs.tag.outputs.prerelease }}
+
+      - name: Update appcast_windows.xml
+        run: |
+          VERSION="${{ needs.tag.outputs.version }}"
+          BUILD_NUMBER="${{ needs.tag.outputs.build_number }}"
+          PRERELEASE="${{ needs.tag.outputs.prerelease }}"
+          INSTALLER="worklog_studio_setup_${VERSION}.exe"
+          SIZE=$(stat -c%s "$INSTALLER")
+          URL="https://github.com/vavilov2212/wl-studio/releases/download/v${VERSION}/${INSTALLER}"
+          DATE=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
+
+          # Dev builds update the dev branch appcast; stable builds update main.
+          if [ "$PRERELEASE" = "true" ]; then
+            TARGET_BRANCH="dev"
+          else
+            TARGET_BRANCH="main"
+          fi
+
+          # Build HTML release notes from the changelog. Each commit becomes
+          # a list item. The result is embedded inline in the appcast CDATA
+          # block so WinSparkle renders it without any HTTP request.
+          RN_STYLE='<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;padding:12px 16px;color:#1c1e21;background:#fff;margin:0}ul{margin:0;padding-left:18px}li{margin:3px 0;line-height:1.5}</style>'
+          RN_ITEMS=$'\n'
+          while IFS= read -r line; do
+            item="${line#- }"
+            item="${item//&/&amp;}"
+            item="${item//</&lt;}"
+            item="${item//>/&gt;}"
+            RN_ITEMS="${RN_ITEMS}      <li>${item}</li>"$'\n'
+          done < changelog.md
+          RELEASE_NOTES_HTML="${RN_STYLE}<ul>${RN_ITEMS}</ul>"
+
+          cat > apps/worklog_studio/release/appcast_windows.xml << APPCAST
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+          <channel>
+            <title>Worklog Studio Windows Updates</title>
+            <link>https://github.com/vavilov2212/wl-studio</link>
+            <description>Latest updates for Worklog Studio (Windows)</description>
+            <language>en</language>
+            <item>
+              <title>Version ${VERSION}</title>
+              <sparkle:releaseNotes><![CDATA[${RELEASE_NOTES_HTML}]]></sparkle:releaseNotes>
+              <pubDate>${DATE}</pubDate>
+              <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
+              <enclosure
+                url="${URL}"
+                sparkle:version="${BUILD_NUMBER}"
+                sparkle:shortVersionString="${VERSION}"
+                length="${SIZE}"
+                type="application/octet-stream"/>
+            </item>
+          </channel>
+          </rss>
+          APPCAST
+
+          # Stash the written file, switch to the target branch, restore it,
+          # then commit only that file (avoids accidentally pushing source changes).
+          cp apps/worklog_studio/release/appcast_windows.xml /tmp/appcast_windows.xml
+          git fetch origin "$TARGET_BRANCH"
+          git checkout -b _appcast-update "origin/$TARGET_BRANCH"
+          cp /tmp/appcast_windows.xml apps/worklog_studio/release/appcast_windows.xml
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/worklog_studio/release/appcast_windows.xml
+          git commit -m "release: update appcast_windows.xml for v${VERSION}"
+          git push origin "HEAD:$TARGET_BRANCH"

@@ -202,6 +202,9 @@ class WindowsTrayService with TrayListener, WindowListener {
   Future<void> _quit() async {
     await trayManager.destroy();
     await windowManager.setPreventClose(false);
-    await windowManager.close();
+    // windowManager.close() only sends WM_CLOSE; active Win32 windows,
+    // timers, and stream subscriptions keep the Dart VM alive after the
+    // Flutter window closes. exit(0) terminates the process reliably.
+    exit(0);
   }
 }

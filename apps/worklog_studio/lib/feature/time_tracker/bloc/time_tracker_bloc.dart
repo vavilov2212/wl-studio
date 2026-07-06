@@ -56,8 +56,12 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     TimeTrackerStarted event,
     Emitter<TimeTrackerBlocState> emit,
   ) async {
-    if (state.isRunning) return;
+    final wasRunning = state.isRunning;
     await _reloadAndEmit(emit, () async {
+      if (wasRunning) {
+        await _service.stop();
+        _idleMonitor?.stop();
+      }
       await _service.start(
         projectId: event.projectId,
         taskId: event.taskId,
