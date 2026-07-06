@@ -978,6 +978,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         } else {
           setState(() => _settingsExpanded = !_settingsExpanded);
         }
+        if (!isSettingsRoute(widget.currentRoute)) {
+          widget.onRouteSelected(AppRoute.settingsGeneral);
+        }
       },
     );
 
