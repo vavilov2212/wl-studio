@@ -4,12 +4,14 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 class DrawerHeader extends StatefulWidget {
   final VoidCallback onClose;
   final VoidCallback? onDelete;
+  final VoidCallback? onDiscard;
   final List<Widget>? extraActions;
 
   const DrawerHeader({
     super.key,
     required this.onClose,
     this.onDelete,
+    this.onDiscard,
     this.extraActions,
   });
 
@@ -52,49 +54,61 @@ class _DrawerHeaderState extends State<DrawerHeader> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.extraActions != null) ...widget.extraActions!,
-              PopoverPrimitive(
-                controller: _popoverController,
-                targetAnchor: Alignment.bottomRight,
-                followerAnchor: Alignment.topRight,
-                width: 180,
-                trigger: IconButton(
-                  icon: Icon(
-                    Icons.more_horiz,
-                    color: palette.text.secondary,
-                    size: 18,
-                  ),
-                  iconSize: 18,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
-                  ),
-                  onPressed: _popoverController.toggle,
-                ),
-                contentBuilder: (context) {
-                  return PopoverSurface(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: theme.spacings.sm,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _PopoverAction(
-                            icon: Icons.delete_outline,
-                            label: 'Delete',
-                            color: palette.accent.danger,
-                            onTap: () {
-                              _popoverController.hide();
-                              widget.onDelete?.call();
-                            },
-                          ),
-                        ],
-                      ),
+              if (widget.onDelete != null || widget.onDiscard != null)
+                PopoverPrimitive(
+                  controller: _popoverController,
+                  targetAnchor: Alignment.bottomRight,
+                  followerAnchor: Alignment.topRight,
+                  width: 180,
+                  trigger: IconButton(
+                    icon: Icon(
+                      Icons.more_horiz,
+                      color: palette.text.secondary,
+                      size: 18,
                     ),
-                  );
-                },
-              ),
+                    iconSize: 18,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    onPressed: _popoverController.toggle,
+                  ),
+                  contentBuilder: (context) {
+                    return PopoverSurface(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: theme.spacings.sm,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.onDelete != null)
+                              _PopoverAction(
+                                icon: Icons.delete_outline,
+                                label: 'Delete', // TODO: l10n
+                                color: palette.accent.danger,
+                                onTap: () {
+                                  _popoverController.hide();
+                                  widget.onDelete?.call();
+                                },
+                              ),
+                            if (widget.onDiscard != null)
+                              _PopoverAction(
+                                icon: Icons.close,
+                                label: 'Discard', // TODO: l10n
+                                color: palette.text.secondary,
+                                onTap: () {
+                                  _popoverController.hide();
+                                  widget.onDiscard?.call();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ],

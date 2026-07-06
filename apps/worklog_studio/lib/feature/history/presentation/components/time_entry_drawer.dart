@@ -131,6 +131,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     }
     if (widget.resolvedEntry != oldWidget.resolvedEntry ||
         widget.isOpen != oldWidget.isOpen) {
+      _isConfirmingDelete = false;
       _initDraft();
 
       if (_commentController.text != (_draft.entry.comment ?? '')) {
@@ -195,6 +196,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                   _isConfirmingDelete = true;
                 });
               },
+        onDiscard: _isNew ? widget.onClose : null,
       ),
       body: _draft == null
           ? const SizedBox.shrink()
@@ -216,33 +218,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       ? Padding(
                           key: const ValueKey('delete_confirmation'),
                           padding: EdgeInsets.fromLTRB(
-                            theme.spacings.x2l,
+                            theme.spacings.xl,
                             theme.spacings.lg,
-                            theme.spacings.x2l,
+                            theme.spacings.xl,
                             0,
                           ),
                           child: InfoBar(
                             variant: InfoBarVariant.danger,
-                            title: const Text('Delete this time entry?'),
+                            title: const Text('Delete this time entry?'), // TODO: l10n
                             description: const Text(
-                              'This action cannot be undone',
+                              'This action cannot be undone', // TODO: l10n
                             ),
-                            actions: Wrap(
-                              spacing: theme.spacings.sm,
-                              runSpacing: theme.spacings.sm,
-                              alignment: WrapAlignment.end,
-                              crossAxisAlignment: WrapCrossAlignment.center,
+                            actions: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                PrimaryButton(
-                                  onTap: () {
-                                    setState(() {
-                                      _isConfirmingDelete = false;
-                                    });
-                                  },
-                                  title: 'Cancel',
-                                  type: ButtonType.ghost,
-                                  size: ButtonSize.sm,
-                                ),
                                 PrimaryButton(
                                   onTap: () {
                                     if (widget.resolvedEntry != null) {
@@ -254,8 +243,19 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       widget.onClose();
                                     }
                                   },
-                                  title: 'Delete',
+                                  title: 'Delete', // TODO: l10n
                                   type: ButtonType.danger,
+                                  size: ButtonSize.sm,
+                                ),
+                                SizedBox(width: theme.spacings.sm),
+                                PrimaryButton(
+                                  onTap: () {
+                                    setState(() {
+                                      _isConfirmingDelete = false;
+                                    });
+                                  },
+                                  title: 'Cancel', // TODO: l10n
+                                  type: ButtonType.ghost,
                                   size: ButtonSize.sm,
                                 ),
                               ],
@@ -264,6 +264,37 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         )
                       : const SizedBox.shrink(key: ValueKey('no_confirmation')),
                 ),
+                if (_isNew)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      theme.spacings.xl,
+                      theme.spacings.md,
+                      theme.spacings.xl,
+                      theme.spacings.none,
+                    ),
+                    child: InfoBar(
+                      variant: InfoBarVariant.info,
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('Not saved yet'), // TODO: l10n
+                      actions: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PrimaryButton(
+                            onTap: widget.onClose,
+                            title: 'Discard', // TODO: l10n
+                            type: ButtonType.ghost,
+                            size: ButtonSize.sm,
+                          ),
+                          SizedBox(width: theme.spacings.sm),
+                          PrimaryButton(
+                            onTap: _handleSave,
+                            title: 'Save', // TODO: l10n
+                            size: ButtonSize.sm,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: DrawerContent(
                     meta: Column(
@@ -707,16 +738,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         ],
                       ),
                     ),
-                    footer: _isNew
-                        ? SizedBox(
-                            width: double.infinity,
-                            child: PrimaryButton(
-                              onTap: _handleSave,
-                              title: 'Create Entry',
-                              size: ButtonSize.lg,
-                            ),
-                          )
-                        : isActive
+                    footer: isActive
                         ? SizedBox(
                             width: double.infinity,
                             child: PrimaryButton(

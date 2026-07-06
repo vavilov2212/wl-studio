@@ -103,6 +103,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
     _blocSubscription = bloc.stream.listen((state) {
       _nativePanel.update(_buildDisplayState(state));
     });
+    // Seed immediately - stream only delivers future emissions, so the
+    // initial loaded state is already gone by the time this runs.
+    _nativePanel.update(_buildDisplayState(bloc.state));
 
     projectTaskState.addListener(() {
       if (_leaderBloc != null) {

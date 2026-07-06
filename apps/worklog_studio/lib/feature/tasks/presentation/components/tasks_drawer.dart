@@ -46,6 +46,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
     super.initState();
     _initDraft();
     _initControllers();
+    _titleFieldController.addListener(_onTitleEditModeChanged);
+    _descriptionFieldController.addListener(_onDescriptionEditModeChanged);
   }
 
   void _initDraft() {
@@ -68,6 +70,31 @@ class _TaskDrawerState extends State<TaskDrawer> {
     _descriptionController = TextEditingController(text: _draft.description);
   }
 
+  void _onTitleEditModeChanged() {
+    if (!mounted) return;
+    if (!_titleFieldController.isEditing && _draft.title != _titleController.text) {
+      _updateDraft(_draft.copyWith(title: _titleController.text));
+    }
+  }
+
+  void _onDescriptionEditModeChanged() {
+    if (!mounted) return;
+    if (!_descriptionFieldController.isEditing &&
+        _draft.description != _descriptionController.text) {
+      _updateDraft(_draft.copyWith(description: _descriptionController.text));
+    }
+  }
+
+  void _updateDraft(Task updatedTask) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _draft = updatedTask);
+      if (!_isNew) {
+        context.read<ProjectTaskState>().updateTask(updatedTask);
+      }
+    });
+  }
+
   @override
   void didUpdateWidget(TaskDrawer oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -75,6 +102,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
       _isConfirmingDelete = false;
     }
     if (widget.task != oldWidget.task || widget.isOpen != oldWidget.isOpen) {
+      _isConfirmingDelete = false;
       _initDraft();
       _initControllers();
     }
@@ -84,7 +112,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _titleFieldController.removeListener(_onTitleEditModeChanged);
     _titleFieldController.dispose();
+    _descriptionFieldController.removeListener(_onDescriptionEditModeChanged);
     _descriptionFieldController.dispose();
     _projectFieldController.dispose();
     super.dispose();
@@ -93,27 +123,14 @@ class _TaskDrawerState extends State<TaskDrawer> {
   bool get _isNew => widget.task == null;
 
   void _handleSave() async {
-    final state = context.read<ProjectTaskState>();
-
-    if (_isNew) {
-      if (_draft.projectId != null && _titleController.text.isNotEmpty) {
-        await state.createTask(
-          _draft.projectId,
-          _titleController.text,
-          _descriptionController.text,
-        );
-        widget.onClose();
-      }
-    } else {
-      if (_titleController.text.isNotEmpty) {
-        final updatedTask = _draft.copyWith(
-          title: _titleController.text,
-          description: _descriptionController.text,
-          projectId: _draft.projectId,
-        );
-        await state.updateTask(updatedTask);
-        widget.onClose();
-      }
+    if (!_isNew) return;
+    if (_draft.projectId.isNotEmpty && _titleController.text.isNotEmpty) {
+      await context.read<ProjectTaskState>().createTask(
+        _draft.projectId,
+        _titleController.text,
+        _descriptionController.text,
+      );
+      widget.onClose();
     }
   }
 
@@ -135,6 +152,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                   _isConfirmingDelete = true;
                 });
               },
+        onDiscard: _isNew ? widget.onClose : null,
       ),
       body: _draft == null
           ? const SizedBox.shrink()
@@ -157,9 +175,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         ? Padding(
                             key: const ValueKey('delete_confirmation'),
                             padding: EdgeInsets.fromLTRB(
-                              theme.spacings.x2l,
+                              theme.spacings.xl,
                               theme.spacings.lg,
-                              theme.spacings.x2l,
+                              theme.spacings.xl,
                               0,
                             ),
                             child: InfoBar(
@@ -168,11 +186,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
                               description: const Text(
                                 'This action cannot be undone',
                               ),
-                              actions: Wrap(
-                                spacing: theme.spacings.sm,
-                                runSpacing: theme.spacings.sm,
-                                alignment: WrapAlignment.end,
-                                crossAxisAlignment: WrapCrossAlignment.center,
+                              actions: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   PrimaryButton(
                                     onTap: () {
@@ -187,6 +202,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                     type: ButtonType.danger,
                                     size: ButtonSize.sm,
                                   ),
+                                  SizedBox(width: theme.spacings.sm),
                                   PrimaryButton(
                                     onTap: () {
                                       setState(() {
@@ -204,6 +220,37 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         : const SizedBox.shrink(
                             key: ValueKey('no_confirmation'),
                           ),
+                  ),
+                if (_isNew)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      theme.spacings.xl,
+                      theme.spacings.md,
+                      theme.spacings.xl,
+                      theme.spacings.none,
+                    ),
+                    child: InfoBar(
+                      variant: InfoBarVariant.info,
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('Not saved yet'), // TODO: l10n
+                      actions: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PrimaryButton(
+                            onTap: widget.onClose,
+                            title: 'Discard', // TODO: l10n
+                            type: ButtonType.ghost,
+                            size: ButtonSize.sm,
+                          ),
+                          SizedBox(width: theme.spacings.sm),
+                          PrimaryButton(
+                            onTap: _handleSave,
+                            title: 'Save', // TODO: l10n
+                            size: ButtonSize.sm,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 Expanded(
                   child: DrawerContent(
@@ -312,11 +359,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                             value: _draft.projectId,
                                             placeholder: 'Select Project',
                                             onChanged: (value) {
-                                              setState(() {
-                                                _draft = _draft.copyWith(
-                                                  projectId: value,
-                                                );
-                                              });
+                                              _updateDraft(
+                                                _draft.copyWith(projectId: value),
+                                              );
                                               _projectFieldController
                                                   .handleEditorCommit();
                                             },
@@ -536,13 +581,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         ],
                       ),
                     ),
-                    footer: SizedBox(
-                      width: double.infinity,
-                      child: PrimaryButton(
-                        title: _isNew ? 'Create Task' : 'Save Changes',
-                        onTap: _handleSave,
-                      ),
-                    ),
+                    footer: null,
                   ),
                 ),
               ],
