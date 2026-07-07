@@ -1,3 +1,4 @@
+// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';

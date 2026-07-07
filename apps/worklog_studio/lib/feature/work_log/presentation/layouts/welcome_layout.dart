@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
