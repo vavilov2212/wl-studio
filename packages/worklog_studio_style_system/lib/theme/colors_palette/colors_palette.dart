@@ -27,6 +27,16 @@ const lightColorsPalette = ColorsPalette(
     warning: Color(0xFFF59E0B),
     nav: Color(0xFF0C447C),
   ),
+  sidebar: SidebarColors(
+    border: Color(0x0FFFFFFF),
+    iconBg: Color(0x1AFFFFFF),
+    icon: Color(0xD9FFFFFF),
+    textPrimary: Color(0xE6FFFFFF),
+    arrow: Color(0x59FFFFFF),
+    sectionLabel: Color(0x40FFFFFF),
+    textSecondary: Color(0x99FFFFFF),
+    textMuted: Color(0x73FFFFFF),
+  ),
 );
 
 const darkColorsPalette = ColorsPalette(
@@ -54,5 +64,15 @@ const darkColorsPalette = ColorsPalette(
     success: Color(0xFF16A34A),
     warning: Color(0xFFF59E0B),
     nav: Color(0xFF0C447C),
+  ),
+  sidebar: SidebarColors(
+    border: Color(0x0FFFFFFF),
+    iconBg: Color(0x1AFFFFFF),
+    icon: Color(0xD9FFFFFF),
+    textPrimary: Color(0xE6FFFFFF),
+    arrow: Color(0x59FFFFFF),
+    sectionLabel: Color(0x40FFFFFF),
+    textSecondary: Color(0x99FFFFFF),
+    textMuted: Color(0x73FFFFFF),
   ),
 );

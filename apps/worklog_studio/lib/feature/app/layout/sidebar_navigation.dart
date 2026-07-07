@@ -36,7 +36,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       decoration: BoxDecoration(
         color: navBg,
         border: Border(
-          right: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+          right: BorderSide(color: palette.sidebar.border),
         ),
       ),
       child: Column(
@@ -55,7 +55,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   duration: const Duration(milliseconds: 150),
                   height: 56,
                   color: _headerHovered
-                      ? Colors.white.withValues(alpha: 0.06)
+                      ? palette.sidebar.border
                       : Colors.transparent,
                   padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
                   child: Row(
@@ -67,13 +67,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           left: _collapsed ? 4 : 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: palette.sidebar.iconBg,
                           borderRadius: theme.radiuses.sm.circular,
                         ),
                         child: Icon(
                           Icons.access_time_rounded,
                           size: 18,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: palette.sidebar.icon,
                         ),
                       ),
                       if (!_collapsed) ...[
@@ -86,7 +86,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                               'Worklog Studio',
                               style: theme.commonTextStyles.labelMedium
                                   .copyWith(
-                                    color: Colors.white.withValues(alpha: 0.9),
+                                    color: palette.sidebar.textPrimary,
                                   ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -95,7 +95,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                         Icon(
                           Icons.chevron_left_rounded,
                           size: 18,
-                          color: Colors.white.withValues(alpha: 0.35),
+                          color: palette.sidebar.arrow,
                         ),
                       ],
                     ],
@@ -128,7 +128,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                         child: Text(
                           'Manage',
                           style: theme.commonTextStyles.labelSmall.copyWith(
-                            color: Colors.white.withValues(alpha: 0.25),
+                            color: palette.sidebar.sectionLabel,
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -150,7 +150,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                         child: Text(
                           'General',
                           style: theme.commonTextStyles.labelSmall.copyWith(
-                            color: Colors.white.withValues(alpha: 0.25),
+                            color: palette.sidebar.sectionLabel,
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -179,14 +179,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   height: 28,
                   margin: EdgeInsets.only(left: _collapsed ? 4 : 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: palette.sidebar.iconBg,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     'WS',
                     style: theme.commonTextStyles.caption3Bold.copyWith(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: palette.sidebar.textSecondary,
                       fontSize: 9,
                     ),
                   ),
@@ -197,7 +197,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                     child: Text(
                       'Worklog Studio',
                       style: theme.commonTextStyles.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.45),
+                        color: palette.sidebar.textMuted,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -228,6 +228,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   /// the active settings sub-route (or General by default) instead of
   /// toggling an expansion that wouldn't be visible anyway.
   List<Widget> _settingsNavGroup() {
+    final palette = context.theme.colorsPalette;
     final isOnSettings = isSettingsRoute(widget.currentRoute);
 
     final parent = SidebarItem(
@@ -242,7 +243,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   ? Icons.expand_more_rounded
                   : Icons.chevron_right_rounded,
               size: 18,
-              color: Colors.white.withValues(alpha: 0.45),
+              color: palette.sidebar.textMuted,
             ),
       onTap: () {
         if (_collapsed) {
