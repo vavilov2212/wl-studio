@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/projects/bloc/projects_bloc.dart';
 import 'package:worklog_studio/feature/projects/presentation/components/project_list.dart';
 import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
-import 'package:worklog_studio/state/page_ui_preferences.dart';
 
 export 'package:worklog_studio/feature/projects/presentation/components/project_list.dart'
     show ProjectViewMode;
@@ -56,40 +56,46 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final resolvedProjects = context
         .watch<EntityResolver>()
         .getResolvedProjects();
-    final prefs = context.watch<PageUiPreferences>();
     final drawer = context.watch<DrawerHostController>();
     final selectedProject =
         drawer.kind == DrawerEntityKind.project ? drawer.project : null;
-    final isFilterExpanded =
-        prefs.projectsFilterExpandedOverride ?? prefs.projectsFilters.isActive;
-    final isSortExpanded = prefs.projectsSortExpandedOverride ?? false;
 
-    return ProjectList(
-      projects: resolvedProjects,
-      selectedProject: selectedProject,
-      selectedRowKey: _selectedRowKey,
-      onProjectSelected: _handleProjectSelected,
-      onCreateProject: _handleCreateProject,
-      viewMode: prefs.projectsViewMode,
-      onViewModeChanged: (mode) =>
-          context.read<PageUiPreferences>().setProjectsViewMode(mode),
-      filters: prefs.projectsFilters,
-      onFiltersChanged: (f) =>
-          context.read<PageUiPreferences>().setProjectsFilters(f),
-      isFilterExpanded: isFilterExpanded,
-      onFilterExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setProjectsFilterExpandedOverride(!isFilterExpanded),
-      sortField: prefs.projectsSortField,
-      sortDirection: prefs.projectsSortDirection,
-      onSortFieldChanged: (field) =>
-          context.read<PageUiPreferences>().setProjectsSortField(field),
-      onSortDirectionChanged: (direction) =>
-          context.read<PageUiPreferences>().setProjectsSortDirection(direction),
-      isSortExpanded: isSortExpanded,
-      onSortExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setProjectsSortExpandedOverride(!isSortExpanded),
+    return BlocBuilder<ProjectsBloc, ProjectsState>(
+      builder: (context, projectsState) {
+        final isFilterExpanded =
+            projectsState.filterExpandedOverride ??
+            projectsState.filters.isActive;
+        final isSortExpanded = projectsState.sortExpanded;
+
+        return ProjectList(
+          projects: resolvedProjects,
+          selectedProject: selectedProject,
+          selectedRowKey: _selectedRowKey,
+          onProjectSelected: _handleProjectSelected,
+          onCreateProject: _handleCreateProject,
+          viewMode: projectsState.viewMode,
+          onViewModeChanged: (mode) =>
+              context.read<ProjectsBloc>().add(ProjectsViewModeChanged(mode)),
+          filters: projectsState.filters,
+          onFiltersChanged: (f) =>
+              context.read<ProjectsBloc>().add(ProjectsFilterChanged(f)),
+          isFilterExpanded: isFilterExpanded,
+          onFilterExpandedToggle: () => context.read<ProjectsBloc>().add(
+            ProjectsFilterExpandedOverrideSet(!isFilterExpanded),
+          ),
+          sortField: projectsState.sortField,
+          sortDirection: projectsState.sortDirection,
+          onSortFieldChanged: (field) =>
+              context.read<ProjectsBloc>().add(ProjectsSortFieldChanged(field)),
+          onSortDirectionChanged: (direction) => context.read<ProjectsBloc>().add(
+            ProjectsSortDirectionChanged(direction),
+          ),
+          isSortExpanded: isSortExpanded,
+          onSortExpandedToggle: () => context.read<ProjectsBloc>().add(
+            ProjectsSortExpandedSet(!isSortExpanded),
+          ),
+        );
+      },
     );
   }
 }

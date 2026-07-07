@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/feature/tasks/bloc/tasks_bloc.dart';
 import 'package:worklog_studio/feature/tasks/presentation/components/task_list.dart';
 import 'package:worklog_studio/state/drawer_host_controller.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
-import 'package:worklog_studio/state/page_ui_preferences.dart';
 
 export 'package:worklog_studio/feature/tasks/presentation/components/task_list.dart'
     show TaskViewMode;
@@ -53,40 +53,44 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final resolvedTasks = context.watch<EntityResolver>().getResolvedTasks();
-    final prefs = context.watch<PageUiPreferences>();
     final drawer = context.watch<DrawerHostController>();
     final selectedTask =
         drawer.kind == DrawerEntityKind.task ? drawer.task : null;
-    final isFilterExpanded =
-        prefs.tasksFilterExpandedOverride ?? prefs.tasksFilters.isActive;
-    final isSortExpanded = prefs.tasksSortExpandedOverride ?? false;
 
-    return TaskList(
-      tasks: resolvedTasks,
-      selectedTask: selectedTask,
-      selectedRowKey: _selectedRowKey,
-      onTaskSelected: _handleTaskSelected,
-      onCreateTask: _handleCreateTask,
-      viewMode: prefs.tasksViewMode,
-      onViewModeChanged: (mode) =>
-          context.read<PageUiPreferences>().setTasksViewMode(mode),
-      filters: prefs.tasksFilters,
-      onFiltersChanged: (f) =>
-          context.read<PageUiPreferences>().setTasksFilters(f),
-      isFilterExpanded: isFilterExpanded,
-      onFilterExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setTasksFilterExpandedOverride(!isFilterExpanded),
-      sortField: prefs.tasksSortField,
-      sortDirection: prefs.tasksSortDirection,
-      onSortFieldChanged: (field) =>
-          context.read<PageUiPreferences>().setTasksSortField(field),
-      onSortDirectionChanged: (direction) =>
-          context.read<PageUiPreferences>().setTasksSortDirection(direction),
-      isSortExpanded: isSortExpanded,
-      onSortExpandedToggle: () => context
-          .read<PageUiPreferences>()
-          .setTasksSortExpandedOverride(!isSortExpanded),
+    return BlocBuilder<TasksBloc, TasksState>(
+      builder: (context, tasksState) {
+        final isFilterExpanded =
+            tasksState.filterExpandedOverride ?? tasksState.filters.isActive;
+        final isSortExpanded = tasksState.sortExpanded;
+
+        return TaskList(
+          tasks: resolvedTasks,
+          selectedTask: selectedTask,
+          selectedRowKey: _selectedRowKey,
+          onTaskSelected: _handleTaskSelected,
+          onCreateTask: _handleCreateTask,
+          viewMode: tasksState.viewMode,
+          onViewModeChanged: (mode) =>
+              context.read<TasksBloc>().add(TasksViewModeChanged(mode)),
+          filters: tasksState.filters,
+          onFiltersChanged: (f) =>
+              context.read<TasksBloc>().add(TasksFilterChanged(f)),
+          isFilterExpanded: isFilterExpanded,
+          onFilterExpandedToggle: () => context.read<TasksBloc>().add(
+            TasksFilterExpandedOverrideSet(!isFilterExpanded),
+          ),
+          sortField: tasksState.sortField,
+          sortDirection: tasksState.sortDirection,
+          onSortFieldChanged: (field) =>
+              context.read<TasksBloc>().add(TasksSortFieldChanged(field)),
+          onSortDirectionChanged: (direction) =>
+              context.read<TasksBloc>().add(TasksSortDirectionChanged(direction)),
+          isSortExpanded: isSortExpanded,
+          onSortExpandedToggle: () => context.read<TasksBloc>().add(
+            TasksSortExpandedSet(!isSortExpanded),
+          ),
+        );
+      },
     );
   }
 }
