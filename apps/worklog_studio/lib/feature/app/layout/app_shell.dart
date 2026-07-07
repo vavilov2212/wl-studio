@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
-import 'package:worklog_studio/feature/settings/general_settings_screen.dart';
-import 'package:worklog_studio/feature/settings/hotkey_settings_screen.dart';
+import 'package:worklog_studio/feature/settings/presentation/general_settings_screen.dart';
+import 'package:worklog_studio/feature/settings/presentation/hotkey_settings_screen.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
