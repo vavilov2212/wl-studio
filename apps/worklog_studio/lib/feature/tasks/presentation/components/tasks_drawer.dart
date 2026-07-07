@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart' hide DrawerHeader;
+import 'package:intl/intl.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -554,7 +556,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                           : 'No comment',
                                       metadata: _formatEntryRange(entry),
                                       trailing: Text(
-                                        _formatExactDuration(
+                                        DateFormatter.formatDurationHms(
                                           entry.duration(DateTime.now()),
                                         ),
                                         style: theme.commonTextStyles.bodyBold,
@@ -591,44 +593,13 @@ class _TaskDrawerState extends State<TaskDrawer> {
 
   String _formatEntryRange(TimeEntry entry) {
     final start = entry.startAt;
-    final datePart = '${_monthAbbrev(start.month)} ${start.day}';
-    final startTime = _formatTimeOfDay(start);
+    final datePart = '${DateFormat.MMM().format(start)} ${start.day}';
+    final startTime = DateFormatter.formatTimeHhMm(start);
     if (entry.endAt == null) {
       return '$datePart, $startTime - now';
     }
-    final endTime = _formatTimeOfDay(entry.endAt!);
+    final endTime = DateFormatter.formatTimeHhMm(entry.endAt!);
     return '$datePart, $startTime - $endTime';
-  }
-
-  String _formatTimeOfDay(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  String _monthAbbrev(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
-
-  String _formatExactDuration(Duration duration) {
-    final hours = duration.inHours.toString().padLeft(2, '0');
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
   }
 
   String _getStatusText(TaskStatus status) {

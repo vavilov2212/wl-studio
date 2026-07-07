@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class SimpleTimerText extends StatefulWidget {
@@ -75,19 +75,11 @@ class _SimpleTimerTextState extends State<SimpleTimerText> {
     }
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$hours:$minutes:$seconds';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     return Text(
-      _formatDuration(_elapsed),
+      DateFormatter.formatDurationHms(_elapsed),
       style: widget.style ??
           theme.commonTextStyles.body.copyWith(
             fontFeatures: const [FontFeature.tabularFigures()],

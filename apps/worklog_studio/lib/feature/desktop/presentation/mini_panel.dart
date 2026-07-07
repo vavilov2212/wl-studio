@@ -652,40 +652,6 @@ class _MiniPanelState extends State<MiniPanel> {
     );
   }
 
-  String _formatDateHeader(DateTime date) {
-    const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    const months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    final weekday = weekdays[date.weekday - 1];
-    final month = months[date.month - 1];
-    return '$weekday, ${date.day} $month';
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-
-    if (duration.inHours > 0) {
-      return '$hours:$minutes:$seconds';
-    } else {
-      return '$minutes:$seconds';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;

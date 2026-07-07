@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
@@ -15,7 +16,6 @@ import 'package:worklog_studio/feature/common/presentation/components/entity_met
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/common/presentation/components/date_time_inline_field.dart';
-import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
@@ -198,9 +198,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
               },
         onDiscard: _isNew ? widget.onClose : null,
       ),
-      body: _draft == null
-          ? const SizedBox.shrink()
-          : Column(
+      body: Column(
               children: [
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
@@ -706,7 +704,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                                     .subtitle,
                                               )
                                             : Text(
-                                                _formatDuration(
+                                                DateFormatter.formatDurationHms(
                                                   _draft.duration(
                                                     DateTime.now(),
                                                   ),
@@ -773,10 +771,4 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     }
   }
 
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours.toString().padLeft(2, '0');
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
 }

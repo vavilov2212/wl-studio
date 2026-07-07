@@ -5,7 +5,7 @@ import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
-import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/history/presentation/components/time_entry_actions_cell.dart';
 import 'package:worklog_studio/feature/home/presentation/components/dashboard_charts_section.dart';
@@ -245,15 +245,15 @@ class _RecentActivitySection extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    _formatExactDuration(item.duration(DateTime.now())),
+                    DateFormatter.formatDurationHms(item.duration(DateTime.now())),
                     style: theme.commonTextStyles.labelMedium.copyWith(
                       color: palette.text.primary,
                     ),
                   ),
             Text(
               isActive
-                  ? '${_formatTime(item.startAt)} → now'
-                  : DateFormatUtils.formatTimeRangeWithDate(
+                  ? '${DateFormatter.formatTime12h(item.startAt)} → now'
+                  : DateFormatter.formatTimeRange(
                       item.startAt,
                       item.endAt,
                     ),
@@ -356,19 +356,4 @@ class _RecentActivitySection extends StatelessWidget {
     );
   }
 
-  String _formatExactDuration(Duration duration) {
-    final hours = duration.inHours.toString().padLeft(2, '0');
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour == 0
-        ? 12
-        : (time.hour > 12 ? time.hour - 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '${hour.toString().padLeft(2, '0')}:$minute $period';
-  }
 }

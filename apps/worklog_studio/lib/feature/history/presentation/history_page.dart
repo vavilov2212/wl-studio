@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
-import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
@@ -447,7 +447,7 @@ class TimeEntryList extends StatelessWidget {
                                     borderRadius: theme.radiuses.pill.circular,
                                   ),
                                   child: Text(
-                                    _formatDateHeader(date),
+                                    DateFormatter.formatDateHeader(date),
                                     style: theme.commonTextStyles.labelSmall
                                         .copyWith(color: palette.text.primary),
                                   ),
@@ -460,7 +460,7 @@ class TimeEntryList extends StatelessWidget {
                                 ),
                                 SizedBox(width: theme.spacings.xxs),
                                 Text(
-                                  _formatDuration(totalDuration),
+                                  DateFormatter.formatDurationHm(totalDuration),
                                   style: theme.commonTextStyles.labelSmall
                                       .copyWith(color: palette.text.muted),
                                 ),
@@ -649,15 +649,15 @@ class TimeEntryList extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      _formatExactDuration(item.duration(DateTime.now())),
+                      DateFormatter.formatDurationHms(item.duration(DateTime.now())),
                       style: theme.commonTextStyles.labelMedium.copyWith(
                         color: palette.text.primary,
                       ),
                     ),
               Text(
                 isActive
-                    ? '${_formatTime(item.startAt)} → now'
-                    : DateFormatUtils.formatTimeRangeWithDate(
+                    ? '${DateFormatter.formatTime12h(item.startAt)} → now'
+                    : DateFormatter.formatTimeRange(
                         item.startAt,
                         item.endAt,
                       ),
@@ -747,57 +747,6 @@ class TimeEntryList extends StatelessWidget {
     ];
   }
 
-  String _formatExactDuration(Duration duration) {
-    final hours = duration.inHours.toString().padLeft(2, '0');
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour == 0
-        ? 12
-        : (time.hour > 12 ? time.hour - 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '${hour.toString().padLeft(2, '0')}:$minute $period';
-  }
-
-  String _formatDateHeader(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final targetDate = DateTime(date.year, date.month, date.day);
-
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final dateString = '${months[date.month - 1]} ${date.day}';
-
-    if (targetDate == today) {
-      return 'Today · $dateString';
-    } else if (targetDate == yesterday) {
-      return 'Yesterday · $dateString';
-    }
-    return dateString;
-  }
-
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    return '${hours}h ${minutes}m';
-  }
 }
 
 class _KpiChip extends StatelessWidget {
