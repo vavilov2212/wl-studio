@@ -196,3 +196,29 @@ User overrides on the plan:
 - Item 57: Assess `_DetailItem` in `tasks_drawer.dart` for reuse.
 - Item 59: Audit `app_bar/` six-file split.
 - Item 60: Audit `entity/session/` and `entity/user/`.
+
+---
+
+### Refactoring Entry #6 - Items 53, 56, 24, 30, 31 + audits 57/59/60
+
+**[Verified Facts]**
+- Item 53: Extracted `_buildBarChartData({required chartMaxY, required interval})` from `_BarChartState.build()`. The method uses `context.theme`/`context.colorsPalette` directly. `build()` is now pure layout + scale computation (~25 lines).
+- Item 56: `git mv` both settings screen files to `feature/settings/presentation/`. Updated one import in `app_shell.dart`.
+- Item 24: Removed silent `try/catch {}` around `getIt<IdleMonitor>()` in `app.dart`. `PlatformIdleMonitor` is `@LazySingleton` and its constructor is safe.
+- Item 30 (Option B): Added `// PROTOTYPE: not active` comment to `raw_txt.dart` (last uncovered file). Other presentation files already had it from prior session.
+- Item 31: `feature/home/data/` directory does not exist - `mock_data.dart` was already removed.
+- Item 57 (audit): `_DetailItem` is tasks-specific (0 consumers in other drawer files). No extraction needed - YAGNI.
+- Item 59 (audit): All 6 `app_bar/` files have distinct roles (`AppBarService` = state, `AppBarProvider` = push config, `AppBarScope` = read + InheritedWidget propagation). Not redundant. No merges.
+- Item 60 (audit): `entity/session/` and `entity/user/` are active - consumed by `work_log` feature via injectable. They are cross-cutting auth/session concerns, distinct from feature-vertical code. No migration needed.
+- Test count: 242/242 (unchanged).
+
+**[Distilled Rules]**
+- `feature/home/data/` no longer exists - no `mock_data.dart` to delete.
+- `app_bar/` six-file split is intentional: service (state) + provider (write) + scope (read/inherit) is a well-designed push-pull pattern, not redundancy.
+- `entity/` top-level is for cross-cutting auth/session concerns that don't fit the single-feature vertical slice model.
+
+**[What's Next]**
+- Item 7: Split `app_shell.dart` (1013 lines) into 4 files.
+- Item 8: Split `mini_panel.dart` (1051 lines) into 4 files.
+- Items 9-11: Smaller page splits.
+- Item 12: TrackerPanelCubit (depends on Item 7).
