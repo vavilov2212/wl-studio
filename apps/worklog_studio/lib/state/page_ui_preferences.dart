@@ -7,7 +7,7 @@ import 'package:worklog_studio/domain/projects_sort.dart';
 import 'package:worklog_studio/domain/sort_direction.dart';
 import 'package:worklog_studio/domain/tasks_filters.dart';
 import 'package:worklog_studio/domain/tasks_sort.dart';
-import 'package:worklog_studio/feature/history/presentation/history_page.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_list.dart';
 import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
 import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 
