@@ -355,7 +355,71 @@ User overrides on the plan:
 - `HistoryBloc._init()` dispatches `HistoryKpiStripVisibilityChanged(visible)` after async SharedPreferences load; the handler persists on every change.
 
 **[What's Next]**
-- Item 17: Extract shared drawer scaffold and draft lifecycle into a reusable base.
-- Items 18-20: Drawer deduplication (ProjectSelector, TaskSelector, delete confirm).
-- Item 23: Register repositories with get_it/injectable.
-- Items 49-52: Write BLoC tests for HistoryBloc, TasksBloc, ProjectsBloc.
+- Items 8, 12, 17, 20 are now complete (see Entry #8).
+
+---
+
+### Refactoring Entry #8 - Items 12, 51, 52, 17, 20, 8
+
+**[Verified Facts]**
+- Item 12: `TrackerPanelCubit` in `feature/time_tracker/bloc/tracker_panel_cubit.dart` - already existed from prior session. Manages draftComment, delegates start/stop/update to TimeTrackerBloc, syncs from bloc stream.
+- Item 51: `test/feature/tracker_panel_cubit_test.dart` - 10 tests, all pass. Uses real TimeTrackerBloc with FakeTimeEntryRepository.
+- Item 52: Added `test/feature/projects/projects_bloc_test.dart` (8 tests), `test/feature/history/history_bloc_test.dart` (12 tests), `test/feature/tasks/tasks_bloc_test.dart` (8 tests). Fixed timing issues in HistoryBloc tests with `await Future<void>.delayed(Duration.zero)`.
+- Item 17: Created `feature/common/bloc/drawer_form_cubit.dart` with `DrawerFormCubit<T>` and `DrawerFormState<T>`. Migrated TimeEntryDrawer, TaskDrawer, and ProjectDrawer to BlocBuilder pattern. Removed all `setState(() => _isConfirmingDelete/draft = ...)` calls.
+- Item 20: Created `feature/common/presentation/components/delete_confirmation_row.dart` with `DeleteConfirmationRow` widget. Wraps AnimatedSwitcher + InfoBar danger pattern. Replaced identical 50-line blocks in all three drawers.
+- Item 8: Split `mini_panel.dart` into: `MiniActiveSessionCard`, `MiniRecentActivitySection`, `MiniSearchResultsSection` (separate component files) + `_MiniPanelHeader`/`_MiniPanelFooter` private widgets. Added `_clearSearch()` helper.
+- Test count: 242 -> 264 (+22).
+
+**[What Worked]**
+- `Consumer` widget from `provider` cannot be resolved through flutter_bloc's transitive export in some files. When using `Consumer` widget, add explicit `import 'package:provider/provider.dart'` alongside `flutter_bloc`.
+- `DrawerFormCubit<T>` generic cubit pattern avoids per-drawer boilerplate. The `reset()` method (replaces full state) vs `updateDraft()` (preserves confirmingDelete) distinction is important for `didUpdateWidget`.
+- For component extraction from stateful widgets that own controllers: pass controllers as constructor parameters to the stateless child. Side effects in build (e.g., `commentController.text = persisted`) are safe when the child receives the same controller object.
+
+**[Distilled Rules]**
+- `DrawerFormCubit.reset(newDraft)` is called in `didUpdateWidget` when widget identity changes - it clears confirmingDelete AND sets new draft atomically.
+- `DrawerFormCubit.cancelDelete()` is called when `!widget.isOpen && oldWidget.isOpen` - just dismisses the confirmation without resetting draft.
+- `DeleteConfirmationRow` takes `isShowing`, `entityLabel`, `onConfirm`, `onCancel` - always wrap the call in `if (!_isNew)` at the call site.
+- `MiniRecentActivitySection` and `MiniSearchResultsSection` both call `onEntrySelected()` callback after `startTimer()` - this is `_clearSearch()` in the parent, which clears search state and calls `setState`.
+- `_SectionHeader` is private to each component file (duplicated but tiny) - not worth a shared file for 5 lines.
+
+**[Pitfalls & What to Avoid]**
+- When replacing an old AnimatedSwitcher+ternary block with a new widget, ensure the closing braces/parens of the old block are fully removed. Stale ternary fragments cause parse errors.
+- `FLUTTER_BLOC re-exports provider` rule from Entry #5 has an exception: `Consumer` widget specifically needs explicit `provider` import.
+
+**[What's Next]**
+- All items in Entry #9 are complete.
+
+---
+
+### Refactoring Entry #9 - Items 20, 8, 25, 28, 26, 27, 22, 23, 40, 18, 19 + audits 34/61/24
+
+**[Verified Facts]**
+- Item 20: `DeleteConfirmationRow` (`feature/common/presentation/components/delete_confirmation_row.dart`) replaced the identical AnimatedSwitcher+InfoBar blocks in all three drawers. Takes `isShowing`, `entityLabel`, `onConfirm`, `onCancel`.
+- Item 8: `mini_panel.dart` split into `MiniActiveSessionCard`, `MiniRecentActivitySection`, `MiniSearchResultsSection` component files + `_MiniPanelHeader`/`_MiniPanelFooter` private widgets.
+- Item 25: mini panel hardcoded colors mapped to tokens: `0xFFeaeffd`/`0xFFebf0fd` -> `accent.primaryMuted`, `0xFFf8fafc` -> `background.canvas`, `Colors.white` header -> `background.surface`.
+- Item 28: `SizedBox(height: 2)` -> `theme.spacings.xs`, `SizedBox(height: 4)` -> `theme.spacings.xxs` (spacings: xs=2, xxs=4 - note the inverted naming).
+- Item 26: Added `SidebarColors` class (8 tokens) to `ColorsPalette` in the style system; both palettes use identical white-alpha values since sidebar bg is always dark `accent.nav`. All 13 `Colors.white.withValues` calls in `sidebar_navigation.dart` replaced.
+- Item 27: `kBadgePalette` const moved to `packages/worklog_studio_style_system/lib/theme/colors_palette/badge_palette.dart`, exported from barrel. `BadgeUtils` now imports it.
+- Item 22: Created abstract `SettingsRepository` (`data/settings_repository.dart`). `SqliteSettingsRepository` annotated `@LazySingleton(as: SettingsRepository)`. `WindowsDesktopService` resolves it via `getIt` getter.
+- Item 23: `SqliteTimeEntryRepository`, `SqliteProjectRepository`, `SqliteTaskRepository` annotated `@LazySingleton(as: <interface>)`; registrations added manually to `service_locator.config.dart`; `app.dart` resolves all repos from `getIt`.
+- Item 40: Removed `addPostFrameCallback` wrappers from all three drawer `_updateDraft` methods - safe now that draft state lives in DrawerFormCubit.
+- Items 18/19: `ProjectSelector` and `TaskSelector` in `feature/common/presentation/components/`. Callbacks: `onProjectSelected(String?)`/`onTaskSelected(String?)`. Consumers: time_entry_drawer (both), tasks_drawer (ProjectSelector). GlobalTimeTrackerPanel selectors intentionally NOT migrated (TrackerPanelCubit + isRunning semantics differ).
+- Item 34 (audit): Firebase IS active - `runner.dart` calls `Firebase.initializeApp`, `plan_json.dart` uses `firebase_ai`. Deps kept. Plan's premise (commented-out init) was outdated.
+- Item 61 (audit): `badge_utils.dart` kept - 18 consumers, non-trivial initials+hash logic.
+- Item 24 (audit): confirmed no try/catch around `getIt<IdleMonitor>()` in app.dart.
+- Test count: 264/264 throughout.
+
+**[Distilled Rules]**
+- `theme.spacings.xs == 2` and `theme.spacings.xxs == 4` - xs is SMALLER than xxs in this codebase.
+- After changing style system package code, run `fvm exec melos bootstrap` then trust `flutter test`/`dart analyze` over IDE diagnostics - the IDE analyzer holds a stale package view for a long time.
+- `service_locator.config.dart` is generated but build_runner is broken - edit it manually, keeping the `_iNNN` import-prefix style.
+- `WindowsDesktopService` uses both `GetIt.I` (for register/unregister of Hotkey/ReminderService) and `getIt` from service_locator - both imports are needed.
+- `firstOrNull` is available from `dart:core` (Dart 3 IterableExtensions) - no `package:collection` import needed.
+- `ProjectSelector`/`TaskSelector` handle `handleEditorCommit`/`handleEditorClose` internally; callers only supply the draft-update callback.
+
+**[Pitfalls & What to Avoid]**
+- Never leave an `if (false)` placeholder block when replacing widget code - stale ternary fragments after it cause cascading parse errors. Replace the entire old block in one edit.
+- `dart analyze <files>` catches errors in lib/ files that `flutter test` never compiles (e.g. app.dart) - run it after DI/import changes.
+
+**[What's Next]**
+- Remaining unaddressed plan items: Item 1 (document canonical feature scaffold in CLAUDE.md), Item 5 (go_router - highest complexity, own branch), Item 6 (repository interface naming/location convention), Item 21 (split ProjectTaskState), Item 46 (EntityResolver consolidation), Item 49 (drawer widget tests).
