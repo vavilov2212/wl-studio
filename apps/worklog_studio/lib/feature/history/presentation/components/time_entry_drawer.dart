@@ -99,24 +99,22 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
         updatedEntry.endAt!.isBefore(updatedEntry.startAt)) {
       updatedEntry = updatedEntry.copyWith(endAt: updatedEntry.startAt);
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final resolver = context.read<EntityResolver>();
-      final resolvedProject = updatedEntry.projectId != null
-          ? resolver.getResolvedProject(updatedEntry.projectId!)?.project
-          : null;
-      final resolvedTask = updatedEntry.taskId != null
-          ? resolver.getResolvedTask(updatedEntry.taskId!)?.task
-          : null;
-      _formCubit.updateDraft(_formCubit.state.draft.copyWith(
-        entry: updatedEntry,
-        project: resolvedProject,
-        task: resolvedTask,
-      ));
-      if (!_isNew) {
-        context.read<TimeTrackerBloc>().add(TimeTrackerEntryUpdated(updatedEntry));
-      }
-    });
+    if (!mounted) return;
+    final resolver = context.read<EntityResolver>();
+    final resolvedProject = updatedEntry.projectId != null
+        ? resolver.getResolvedProject(updatedEntry.projectId!)?.project
+        : null;
+    final resolvedTask = updatedEntry.taskId != null
+        ? resolver.getResolvedTask(updatedEntry.taskId!)?.task
+        : null;
+    _formCubit.updateDraft(_formCubit.state.draft.copyWith(
+      entry: updatedEntry,
+      project: resolvedProject,
+      task: resolvedTask,
+    ));
+    if (!_isNew) {
+      context.read<TimeTrackerBloc>().add(TimeTrackerEntryUpdated(updatedEntry));
+    }
   }
 
   @override

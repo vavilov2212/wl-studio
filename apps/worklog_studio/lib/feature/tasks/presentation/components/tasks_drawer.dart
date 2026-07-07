@@ -99,13 +99,11 @@ class _TaskDrawerState extends State<TaskDrawer> {
   }
 
   void _updateDraft(Task updatedTask) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _formCubit.updateDraft(updatedTask);
-      if (!_isNew) {
-        context.read<ProjectTaskState>().updateTask(updatedTask);
-      }
-    });
+    if (!mounted) return;
+    _formCubit.updateDraft(updatedTask);
+    if (!_isNew) {
+      context.read<ProjectTaskState>().updateTask(updatedTask);
+    }
   }
 
   @override
