@@ -1,20 +1,21 @@
 ﻿import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/domain/project.dart';
-import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
-import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
-import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/desktop/presentation/components/mini_active_timer_text.dart';
+import 'package:worklog_studio/feature/desktop/presentation/components/mini_hoverable_list_item.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
-import 'package:collection/collection.dart';
-import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 
 class MiniPanel extends StatefulWidget {
   const MiniPanel({super.key});
@@ -24,7 +25,6 @@ class MiniPanel extends StatefulWidget {
 }
 
 class _MiniPanelState extends State<MiniPanel> {
-  static const _platform = MethodChannel('worklog_studio/ipc');
   bool _isVisible = false;
   String _query = '';
   final TextEditingController _searchController = TextEditingController();
@@ -201,7 +201,7 @@ class _MiniPanelState extends State<MiniPanel> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _MiniActiveTimerTextWrapper(
+                      MiniActiveTimerText(
                         entry: activeEntry,
                         style: theme.commonTextStyles.h2.copyWith(
                           color: theme.colorsPalette.text.primary,
@@ -303,7 +303,7 @@ class _MiniPanelState extends State<MiniPanel> {
     );
     final colors = BadgeUtils.getBadgeColor(task.id);
 
-    return _HoverableListItem(
+    return MiniHoverableListItem(
       leading: WsInitialBadge(
         initials: initials,
         backgroundColor: colors.$1,
@@ -351,7 +351,7 @@ class _MiniPanelState extends State<MiniPanel> {
     final initials = BadgeUtils.getProjectInitials(project.name);
     final colors = BadgeUtils.getBadgeColor(project.id);
 
-    return _HoverableListItem(
+    return MiniHoverableListItem(
       leading: WsInitialBadge(
         initials: initials,
         backgroundColor: colors.$1,
@@ -407,7 +407,7 @@ class _MiniPanelState extends State<MiniPanel> {
       });
     }
 
-    return _HoverableListItem(
+    return MiniHoverableListItem(
       leading: WsInitialBadge(
         initials: initials,
         backgroundColor: colors.$1,
@@ -655,9 +655,6 @@ class _MiniPanelState extends State<MiniPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
     // Project and Entity state cannot be easily retrieved dynamically from the Cubit/IPC
     // currently unless we broadcast the whole lookup dictionary.
     // For now we will display the comment.
@@ -666,15 +663,6 @@ class _MiniPanelState extends State<MiniPanel> {
       builder: (context, state) {
         final isRunning = state.isRunning;
         final activeEntry = state.activeEntry;
-
-        // Group entries by date
-        final allEntries = state.allEntries.where((e) => !e.isRunning).toList()
-          ..sort((a, b) => b.startAt.compareTo(a.startAt));
-
-        final groupedEntries = groupBy(allEntries, (TimeEntry e) {
-          final local = e.startAt.toLocal();
-          return DateTime(local.year, local.month, local.day);
-        });
         final theme = context.theme;
         final palette = theme.colorsPalette;
 
@@ -853,166 +841,6 @@ class _MiniPanelState extends State<MiniPanel> {
           ),
         );
       },
-    );
-  }
-}
-
-class _MiniActiveTimerTextWrapper extends StatefulWidget {
-  final TimeEntry? entry;
-  final TextStyle? style;
-
-  const _MiniActiveTimerTextWrapper({required this.entry, this.style});
-
-  @override
-  State<_MiniActiveTimerTextWrapper> createState() =>
-      _MiniActiveTimerTextWrapperState();
-}
-
-class _MiniActiveTimerTextWrapperState
-    extends State<_MiniActiveTimerTextWrapper> {
-  late Stream<int> _timerStream;
-  int _seconds = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _recalc();
-    _timerStream = Stream.periodic(const Duration(seconds: 1), (i) => i);
-  }
-
-  void _recalc() {
-    if (widget.entry != null) {
-      final now = DateTime.now();
-      _seconds = now.difference(widget.entry!.startAt).inSeconds;
-    } else {
-      _seconds = 0;
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _MiniActiveTimerTextWrapper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _recalc();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.entry == null) return const SizedBox.shrink();
-
-    return StreamBuilder<int>(
-      stream: _timerStream,
-      builder: (context, snapshot) {
-        _recalc(); // Recalc each second
-        final duration = Duration(seconds: _seconds);
-        String twoDigits(int n) => n.toString().padLeft(2, "0");
-        String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-        String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-        final formatted =
-            "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
-
-        return Text(
-          formatted,
-          style:
-              widget.style ??
-              context.theme.commonTextStyles.captionBold.copyWith(
-                color: context.theme.colorsPalette.text.primary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-        );
-      },
-    );
-  }
-}
-
-class _HoverableListItem extends StatefulWidget {
-  final Widget? leading;
-  final Widget Function(bool isHovered)? leadingWidget;
-  final String title;
-  final String? subtitle;
-  final Widget Function(bool isHovered)? trailingWidget;
-  final Widget? trailing;
-  final VoidCallback onTap;
-
-  const _HoverableListItem({
-    super.key,
-    this.leading,
-    this.leadingWidget,
-    required this.title,
-    this.subtitle,
-    this.trailingWidget,
-    this.trailing,
-    required this.onTap,
-  });
-
-  @override
-  State<_HoverableListItem> createState() => _HoverableListItemState();
-}
-
-class _HoverableListItemState extends State<_HoverableListItem> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: theme.spacings.sm,
-            horizontal: theme.spacings.md,
-          ),
-          decoration: BoxDecoration(
-            color: _isHovered
-                ? theme.colorsPalette.accent.primaryMuted
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(theme.radiuses.sm),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              widget.leading ?? SizedBox.shrink(),
-              widget.leadingWidget?.call(_isHovered) ?? SizedBox.shrink(),
-              (widget.leading == null && widget.leadingWidget == null)
-                  ? SizedBox.shrink()
-                  : SizedBox(width: theme.spacings.md),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: theme.commonTextStyles.body.copyWith(
-                        color: theme.colorsPalette.text.primary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (widget.subtitle != null) ...[
-                      SizedBox(height: theme.spacings.xs),
-                      Text(
-                        widget.subtitle!,
-                        style: theme.commonTextStyles.caption.copyWith(
-                          color: theme.colorsPalette.text.secondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              SizedBox(width: theme.spacings.sm),
-              widget.trailing ?? SizedBox.shrink(),
-              widget.trailingWidget?.call(_isHovered) ?? SizedBox.shrink(),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
