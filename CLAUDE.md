@@ -165,3 +165,34 @@ User overrides on the plan:
 
 **[What's Next]**
 - Item 44: Standardize all relative imports to `package:worklog_studio/` absolute imports. Add `always_use_package_imports: true` lint rule.
+
+---
+
+### Refactoring Entry #5 - Items 44, 45, 47, 48, 50 (Imports + test coverage)
+
+**[Verified Facts]**
+- Item 44: Added `always_use_package_imports: true` to `analysis_options.yaml`. Converted 54 relative imports across 29 `lib/` files to `package:worklog_studio/...` URIs. Includes conditional platform stub import in `entity/session/.../input_storage.dart`. Zero remaining relative imports.
+- Item 45: `app_drawer_host.dart` is alive and consumed by `app_shell.dart`. It is the widget layer driven by `DrawerHostController` (which is the state). Not redundant - no action taken.
+- Item 47: Created `test/feature/project_task_state_test.dart` (15 tests). Added `FakeProjectRepository` and `FakeTaskRepository` to `test_fakes.dart`.
+- Item 48: Created `test/feature/entity_resolver_test.dart` (12 tests). Uses real `TimeTrackerBloc` with fake deps - simpler than a fake BLoC.
+- Item 50: Created `test/feature/work_log_raw_data_bloc_test.dart` (6 tests). Used plain `flutter_test` stream subscription (no `bloc_test` package - not in pubspec).
+- Test count: 209 -> 242 (+33).
+
+**[What Worked]**
+- For `EntityResolver` tests: creating a real `TimeTrackerBloc` with `FakeTimeEntryRepository` and dispatching `TimeTrackerLoaded` gives a properly-populated state without needing a fake BLoC.
+- `await Future<void>.delayed(Duration.zero)` is sufficient to let async ChangeNotifier `_init()` and BLoC event handlers complete in tests.
+
+**[Distilled Rules]**
+- `bloc_test` package is NOT in the project's pubspec. Use `bloc.stream.listen` + `Future.delayed(Duration.zero)` for BLoC state assertions.
+- For ChangeNotifier tests: construct, wait one microtask, then assert. No `pumpEventQueue` needed.
+- Windows drive-letter case mismatch (d: vs D:) can produce spurious `argument_type_not_assignable` IDE diagnostics. They clear on full analysis and do not affect `flutter test`.
+
+**[Pitfalls & What to Avoid]**
+- Do not use `bloc_test` in new test files until it is added to `pubspec.yaml`.
+
+**[What's Next]**
+- Item 53: Extract `_BarChart` fl_chart config from `dashboard_charts_section.dart`.
+- Item 56: Create `feature/settings/presentation/` subfolders and move screen files.
+- Item 57: Assess `_DetailItem` in `tasks_drawer.dart` for reuse.
+- Item 59: Audit `app_bar/` six-file split.
+- Item 60: Audit `entity/session/` and `entity/user/`.
