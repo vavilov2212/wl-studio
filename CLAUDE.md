@@ -334,3 +334,28 @@ User overrides on the plan:
 - Item 13: Create `HistoryBloc` for the history screen.
 - Item 14: Create `TasksBloc` for the tasks screen.
 - Item 15: Create `ProjectsBloc` for the projects screen.
+
+---
+
+### Refactoring Entry #12 - Items 13, 14, 15, 16 (Feature BLoCs + PageUiPreferences removal)
+
+**[Verified Facts]**
+- Item 13: Created `feature/history/bloc/history_bloc.dart` - `HistoryBloc` with events (ViewModeChanged, FilterChanged, FilterExpandedOverrideSet, SortFieldChanged, SortDirectionChanged, SortExpandedSet, KpiStripVisibilityChanged). State: `HistoryState` with viewMode, filters, filterExpandedOverride, sortField, sortDirection, sortExpanded, kpiStripVisible. Persists kpiStripVisible via SharedPreferences.
+- Item 14: Created `feature/tasks/bloc/tasks_bloc.dart` - `TasksBloc` with same event/state pattern (no persistence).
+- Item 15: Created `feature/projects/bloc/projects_bloc.dart` - `ProjectsBloc` with same event/state pattern.
+- Item 16: `PageUiPreferences` deleted (all state moved to the three BLoCs). `state/page_ui_preferences.dart` and `test/feature/page_ui_preferences_test.dart` removed.
+- All three BLoCs registered as `BlocProvider` in `MainApp` (before `TimeTrackerBloc`) so they survive tab switches (pages are recreated on tab change but BLoCs persist).
+- `history_page.dart`, `tasks_page.dart`, `projects_page.dart` updated to use `BlocBuilder` + `context.read<XxxBloc>().add(...)` instead of `PageUiPreferences`.
+- Test count: 226/226 (down 16 from removed PageUiPreferences tests).
+
+**[Distilled Rules]**
+- The `_sentinel = Object()` pattern in `copyWith` enables passing `null` explicitly to clear nullable fields (e.g., `filterExpandedOverride: null`).
+- All three BLoCs must be provided at `MainApp` level (not at the screen level) since pages are intentionally recreated on tab change (Item 5 override). Screen-level BlocProvider would lose state on every tab switch.
+- `flutter_bloc` re-exports `provider`, so never import both - use only `flutter_bloc/flutter_bloc.dart`.
+- `HistoryBloc._init()` dispatches `HistoryKpiStripVisibilityChanged(visible)` after async SharedPreferences load; the handler persists on every change.
+
+**[What's Next]**
+- Item 17: Extract shared drawer scaffold and draft lifecycle into a reusable base.
+- Items 18-20: Drawer deduplication (ProjectSelector, TaskSelector, delete confirm).
+- Item 23: Register repositories with get_it/injectable.
+- Items 49-52: Write BLoC tests for HistoryBloc, TasksBloc, ProjectsBloc.
