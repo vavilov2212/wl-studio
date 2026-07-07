@@ -73,7 +73,7 @@ class MiniActiveSessionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorsPalette.background.surface,
         borderRadius: theme.radiuses.md.circular,
-        border: Border.all(color: const Color(0xFFeaeffd)),
+        border: Border.all(color: theme.colorsPalette.accent.primaryMuted),
         boxShadow: [theme.shadows.sm],
       ),
       child: Padding(

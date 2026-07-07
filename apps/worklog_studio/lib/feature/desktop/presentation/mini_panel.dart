@@ -116,7 +116,7 @@ class _MiniPanelState extends State<MiniPanel> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: const Color(0xFFf8fafc),
+              color: theme.colorsPalette.background.canvas,
               borderRadius: BorderRadius.circular(theme.spacings.md),
               boxShadow: [theme.shadows.md],
               border: Border.all(
@@ -169,7 +169,7 @@ class _MiniPanelState extends State<MiniPanel> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFf8fafc),
+                        color: theme.colorsPalette.background.canvas,
                       ),
                       child: _query.isEmpty
                           ? SingleChildScrollView(
@@ -235,8 +235,8 @@ class _MiniPanelHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFebf0fd)),
+        color: theme.colorsPalette.background.surface,
+        border: Border.all(color: theme.colorsPalette.accent.primaryMuted),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: theme.spacings.lg),
@@ -280,7 +280,7 @@ class _MiniPanelFooter extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorsPalette.accent.primaryMuted,
-        border: Border.all(color: const Color(0xFFeaeffd)),
+        border: Border.all(color: theme.colorsPalette.accent.primaryMuted),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
