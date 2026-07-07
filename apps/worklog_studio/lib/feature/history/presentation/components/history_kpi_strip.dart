@@ -120,7 +120,7 @@ class _KpiChip extends StatelessWidget {
               color: palette.text.muted,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: theme.spacings.xs),
           Text(
             value,
             style: theme.commonTextStyles.captionBold.copyWith(

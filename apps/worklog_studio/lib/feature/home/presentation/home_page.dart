@@ -308,7 +308,7 @@ class _RecentActivitySection extends StatelessWidget {
                 color: palette.accent.success,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: theme.spacings.xxs),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
