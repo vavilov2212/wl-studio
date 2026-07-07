@@ -1,6 +1,8 @@
+import 'package:injectable/injectable.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/data/sqlite/sqlite_repository_base.dart';
 
+@LazySingleton(as: ProjectRepository)
 class SqliteProjectRepository extends SqliteRepositoryBase<Project>
     implements ProjectRepository {
   @override

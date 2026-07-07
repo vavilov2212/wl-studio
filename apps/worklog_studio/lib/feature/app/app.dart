@@ -8,10 +8,10 @@ import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
-import 'package:worklog_studio/data/sqlite/sqlite_time_entry_repository.dart';
-import 'package:worklog_studio/data/sqlite/sqlite_project_repository.dart';
-import 'package:worklog_studio/data/sqlite/sqlite_task_repository.dart';
 import 'package:worklog_studio/data/system_clock.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/domain/time_tracker.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
@@ -89,11 +89,9 @@ class MainApp extends StatelessWidget {
         BlocProvider<ProjectsBloc>(create: (_) => ProjectsBloc()),
         BlocProvider<TimeTrackerBloc>(
           create: (_) {
-            final clock = SystemClock();
-            final repository = SqliteTimeEntryRepository();
             final service = TimeTrackerService(
-              repository: repository,
-              clock: clock,
+              repository: getIt<TimeEntryRepository>(),
+              clock: SystemClock(),
             );
 
             final IdleMonitor idleMonitor = getIt<IdleMonitor>();
@@ -106,16 +104,11 @@ class MainApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(
-          create: (_) {
-            final clock = SystemClock();
-            final projectRepo = SqliteProjectRepository();
-            final taskRepo = SqliteTaskRepository();
-            return ProjectTaskState(
-              projectRepository: projectRepo,
-              taskRepository: taskRepo,
-              clock: clock,
-            );
-          },
+          create: (_) => ProjectTaskState(
+            projectRepository: getIt<ProjectRepository>(),
+            taskRepository: getIt<TaskRepository>(),
+            clock: SystemClock(),
+          ),
         ),
         BlocProvider<TrackerPanelCubit>(
           create: (context) => TrackerPanelCubit(
