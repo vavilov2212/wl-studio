@@ -11,6 +11,21 @@ This is a Flutter monorepository managed via Melos.
   * *Entry Point:* `packages\worklog_studio_style_system\lib\worklog_studio_style_system.dart` (barrel export file).
   * **UI Kit Reference:** `packages\worklog_studio_style_system\UI_KIT.md` - read this first on any UI task. Contains all components, props, tokens, and theme architecture. Do not crawl source files to discover what exists; consult this file instead.
 
+## 1a. Canonical Feature Scaffold & Repository Conventions
+Every feature under `apps\worklog_studio\lib\feature\<name>\` follows this vertical-slice layout (omit folders that would be empty - never create placeholder dirs):
+```
+feature/<name>/
+  bloc/               BLoC or Cubit + events + states
+  data/               feature-specific data sources / usecases (if any)
+  presentation/
+    <name>_page.dart  entry-point screen widget (thin coordinator)
+    components/       sub-widgets used only by this feature
+```
+- Cross-cutting domain entities and repository **interfaces** live in the top-level `lib\domain\` (e.g. `ProjectRepository` in `domain\project.dart`, `TaskRepository` in `domain\task.dart`, `TimeEntryRepository` in `domain\time_tracker.dart`, `SettingsRepository` in `data\settings_repository.dart`).
+- Interface naming: bare noun + `Repository` suffix - no `I` prefix (exception: legacy `IWorkLogRawDataUsecase` in the isolated work_log prototype).
+- Concrete implementations live in `lib\data\sqlite\` as `Sqlite<Entity>Repository`, annotated `@LazySingleton(as: <Interface>)`, and are resolved via `getIt<Interface>()`. Never instantiate a Sqlite repository directly in widget/provider code.
+- Cross-cutting auth/session concerns live in `lib\entity\` (session, user); shared app state in `lib\state\`.
+
 ## 2. Environment Constraints (Strictly Windows)
 - The development environment is **Windows**. All filesystem paths must use backslashes (`\`).
 - Completely ignore and never crawl platform-specific directories for other OS targets (`macos\`, `ios\`, `android\`, `linux\`, `web\`).
