@@ -5,7 +5,7 @@ import 'package:worklog_studio/core/services/desktop/desktop_service_registry.da
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
+import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
 
 /// Commands sent from the leader to the mini panel follower's cubit so the
 /// mini panel widget can respond to hotkeys and IPC-triggered focus changes

@@ -15,7 +15,7 @@ import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/state/page_ui_preferences.dart';

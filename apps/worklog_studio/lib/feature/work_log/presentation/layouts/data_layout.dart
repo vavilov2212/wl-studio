@@ -36,7 +36,6 @@ class DataLayoutState extends State<DataLayout> {
   }
 
   Future<void> _loadPlan() async {
-    // final jsonStr = await rootBundle.loadString('assets/plan.json');
     try {
       final jsonStr = await getIt<UserRepository>().sessionStorageRepository
           .load('plan.json');
@@ -108,8 +107,7 @@ class DataLayoutState extends State<DataLayout> {
 
                     Expanded(
                       flex: 3,
-                      child: //TODO: add empty list view
-                      ListView.separated(
+                      child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemBuilder: (context, _index) {
                           final _action = plan!['actions'][_index];
@@ -156,7 +154,6 @@ class DataLayoutState extends State<DataLayout> {
                         ],
                       ),
                     ),
-                    // const Spacer(),
                     const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 12),

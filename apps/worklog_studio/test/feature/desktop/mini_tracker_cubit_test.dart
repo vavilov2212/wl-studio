@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/core/services/desktop/no_op_desktop_service.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 
 class _RecordingDesktopService extends NoOpDesktopService {
   _RecordingDesktopService() : super.base();

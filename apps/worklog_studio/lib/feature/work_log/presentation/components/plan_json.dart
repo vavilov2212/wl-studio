@@ -41,7 +41,6 @@ class _PlanJsonState extends State<PlanJson> {
       'raw.txt',
     );
 
-    // print(input);
     final prompt = [
       Content.text(
         'Ты помощник разработчика. Разбери текст и верни ТОЛЬКО валидный JSON. Не объединяй записи и не суммируй их затраченное время, каждая запись - это отдельное вхождение json. Обрати внимание на формат даты - он очень важен. Формат: {   "actions": [     { "issue": "DEV-123", "date": "8/дек/2025 00:00 AM", "hours": 2, "comment": "..." }   ] } Текст: $input',
@@ -51,12 +50,6 @@ class _PlanJsonState extends State<PlanJson> {
     try {
       final res = await model.generateContent(prompt);
 
-      // const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      // JSON.parse(json); // валидация
-      // fs.writeFileSync('plan.json', json);
-      // console.log('✅ plan.json создан');
-
-      // await getIt<UserRepository>().sessionStorageRepository.save(res.text!);
       _controller.text = res.text!;
     } catch (e) {
       print('❌ LLM error: ${e.toString()}');

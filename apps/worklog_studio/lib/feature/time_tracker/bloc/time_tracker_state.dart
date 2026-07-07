@@ -1,68 +1,55 @@
 part of 'time_tracker_bloc.dart';
 
-/// Представляет различные состояния блока управления таймером.
-///
-/// Использует Freezed для создания иммутабельных и типобезопасных состояний
-/// с удобными методами `copyWith` и `when/map`.
 @freezed
 class TimeTrackerBlocState with _$TimeTrackerBlocState {
-  const TimeTrackerBlocState._(); // Позволяет добавлять кастомные геттеры и методы
+  const TimeTrackerBlocState._();
 
-  /// Начальное состояние, когда нет загруженных данных и активного таймера.
+  /// No data loaded; initial state before the first [TimeTrackerLoaded] event.
   const factory TimeTrackerBlocState.idle() = _TimeTrackerIdleState;
 
-  /// Состояние, когда идет загрузка записей времени из репозитория.
+  /// A load or mutation operation is in flight.
   const factory TimeTrackerBlocState.loading() = _TimeTrackerLoadingState;
 
-  /// Состояние, когда записи времени успешно загружены, но таймер неактивен.
+  /// Entries are loaded and no timer is running.
   const factory TimeTrackerBlocState.loaded({
-    @Default([]) List<TimeEntry> entries, // Список всех загруженных записей
-    TimeEntry? activeEntry, // Активная запись, если есть (но таймер не идет)
+    @Default([]) List<TimeEntry> entries,
+    TimeEntry? activeEntry,
   }) = _TimeTrackerLoadedState;
 
-  /// Состояние, когда таймер активно работает.
-  ///
-  /// Обязательно содержит `activeEntry` и список всех записей.
+  /// A timer is actively running.
   const factory TimeTrackerBlocState.running({
-    @Default([]) List<TimeEntry> entries, // Список всех загруженных записей
-    required TimeEntry activeEntry, // Активная запись, таймер идет
+    @Default([]) List<TimeEntry> entries,
+    required TimeEntry activeEntry,
   }) = _TimeTrackerRunningState;
 
-  /// Состояние, когда произошла ошибка во время какой-либо операции.
-  ///
-  /// Может содержать предыдущие записи и активный таймер для контекста.
+  /// An error occurred during an operation. Previous entries and active entry
+  /// are preserved so the UI can remain functional while showing the error.
   const factory TimeTrackerBlocState.error({
-    required Object errorHandler, // Объект ошибки для обработки
-    @Default([]) List<TimeEntry> entries, // Предыдущие записи для контекста
-    TimeEntry? activeEntry, // Предыдущая активная запись для контекста
+    required Object errorHandler,
+    @Default([]) List<TimeEntry> entries,
+    TimeEntry? activeEntry,
   }) = _TimeTrackerErrorState;
 
   // ---------------------------------------------------------------------------
-  // ВСПОМОГАТЕЛЬНЫЕ ГЕТТЕРЫ ДЛЯ УДОБНОГО ДОСТУПА К СОСТОЯНИЮ
+  // Convenience getters
   // ---------------------------------------------------------------------------
 
-  /// Возвращает `true`, если таймер активно работает.
   bool get isRunning => this is _TimeTrackerRunningState;
 
-  /// Возвращает активную запись времени, если она есть, иначе `null`.
   TimeEntry? get activeEntryOrNull {
     return when(
       idle: () => null,
-      loading: () =>
-          null, // Во время загрузки активной записи может не быть или она устарела
+      loading: () => null,
       loaded: (entries, activeEntry) => activeEntry,
       running: (entries, activeEntry) => activeEntry,
       error: (errorHandler, entries, activeEntry) => activeEntry,
     );
   }
 
-  /// Возвращает все загруженные записи времени.
-  /// Возвращает пустой список, если записи еще не загружены или состояние не применимо.
   List<TimeEntry> get allEntries {
     return when(
       idle: () => [],
-      loading: () =>
-          [], // Во время загрузки список может быть устаревшим или пустым
+      loading: () => [],
       loaded: (entries, activeEntry) => entries,
       running: (entries, activeEntry) => entries,
       error: (errorHandler, entries, activeEntry) => entries,

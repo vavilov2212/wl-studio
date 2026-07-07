@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
-// import 'package:worklog_studio_style_system/ui_kit/src/select/index.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
@@ -138,7 +137,7 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                     PopoverPrimitive(
                                       controller: popoverController,
                                       onRequestClose: popoverController.hide,
-                                      width: 520, // Меню шире, чем триггер
+                                      width: 520,
                                       trigger: PrimaryButton(
                                         type: ButtonType.secondary,
                                         title: 'Comment',
@@ -168,21 +167,6 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                               ),
                                             ],
                                           ),
-
-                                          // Column(
-                                          //   mainAxisSize: MainAxisSize.min,
-                                          //   children: [
-                                          //     _menuItem(Icons.edit, "Edit task", context),
-                                          //     _menuItem(Icons.copy, "Duplicate", context),
-                                          //     const Divider(height: 1),
-                                          //     _menuItem(
-                                          //       Icons.delete,
-                                          //       "Delete",
-                                          //       context,
-                                          //       isDestructive: true,
-                                          //     ),
-                                          //   ],
-                                          // ),
                                         );
                                       },
                                     ),
@@ -319,19 +303,6 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                                     ? 'Create new task'
                                                     : 'Create task "$query"',
                                                 onTap: () async {
-                                                  // final newTask =
-                                                  //     await projectTaskState
-                                                  //         .createTask(
-                                                  //           query.isEmpty
-                                                  //               ? 'New task'
-                                                  //               : query,
-                                                  //           activeEntry?.projectId,
-                                                  //         );
-                                                  // bloc.add(
-                                                  //   TimeTrackerActiveEntryUpdated(
-                                                  //     taskId: newTask.id,
-                                                  //   ),
-                                                  // );
                                                   close();
                                                 },
                                               );
@@ -436,35 +407,3 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
     return '$hours:$minutes:$seconds';
   }
 }
-
-// Widget _menuItem(
-//   IconData icon,
-//   String text,
-//   BuildContext context, {
-//   bool isDestructive = false,
-// }) {
-//   return InkWell(
-//     onTap: () {
-//       /* Logic */
-//     },
-//     child: Padding(
-//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-//       child: Row(
-//         children: [
-//           Icon(
-//             icon,
-//             size: 18,
-//             color: isDestructive ? Colors.red : Colors.black87,
-//           ),
-//           const SizedBox(width: 12),
-//           Text(
-//             text,
-//             style: TextStyle(
-//               color: isDestructive ? Colors.red : Colors.black87,
-//             ),
-//           ),
-//         ],
-//       ),
-//     ),
-//   );
-// }
