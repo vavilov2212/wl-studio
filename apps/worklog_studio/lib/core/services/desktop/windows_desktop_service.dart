@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
+import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
@@ -13,7 +14,7 @@ import 'package:worklog_studio/core/services/desktop/native_activity_window.dart
 import 'package:worklog_studio/core/services/desktop/native_mini_panel.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
 import 'package:worklog_studio/core/services/reminder_service.dart';
-import 'package:worklog_studio/data/sqlite/sqlite_settings_repository.dart';
+import 'package:worklog_studio/data/settings_repository.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
@@ -43,7 +44,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   ProjectTaskState? _projectTaskState;
   StreamSubscription<TimeTrackerBlocState>? _blocSubscription;
 
-  final _settingsRepository = SqliteSettingsRepository();
+  SettingsRepository get _settingsRepository => getIt<SettingsRepository>();
   HotkeyService? _hotkeyService;
   ReminderService? _reminderService;
 
