@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
@@ -11,10 +10,9 @@ import 'package:worklog_studio/feature/common/presentation/components/drawer_con
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
+import 'package:worklog_studio/feature/common/presentation/components/project_selector.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
-import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
-import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
@@ -267,128 +265,15 @@ class _TaskDrawerState extends State<TaskDrawer> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Consumer<ProjectTaskState>(
-                                    builder: (context, state, child) {
-                                      final selectedProject = state.projects
-                                          .where(
-                                            (p) => p.id == draft.projectId,
-                                          )
-                                          .firstOrNull;
-
-                                      Widget? leadingProjectWidget;
-                                      if (selectedProject != null) {
-                                        final initials =
-                                            BadgeUtils.getProjectInitials(
-                                              selectedProject.name,
-                                            );
-                                        final colors =
-                                            BadgeUtils.getBadgeColor(
-                                              selectedProject.id,
-                                            );
-                                        leadingProjectWidget = WsInitialBadge(
-                                          initials: initials,
-                                          backgroundColor: colors.$1,
-                                          textColor: colors.$2,
-                                          size: WsInitialBadgeSize.small,
+                                  child: ProjectSelector(
+                                    selectedProjectId: draft.projectId,
+                                    fieldController: _projectFieldController,
+                                    onProjectSelected: (value) {
+                                      if (value != null) {
+                                        _updateDraft(
+                                          draft.copyWith(projectId: value),
                                         );
                                       }
-
-                                      return InlineField(
-                                        label: 'Project',
-                                        value: selectedProject?.name ?? '',
-                                        placeholder: 'Select Project',
-                                        leading: leadingProjectWidget,
-                                        controller: _projectFieldController,
-                                        editWidget: Select<String>(
-                                          autoOpen: true,
-                                          searchable: true,
-                                          tapRegionGroupId:
-                                              _projectFieldController
-                                                  .tapRegionGroupId,
-                                          onOpenChange: (isOpen) {
-                                            if (!isOpen) {
-                                              _projectFieldController
-                                                  .handleEditorClose();
-                                            }
-                                          },
-                                          value: draft.projectId,
-                                          placeholder: 'Select Project',
-                                          onChanged: (value) {
-                                            if (value != null) {
-                                              _updateDraft(
-                                                draft.copyWith(
-                                                  projectId: value,
-                                                ),
-                                              );
-                                            }
-                                            _projectFieldController
-                                                .handleEditorCommit();
-                                          },
-                                          actionBuilder:
-                                              (context, query, close) {
-                                            final exactMatchExists =
-                                                state.projects.any(
-                                                  (p) =>
-                                                      p.name.toLowerCase() ==
-                                                      query.toLowerCase(),
-                                                );
-                                            if (exactMatchExists &&
-                                                query.isNotEmpty) {
-                                              return const SizedBox.shrink();
-                                            }
-
-                                            return SelectCreateAction(
-                                              label: query.isEmpty
-                                                  ? 'Create new project'
-                                                  : 'Create project "$query"',
-                                              onTap: () async {
-                                                final newProject =
-                                                    await state.createProject(
-                                                  query.isEmpty
-                                                      ? 'New project'
-                                                      : query,
-                                                  '',
-                                                );
-                                                _formCubit.updateDraft(
-                                                  draft.copyWith(
-                                                    projectId: newProject.id,
-                                                  ),
-                                                );
-                                                _projectFieldController
-                                                    .handleEditorCommit();
-                                                close();
-                                              },
-                                            );
-                                          },
-                                          options: state.projects.map((p) {
-                                            final initials =
-                                                BadgeUtils.getProjectInitials(
-                                                  p.name,
-                                                );
-                                            final colors =
-                                                BadgeUtils.getBadgeColor(
-                                                  p.id,
-                                                );
-                                            return SelectOption(
-                                              value: p.id,
-                                              label: p.name,
-                                              leading: WsInitialBadge(
-                                                initials: initials,
-                                                backgroundColor: colors.$1,
-                                                textColor: colors.$2,
-                                                size: WsInitialBadgeSize.small,
-                                              ),
-                                              onAction: () => context
-                                                  .read<
-                                                    AppNavigationController
-                                                  >()
-                                                  .openProject(p.id),
-                                              // TODO: l10n
-                                              actionTooltip: 'Open project',
-                                            );
-                                          }).toList(),
-                                        ),
-                                      );
                                     },
                                   ),
                                 ),
