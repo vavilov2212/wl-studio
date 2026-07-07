@@ -8,8 +8,8 @@ import 'package:worklog_studio/domain/sort_direction.dart';
 import 'package:worklog_studio/domain/tasks_filters.dart';
 import 'package:worklog_studio/domain/tasks_sort.dart';
 import 'package:worklog_studio/feature/history/presentation/components/time_entry_list.dart';
-import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
-import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
+import 'package:worklog_studio/feature/projects/presentation/components/project_list.dart';
+import 'package:worklog_studio/feature/tasks/presentation/components/task_list.dart';
 
 /// Session-scoped (in-memory, lost on app restart) view-mode, filter, and
 /// sort state for History/Tasks/Projects, lifted out of the page widgets so
