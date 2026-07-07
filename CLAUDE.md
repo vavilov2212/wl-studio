@@ -116,3 +116,27 @@ User overrides on the plan:
 - All Quick Wins are now complete (items 29, 37, 43, 33, 54, 55, 35, 36). Item 32 and 38 were skipped per user.
 - Next structural item: **Item 34** - Audit Firebase deps (`firebase_core`, `firebase_ai`). No prerequisites.
 - After Item 34: **Item 30** - Isolate `work_log` feature (Option B). No prerequisites beyond Item 34 decision.
+
+---
+
+### Refactoring Entry #3 - Items 39, 58 (Centralize date/duration formatting)
+
+**[Verified Facts]**
+- Item 39: Expanded `DateFormatter` in `core/utils/date_formatter.dart` with 6 static methods: `formatDurationHms`, `formatDurationHm`, `formatDateHeader`, `formatTime12h`, `formatTimeHhMm`, `formatTimeRange`.
+- Migrated 9 files: `active_timer_text.dart`, `live_duration_text.dart`, `simple_timer_text.dart`, `time_entry_card.dart`, `time_entry_drawer.dart`, `history_page.dart`, `home_page.dart`, `tasks_drawer.dart`, `app_shell.dart`, `mini_panel.dart`.
+- Also fixed pre-existing dead-code null checks in `time_entry_drawer.dart` and removed unused `project.dart` import there.
+- Item 58: Deleted `feature/common/utils/date_format_utils.dart` after confirming zero consumers.
+- Test result: 209/209 passed.
+
+**[What Worked]**
+- Grep for all call sites before touching imports - catches hidden usages.
+- Delete private methods only after confirming linter marks them unused_element.
+
+**[Distilled Rules]**
+- `DateFormatUtils.formatTimeRangeWithDate` is fully replaced by `DateFormatter.formatTimeRange` - identical logic.
+- `_formatTime` (12h clock) maps to `DateFormatter.formatTime12h`.
+- `_formatDuration` (Xh Ym) maps to `DateFormatter.formatDurationHm`.
+- `_formatExactDuration` / `_formatDuration` (HH:mm:ss) map to `DateFormatter.formatDurationHms`.
+
+**[What's Next]**
+- Next item: **Item 40** - Replace MiniTrackerCubit raw state with Freezed sealed class.

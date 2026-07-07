@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
@@ -41,7 +42,7 @@ class _MiniPanelState extends State<MiniPanel> {
       setState(() {});
     });
     _commentFieldController.addListener(_onCommentEditModeChanged);
-    _commandSub = context.read<MiniTrackerCubit>().commands.listen(
+    _commandSub = context.read<MiniPanelCommandBus>().stream.listen(
       _handleCommand,
     );
     Future.delayed(const Duration(milliseconds: 50), () {

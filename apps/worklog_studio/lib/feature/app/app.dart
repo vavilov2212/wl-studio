@@ -15,6 +15,7 @@ import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
@@ -35,14 +36,22 @@ class MiniApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<MiniTrackerCubit>(
-      create: (context) {
-        final cubit = MiniTrackerCubit();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          DesktopServiceRegistry.instance.initFollower(cubit);
-        });
-        return cubit;
-      },
+    return MultiProvider(
+      providers: [
+        Provider<MiniPanelCommandBus>(
+          create: (_) => MiniPanelCommandBus(),
+          dispose: (_, bus) => bus.dispose(),
+        ),
+        BlocProvider<MiniTrackerCubit>(
+          create: (context) {
+            final cubit = MiniTrackerCubit();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              DesktopServiceRegistry.instance.initFollower(cubit);
+            });
+            return cubit;
+          },
+        ),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: appEnvironment.config.lightTheme,

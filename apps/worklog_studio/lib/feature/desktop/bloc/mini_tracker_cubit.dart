@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
@@ -43,22 +41,6 @@ abstract class MiniTrackerState with _$MiniTrackerState {
 
 class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   MiniTrackerCubit() : super(const MiniTrackerState());
-
-  final _commandController = StreamController<MiniPanelCommand>.broadcast();
-
-  /// Command stream consumed by [MiniPanel] to respond to leader-initiated
-  /// focus and commit events (e.g. hotkeys, IPC triggers).
-  Stream<MiniPanelCommand> get commands => _commandController.stream;
-
-  void emitCommand(MiniPanelCommand command) {
-    _commandController.add(command);
-  }
-
-  @override
-  Future<void> close() {
-    _commandController.close();
-    return super.close();
-  }
 
   void updateFromSnapshot(TimerSnapshot snapshot) {
     if (snapshot.timestamp < state.lastTimestamp) return;
