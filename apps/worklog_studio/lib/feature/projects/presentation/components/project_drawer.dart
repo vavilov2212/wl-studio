@@ -4,6 +4,7 @@ import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/bloc/drawer_form_cubit.dart';
+import 'package:worklog_studio/feature/common/presentation/components/delete_confirmation_row.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -165,63 +166,18 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
           body: Column(
             children: [
               if (!_isNew)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder:
-                      (Widget child, Animation<double> animation) {
-                        return SizeTransition(
-                          sizeFactor: animation,
-                          child: FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          ),
-                        );
-                      },
-                  child: isConfirmingDelete
-                      ? Padding(
-                          key: const ValueKey('delete_confirmation'),
-                          padding: EdgeInsets.fromLTRB(
-                            theme.spacings.xl,
-                            theme.spacings.lg,
-                            theme.spacings.xl,
-                            0,
-                          ),
-                          child: InfoBar(
-                            variant: InfoBarVariant.danger,
-                            title: const Text('Delete this project?'),
-                            description: const Text(
-                              'This action cannot be undone',
-                            ),
-                            actions: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                PrimaryButton(
-                                  onTap: () {
-                                    if (widget.project != null) {
-                                      context
-                                          .read<ProjectTaskState>()
-                                          .deleteProject(widget.project!.id);
-                                      widget.onClose();
-                                    }
-                                  },
-                                  title: 'Delete',
-                                  type: ButtonType.danger,
-                                  size: ButtonSize.sm,
-                                ),
-                                SizedBox(width: theme.spacings.sm),
-                                PrimaryButton(
-                                  onTap: _formCubit.cancelDelete,
-                                  title: 'Cancel',
-                                  type: ButtonType.ghost,
-                                  size: ButtonSize.sm,
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('no_confirmation'),
-                        ),
+                DeleteConfirmationRow(
+                  isShowing: isConfirmingDelete,
+                  entityLabel: 'project',
+                  onConfirm: () {
+                    if (widget.project != null) {
+                      context
+                          .read<ProjectTaskState>()
+                          .deleteProject(widget.project!.id);
+                      widget.onClose();
+                    }
+                  },
+                  onCancel: _formCubit.cancelDelete,
                 ),
               if (_isNew)
                 Padding(

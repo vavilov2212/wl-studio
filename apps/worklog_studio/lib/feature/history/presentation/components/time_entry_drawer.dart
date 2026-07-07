@@ -14,6 +14,7 @@ import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart'
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/presentation/components/delete_confirmation_row.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
@@ -197,59 +198,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
           ),
           body: Column(
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return SizeTransition(
-                    sizeFactor: animation,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
+              DeleteConfirmationRow(
+                isShowing: isConfirmingDelete,
+                entityLabel: 'time entry',
+                onConfirm: () {
+                  if (widget.resolvedEntry != null) {
+                    context.read<TimeTrackerBloc>().add(
+                      TimeTrackerEntryDeleted(
+                        widget.resolvedEntry!.entry.id,
+                      ),
+                    );
+                    widget.onClose();
+                  }
                 },
-                child: isConfirmingDelete
-                    ? Padding(
-                        key: const ValueKey('delete_confirmation'),
-                        padding: EdgeInsets.fromLTRB(
-                          theme.spacings.xl,
-                          theme.spacings.lg,
-                          theme.spacings.xl,
-                          0,
-                        ),
-                        child: InfoBar(
-                          variant: InfoBarVariant.danger,
-                          title: const Text('Delete this time entry?'), // TODO: l10n
-                          description: const Text(
-                            'This action cannot be undone', // TODO: l10n
-                          ),
-                          actions: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              PrimaryButton(
-                                onTap: () {
-                                  if (widget.resolvedEntry != null) {
-                                    context.read<TimeTrackerBloc>().add(
-                                      TimeTrackerEntryDeleted(
-                                        widget.resolvedEntry!.entry.id,
-                                      ),
-                                    );
-                                    widget.onClose();
-                                  }
-                                },
-                                title: 'Delete', // TODO: l10n
-                                type: ButtonType.danger,
-                                size: ButtonSize.sm,
-                              ),
-                              SizedBox(width: theme.spacings.sm),
-                              PrimaryButton(
-                                onTap: _formCubit.cancelDelete,
-                                title: 'Cancel', // TODO: l10n
-                                type: ButtonType.ghost,
-                                size: ButtonSize.sm,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('no_confirmation')),
+                onCancel: _formCubit.cancelDelete,
               ),
               if (_isNew)
                 Padding(
