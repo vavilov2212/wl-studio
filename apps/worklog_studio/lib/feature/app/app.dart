@@ -91,10 +91,7 @@ class MainApp extends StatelessWidget {
               clock: clock,
             );
 
-            IdleMonitor? idleMonitor;
-            try {
-              idleMonitor = getIt<IdleMonitor>();
-            } catch (_) {}
+            final IdleMonitor idleMonitor = getIt<IdleMonitor>();
 
             final bloc = TimeTrackerBloc(
               service: service,

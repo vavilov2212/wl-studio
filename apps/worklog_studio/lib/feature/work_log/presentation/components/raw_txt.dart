@@ -1,3 +1,4 @@
+// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/entity/user/data/repository/user_repository.dart';
