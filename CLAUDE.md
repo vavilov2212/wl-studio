@@ -308,3 +308,29 @@ User overrides on the plan:
 
 **[What's Next]**
 - Item 12: TrackerPanelCubit - extract tracker panel state from `GlobalTimeTrackerPanel` into a dedicated Cubit.
+
+---
+
+### Refactoring Entry #11 - Item 12 (TrackerPanelCubit)
+
+**[Verified Facts]**
+- Item 12: Created `feature/time_tracker/bloc/tracker_panel_cubit.dart`.
+  - `TrackerPanelState(draftComment: String)` - owns only the comment draft (project/task draft stays in `ProjectTaskState` because it is consumed by many other widgets).
+  - `TrackerPanelCubit` subscribes to `TimeTrackerBloc.stream` in constructor; syncs draft comment + project/task when active entry changes.
+  - Methods: `startTimer`, `stopTimer`, `updateProject`, `updateTask`, `updateComment`, `createProject`, `createTask`.
+  - Registered as `BlocProvider<TrackerPanelCubit>` in `app.dart` after `TimeTrackerBloc` and `ProjectTaskState` providers.
+- `global_time_tracker_panel.dart`: removed `BlocListener<TimeTrackerBloc>` (moved to cubit); added `BlocListener<TrackerPanelCubit>` to sync `_commentController.text`; all inline `add()` and `updateDraft()` calls replaced with cubit method calls.
+- Widget retains 4 `InlineFieldController`/`TextEditingController` fields (pure UI focus management - cannot go in a Cubit).
+- Test count: 242/242 (unchanged).
+
+**[Distilled Rules]**
+- `ProjectTaskState` owns `draftProjectId`, `draftTaskId`, `draftComment` as shared cross-cutting state. `TrackerPanelCubit` delegates to it; do not duplicate draft project/task in the cubit.
+- `InlineFieldController` and `TextEditingController` cannot go in a Cubit - they are Flutter framework objects with widget tree integration.
+- The `BlocListener<TrackerPanelCubit>` in the widget syncs `state.draftComment` to `_commentController.text` when the cubit emits a new comment (e.g., on active entry sync).
+- `createProject`/`createTask` methods return `Future<void>` - the widget calls `close()` and `exitEditMode()` after awaiting them, keeping UI logic widget-side.
+- `ScaffoldMessenger.of(context).showSnackBar()` (when no project selected for task create) stays in the widget's action builder - it is UI logic that cannot go in the cubit.
+
+**[What's Next]**
+- Item 13: Create `HistoryBloc` for the history screen.
+- Item 14: Create `TasksBloc` for the tasks screen.
+- Item 15: Create `ProjectsBloc` for the projects screen.
