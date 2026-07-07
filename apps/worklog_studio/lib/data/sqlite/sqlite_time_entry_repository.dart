@@ -1,7 +1,7 @@
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/time_tracker.dart';
-import 'sqlite_repository_base.dart';
-import 'time_entry_mapper.dart';
+import 'package:worklog_studio/data/sqlite/sqlite_repository_base.dart';
+import 'package:worklog_studio/data/sqlite/time_entry_mapper.dart';
 
 class SqliteTimeEntryRepository extends SqliteRepositoryBase<TimeEntry>
     implements TimeEntryRepository {

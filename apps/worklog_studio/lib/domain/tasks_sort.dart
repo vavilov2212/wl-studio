@@ -1,5 +1,5 @@
-import 'resolved_task.dart';
-import 'sort_direction.dart';
+import 'package:worklog_studio/domain/resolved_task.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 
 enum TasksSortField { name, timeTracked }
 

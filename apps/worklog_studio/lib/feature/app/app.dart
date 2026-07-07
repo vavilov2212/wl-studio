@@ -25,7 +25,7 @@ import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart'
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 
-import 'layout/app_bar/app_bar_navigator_observer.dart';
+import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_navigator_observer.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 

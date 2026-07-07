@@ -15,10 +15,10 @@ import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart'
 import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
-import 'components/time_entry_card.dart';
-import 'components/time_entry_actions_cell.dart';
-import 'components/history_filter_bar.dart';
-import 'components/history_sort_bar.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_card.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_actions_cell.dart';
+import 'package:worklog_studio/feature/history/presentation/components/history_filter_bar.dart';
+import 'package:worklog_studio/feature/history/presentation/components/history_sort_bar.dart';
 
 enum HistoryViewMode { cards, table }
 

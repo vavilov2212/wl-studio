@@ -139,4 +139,29 @@ User overrides on the plan:
 - `_formatExactDuration` / `_formatDuration` (HH:mm:ss) map to `DateFormatter.formatDurationHms`.
 
 **[What's Next]**
-- Next item: **Item 40** - Replace MiniTrackerCubit raw state with Freezed sealed class.
+- Next items: **Item 41** (Freezed MiniTrackerState) and **Item 42** (MiniPanelCommandBus) - see Entry #4.
+
+---
+
+### Refactoring Entry #4 - Items 41, 42 (Freezed MiniTrackerState + MiniPanelCommandBus)
+
+**[Verified Facts]**
+- Item 41: Converted `MiniTrackerState` to `@freezed abstract class` with private constructor `const MiniTrackerState._()`. Manually wrote `mini_tracker_cubit.freezed.dart` (build_runner blocked by Dart 3.10.4 + `native_toolchain_c` build hooks).
+- Item 42: Created `feature/desktop/bloc/mini_panel_command_bus.dart` - standalone `MiniPanelCommandBus` with broadcast `StreamController<MiniPanelCommand>`. Removed `_commandController`, `commands` getter, `emitCommand()`, and `close()` override from `MiniTrackerCubit`. Wrapped `BlocProvider<MiniTrackerCubit>` in `MultiProvider` in `app.dart` to also provide `MiniPanelCommandBus`. Updated `mini_panel.dart` and test to use bus instead of cubit.
+- Test result: 209/209 passed.
+
+**[What Worked]**
+- Manually writing `.freezed.dart` by copying the Freezed v3 pattern from existing project files (`dashboard_charts_bloc.freezed.dart`, `time_tracker_bloc.freezed.dart`) for list field handling.
+- Using `MiniTrackerState(...)` direct constructor in `updateFromSnapshot` instead of `state.copyWith(...)` to avoid nullable `activeEntry` copyWith semantics.
+
+**[Distilled Rules]**
+- build_runner is broken with Dart 3.10.4 + `native_toolchain_c 0.19.1`. Always write Freezed files manually. Copy pattern from existing `*.freezed.dart` in the project - list fields need private backing `_field`, `EqualUnmodifiableListView` getter, and `DeepCollectionEquality` in equality/hashCode.
+- `MiniPanelCommand` enum lives in `mini_tracker_cubit.dart` (not the bus file) because it is part of the state domain.
+- `MiniPanelCommandBus` is registered as a `Provider<MiniPanelCommandBus>` with `dispose: (_, bus) => bus.dispose()` - not a BlocProvider.
+
+**[Pitfalls & What to Avoid]**
+- Do not add an explicit `provider` import alongside `flutter_bloc` - `flutter_bloc` already re-exports `provider` and the duplicate causes a conflict lint.
+- Stale IDE diagnostics showed errors at pre-edit line numbers. Verify file state via grep, not IDE.
+
+**[What's Next]**
+- Item 44: Standardize all relative imports to `package:worklog_studio/` absolute imports. Add `always_use_package_imports: true` lint rule.

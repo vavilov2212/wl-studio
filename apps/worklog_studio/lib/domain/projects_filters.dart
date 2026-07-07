@@ -1,5 +1,5 @@
-import 'project.dart';
-import 'resolved_project.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/resolved_project.dart';
 
 class ProjectsFilters {
   final Set<ProjectStatus> statuses;

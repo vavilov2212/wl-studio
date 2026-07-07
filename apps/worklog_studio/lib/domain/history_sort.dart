@@ -1,5 +1,5 @@
-import 'resolved_time_entry.dart';
-import 'sort_direction.dart';
+import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 
 enum HistorySortField { date, duration, taskProjectName }
 

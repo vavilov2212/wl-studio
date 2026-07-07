@@ -1,5 +1,5 @@
 import 'package:worklog_studio/domain/task.dart';
-import 'sqlite_repository_base.dart';
+import 'package:worklog_studio/data/sqlite/sqlite_repository_base.dart';
 
 class SqliteTaskRepository extends SqliteRepositoryBase<Task>
     implements TaskRepository {

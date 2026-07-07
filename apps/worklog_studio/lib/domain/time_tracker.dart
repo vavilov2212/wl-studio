@@ -1,4 +1,4 @@
-import 'time_entry.dart';
+import 'package:worklog_studio/domain/time_entry.dart';
 
 abstract class TimeEntryRepository {
   Future<TimeEntry?> getActive();

@@ -1,5 +1,5 @@
 import 'package:worklog_studio/domain/project.dart';
-import 'sqlite_repository_base.dart';
+import 'package:worklog_studio/data/sqlite/sqlite_repository_base.dart';
 
 class SqliteProjectRepository extends SqliteRepositoryBase<Project>
     implements ProjectRepository {

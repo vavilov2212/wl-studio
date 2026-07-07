@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
-import 'inline_field_controller.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 
 class InlineField extends StatefulWidget {
   final String label;

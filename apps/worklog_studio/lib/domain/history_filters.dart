@@ -1,4 +1,4 @@
-import 'resolved_time_entry.dart';
+import 'package:worklog_studio/domain/resolved_time_entry.dart';
 
 class HistoryFilters {
   final Set<String> taskIds;
