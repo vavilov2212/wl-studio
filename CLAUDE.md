@@ -250,3 +250,61 @@ User overrides on the plan:
 **[What's Next]**
 - Item 8: Split `mini_panel.dart` (~1051 lines). Same 4-file pattern.
 - Item 12: TrackerPanelCubit (depends on Item 7 - now unblocked).
+
+---
+
+### Refactoring Entry #8 - Item 8 (Split mini_panel.dart)
+
+**[Verified Facts]**
+- Item 8: Split `mini_panel.dart` (~1051 lines) into 3 files:
+  - `feature/desktop/presentation/components/mini_active_timer_text.dart` - `MiniActiveTimerText` (renamed from `_MiniActiveTimerTextWrapper`)
+  - `feature/desktop/presentation/components/mini_hoverable_list_item.dart` - `MiniHoverableListItem` (renamed from `_HoverableListItem`)
+  - `feature/desktop/presentation/mini_panel.dart` - reduced, imports new components
+- Removed dead code: `_platform` (unused MethodChannel), outer `theme`/`palette` vars shadowed by BlocBuilder, `groupedEntries = groupBy(...)` result never consumed, `import 'package:flutter/services.dart'`.
+- Test count: 242/242 (unchanged).
+
+**[What Worked]**
+- Extracting private classes by renaming them to public names during copy.
+
+**[Pitfalls & What to Avoid]**
+- `replace_all` on a constructor call pattern also hits the constructor declaration inside the class - delete the old class body manually rather than using replace_all for renames.
+- After deleting two classes, verify no stray closing brace remains at the end of the file.
+
+---
+
+### Refactoring Entry #9 - Item 9 (Split history_page.dart)
+
+**[Verified Facts]**
+- Item 9: Split `history_page.dart` into 4 files:
+  - `feature/history/presentation/components/history_kpi_strip.dart` - `HistoryKpiStrip` + `_KpiChip`
+  - `feature/history/presentation/components/time_entry_table.dart` - `getHistoryTableColumns(AppThemeExtension theme)` top-level function
+  - `feature/history/presentation/components/time_entry_list.dart` - `HistoryViewMode` enum + `TimeEntryList` widget
+  - `feature/history/presentation/history_page.dart` - thin `HistoryScreen` coordinator (~150 lines)
+- `history_page.dart` re-exports `HistoryViewMode` for backward compat.
+- `page_ui_preferences.dart` updated to import `HistoryViewMode` directly from `time_entry_list.dart`.
+- Test count: 242/242 (unchanged).
+
+**[Distilled Rules]**
+- Page split 3-file pattern: `{page}.dart` (coordinator) + `components/{entity}_list.dart` (ViewMode enum + list widget) + `components/{entity}_table.dart` (getXxxTableColumns function).
+- Place the ViewMode enum in the list component file to avoid circular imports (page imports list, list would need ViewMode which is defined in page - circular).
+- Re-export ViewMode from the page file with `export ... show XxxViewMode` for backward compat.
+- `page_ui_preferences.dart` should import ViewMode enums directly from the component files, not the page files.
+
+---
+
+### Refactoring Entry #10 - Items 10, 11 (Split tasks_page and projects_page)
+
+**[Verified Facts]**
+- Item 10: Split `tasks_page.dart` into:
+  - `components/task_list.dart` - `TaskViewMode` enum + `TaskList` widget
+  - `components/task_table.dart` - `getTaskTableColumns(AppThemeExtension theme)` + `_getBadgeStatus` + `_formatExactDuration` (private top-level helpers)
+  - `tasks_page.dart` - thin `TasksScreen` coordinator + `export ... show TaskViewMode`
+- Item 11: Split `projects_page.dart` into:
+  - `components/project_list.dart` - `ProjectViewMode` enum + `ProjectList` widget
+  - `components/project_table.dart` - `getProjectTableColumns(AppThemeExtension theme)` + helpers
+  - `projects_page.dart` - thin `ProjectsScreen` coordinator + `export ... show ProjectViewMode`
+- `page_ui_preferences.dart` imports for `TaskViewMode` and `ProjectViewMode` updated to point to the component files.
+- Test count: 242/242 (unchanged).
+
+**[What's Next]**
+- Item 12: TrackerPanelCubit - extract tracker panel state from `GlobalTimeTrackerPanel` into a dedicated Cubit.
