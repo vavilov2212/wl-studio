@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
+
+part 'mini_tracker_cubit.freezed.dart';
 
 /// Commands sent from the leader to the mini panel follower's cubit so the
 /// mini panel widget can respond to hotkeys and IPC-triggered focus changes
@@ -25,40 +28,17 @@ enum MiniPanelCommand {
   autoDismissComment,
 }
 
-class MiniTrackerState {
-  final bool isRunning;
-  final TimeEntry? activeEntry;
-  final List<TimeEntry> allEntries;
-  final List<Task> tasks;
-  final List<Project> projects;
-  final int lastTimestamp;
-
-  const MiniTrackerState({
-    this.isRunning = false,
-    this.activeEntry,
-    this.allEntries = const [],
-    this.tasks = const [],
-    this.projects = const [],
-    this.lastTimestamp = 0,
-  });
-
-  MiniTrackerState copyWith({
-    bool? isRunning,
+@freezed
+abstract class MiniTrackerState with _$MiniTrackerState {
+  const MiniTrackerState._();
+  const factory MiniTrackerState({
+    @Default(false) bool isRunning,
     TimeEntry? activeEntry,
-    List<TimeEntry>? allEntries,
-    List<Task>? tasks,
-    List<Project>? projects,
-    int? lastTimestamp,
-  }) {
-    return MiniTrackerState(
-      isRunning: isRunning ?? this.isRunning,
-      activeEntry: activeEntry ?? this.activeEntry,
-      allEntries: allEntries ?? this.allEntries,
-      tasks: tasks ?? this.tasks,
-      projects: projects ?? this.projects,
-      lastTimestamp: lastTimestamp ?? this.lastTimestamp,
-    );
-  }
+    @Default([]) List<TimeEntry> allEntries,
+    @Default([]) List<Task> tasks,
+    @Default([]) List<Project> projects,
+    @Default(0) int lastTimestamp,
+  }) = _MiniTrackerState;
 }
 
 class MiniTrackerCubit extends Cubit<MiniTrackerState> {
@@ -83,7 +63,7 @@ class MiniTrackerCubit extends Cubit<MiniTrackerState> {
   void updateFromSnapshot(TimerSnapshot snapshot) {
     if (snapshot.timestamp < state.lastTimestamp) return;
     emit(
-      state.copyWith(
+      MiniTrackerState(
         isRunning: snapshot.isRunning,
         activeEntry: snapshot.activeEntry,
         allEntries: snapshot.entries,
