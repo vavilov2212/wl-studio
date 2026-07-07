@@ -218,7 +218,35 @@ User overrides on the plan:
 - `entity/` top-level is for cross-cutting auth/session concerns that don't fit the single-feature vertical slice model.
 
 **[What's Next]**
-- Item 7: Split `app_shell.dart` (1013 lines) into 4 files.
+- Item 7: DONE (see Entry #7).
 - Item 8: Split `mini_panel.dart` (1051 lines) into 4 files.
 - Items 9-11: Smaller page splits.
 - Item 12: TrackerPanelCubit (depends on Item 7).
+
+---
+
+### Refactoring Entry #7 - Item 7 (Split app_shell.dart)
+
+**[Verified Facts]**
+- Item 7: Split `app_shell.dart` (1005 lines) into 4 files:
+  - `feature/app/layout/app_route.dart` - `AppRoute` enum + `isSettingsRoute` helper (avoids circular imports)
+  - `feature/time_tracker/presentation/global_time_tracker_panel.dart` - `GlobalTimeTrackerPanel` + `_GlobalTimeTrackerPanelState`
+  - `feature/app/layout/app_bar/top_app_bar.dart` - `TopAppBar`
+  - `feature/app/layout/sidebar_navigation.dart` - `SidebarNavigation` + `_SidebarNavigationState`
+  - `feature/app/layout/app_shell.dart` - now only `AppShell`/`_AppShellState` (~160 lines)
+- Fixed pre-existing unused `theme` variable in `_navItem` during extraction.
+- Test count: 242/242 (unchanged).
+
+**[What Worked]**
+- Placing `AppRoute` in its own `app_route.dart` avoids a circular import (`app_shell.dart` imports `sidebar_navigation.dart` which needs `AppRoute`).
+- `TopAppBar` is a thin stateless wrapper - it only needs `worklog_studio_style_system.dart` + the new `GlobalTimeTrackerPanel` import.
+- `GlobalTimeTrackerPanel` needs the explicit `colors_palette_entity.dart` import because `ColorsPalette` appears as a named parameter type in `_buildTimerAndAction`.
+
+**[Distilled Rules]**
+- When extracting a class that references an enum from the containing file, put the enum in a third shared file rather than importing the old file (circular dep risk).
+- `sidebar_navigation.dart` imports `app_route.dart` directly, NOT `app_shell.dart`.
+- `_navItem` in `SidebarNavigation` does not use a `theme` local - the linter catches this. Remove it on extraction.
+
+**[What's Next]**
+- Item 8: Split `mini_panel.dart` (~1051 lines). Same 4-file pattern.
+- Item 12: TrackerPanelCubit (depends on Item 7 - now unblocked).
