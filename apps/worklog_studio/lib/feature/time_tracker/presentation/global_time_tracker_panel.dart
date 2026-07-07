@@ -1,0 +1,509 @@
+import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
+import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+
+class GlobalTimeTrackerPanel extends StatefulWidget {
+  final ValueChanged<String> onOpenProject;
+  final ValueChanged<String> onOpenTask;
+
+  const GlobalTimeTrackerPanel({
+    super.key,
+    required this.onOpenProject,
+    required this.onOpenTask,
+  });
+
+  @override
+  State<GlobalTimeTrackerPanel> createState() => _GlobalTimeTrackerPanelState();
+}
+
+class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
+  final TextEditingController _commentController = TextEditingController();
+  final InlineFieldController _projectFieldController = InlineFieldController();
+  final InlineFieldController _taskFieldController = InlineFieldController();
+  final InlineFieldController _commentFieldController = InlineFieldController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _projectFieldController.dispose();
+    _taskFieldController.dispose();
+    _commentFieldController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+    final projectTaskState = context.read<ProjectTaskState>();
+
+    return BlocListener<TimeTrackerBloc, TimeTrackerBlocState>(
+      listenWhen: (previous, current) =>
+          previous.activeEntryOrNull != current.activeEntryOrNull,
+      listener: (context, state) {
+        final activeEntry = state.activeEntryOrNull;
+        if (activeEntry != null) {
+          projectTaskState.updateDraft(
+            projectId: activeEntry.projectId,
+            taskId: activeEntry.taskId,
+            comment: activeEntry.comment ?? '',
+          );
+          if (_commentController.text != (activeEntry.comment ?? '')) {
+            _commentController.text = activeEntry.comment ?? '';
+          }
+        }
+      },
+      child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
+        buildWhen: (previous, current) =>
+            previous.isRunning != current.isRunning ||
+            previous.activeEntryOrNull != current.activeEntryOrNull,
+        builder: (context, state) {
+          final isRunning = state.isRunning;
+          final draftProjectId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftProjectId,
+          );
+          final draftTaskId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftTaskId,
+          );
+
+          return Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              horizontal: theme.spacings.x2l,
+              vertical: theme.spacings.sm,
+            ),
+            decoration: const BoxDecoration(color: Colors.transparent),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final projectField = _buildProjectSelector(
+                  context,
+                  isRunning,
+                  draftProjectId,
+                );
+                final taskField = _buildTaskSelector(
+                  context,
+                  isRunning,
+                  draftTaskId,
+                );
+                final commentField = _buildCommentInput(
+                  context,
+                  isRunning,
+                  draftTaskId,
+                );
+                final timerAndAction = _buildTimerAndAction(
+                  context,
+                  isRunning,
+                  theme,
+                  palette,
+                  projectTaskState,
+                  draftProjectId,
+                  draftTaskId,
+                );
+
+                if (constraints.maxWidth >= 900) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(child: projectField),
+                            SizedBox(width: theme.spacings.lg),
+                            Expanded(child: taskField),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: theme.spacings.xl),
+                      Expanded(flex: 4, child: commentField),
+                      SizedBox(width: theme.spacings.xl),
+                      ...timerAndAction,
+                    ],
+                  );
+                } else if (constraints.maxWidth >= 600) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(child: projectField),
+                          SizedBox(width: theme.spacings.lg),
+                          Expanded(child: taskField),
+                        ],
+                      ),
+                      SizedBox(height: theme.spacings.lg),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(child: commentField),
+                          SizedBox(width: theme.spacings.xl),
+                          ...timerAndAction,
+                        ],
+                      ),
+                    ],
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      projectField,
+                      SizedBox(height: theme.spacings.lg),
+                      taskField,
+                      SizedBox(height: theme.spacings.lg),
+                      commentField,
+                      SizedBox(height: theme.spacings.xl),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: timerAndAction,
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _buildTimerAndAction(
+    BuildContext context,
+    bool isRunning,
+    AppThemeExtension theme,
+    ColorsPalette palette,
+    ProjectTaskState projectTaskState,
+    String? draftProjectId,
+    String? draftTaskId,
+  ) {
+    return [
+      ActiveTimerText(
+        style: theme.commonTextStyles.h1.copyWith(
+          color: isRunning ? palette.text.primary : palette.text.muted,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+      SizedBox(width: theme.spacings.xl),
+      isRunning
+          ? PrimaryButton(
+              type: ButtonType.danger,
+              size: ButtonSize.sm,
+              leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
+              backgroundColor: palette.accent.danger,
+              onTap: () {
+                context.read<TimeTrackerBloc>().add(TimeTrackerStopped());
+                projectTaskState.clearDraft();
+                _commentController.clear();
+              },
+            )
+          : PrimaryButton(
+              size: ButtonSize.sm,
+              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
+              onTap: () {
+                context.read<TimeTrackerBloc>().add(
+                  TimeTrackerStarted(
+                    projectId: draftProjectId,
+                    taskId: draftTaskId,
+                    comment: _commentController.text.isNotEmpty
+                        ? _commentController.text
+                        : null,
+                  ),
+                );
+              },
+            ),
+    ];
+  }
+
+  Widget _buildProjectSelector(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
+    final projectTaskState = context.read<ProjectTaskState>();
+    final projects = context.select<ProjectTaskState, List<Project>>(
+      (s) => s.projects,
+    );
+
+    final options = projects.map((p) {
+      final initials = BadgeUtils.getProjectInitials(p.name);
+      final colors = BadgeUtils.getBadgeColor(p.id);
+      return SelectOption(
+        value: p.id,
+        label: p.name,
+        leading: WsInitialBadge(
+          initials: initials,
+          backgroundColor: colors.$1,
+          textColor: colors.$2,
+          size: WsInitialBadgeSize.small,
+        ),
+        onAction: () => widget.onOpenProject(p.id),
+        // TODO: l10n
+        actionTooltip: 'Open project',
+      );
+    }).toList();
+
+    final selectedProject = projects.where((p) => p.id == selectedId).firstOrNull;
+
+    Widget? leadingWidget;
+    if (selectedProject != null) {
+      final initials = BadgeUtils.getProjectInitials(selectedProject.name);
+      final colors = BadgeUtils.getBadgeColor(selectedProject.id);
+      leadingWidget = WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      );
+    }
+
+    return InlineField(
+      label: 'Project',
+      value: selectedProject?.name ?? '',
+      placeholder: 'Select Project',
+      leading: leadingWidget,
+      controller: _projectFieldController,
+      editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _projectFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _projectFieldController.handleEditorClose();
+        },
+        value: selectedId,
+        placeholder: 'Select Project',
+        searchable: true,
+        options: options,
+        actionBuilder: (context, query, close) {
+          final exactMatchExists = projects.any(
+            (p) => p.name.toLowerCase() == query.toLowerCase(),
+          );
+          if (exactMatchExists && query.isNotEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return SelectCreateAction(
+            label: query.isEmpty
+                ? 'Create new project'
+                : 'Create project "$query"',
+            onTap: () async {
+              final newProject = await projectTaskState.createProject(
+                query.isEmpty ? 'New project' : query,
+                '',
+              );
+              projectTaskState.updateDraft(projectId: newProject.id);
+              if (isRunning) {
+                context.read<TimeTrackerBloc>().add(
+                  TimeTrackerActiveEntryUpdated(
+                    projectId: newProject.id,
+                    taskId: projectTaskState.draftTaskId,
+                    comment: _commentController.text,
+                  ),
+                );
+              }
+              close();
+              _projectFieldController.exitEditMode();
+            },
+          );
+        },
+        onChanged: (value) async {
+          projectTaskState.updateDraft(projectId: value);
+          if (isRunning) {
+            context.read<TimeTrackerBloc>().add(
+              TimeTrackerActiveEntryUpdated(
+                projectId: value,
+                taskId: projectTaskState.draftTaskId,
+                comment: _commentController.text,
+              ),
+            );
+          }
+          _projectFieldController.exitEditMode();
+        },
+      ),
+    );
+  }
+
+  Widget _buildTaskSelector(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
+    final projectTaskState = context.read<ProjectTaskState>();
+    final tasks = context.select<ProjectTaskState, List<Task>>((s) => s.tasks);
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
+
+    final filteredTasks = draftProjectId != null
+        ? tasks.where((t) => t.projectId == draftProjectId).toList()
+        : tasks;
+
+    final options = filteredTasks.map((t) {
+      final project = projectTaskState.projects.firstWhereOrNull(
+        (p) => p.id == t.projectId,
+      );
+      final initials = BadgeUtils.getTaskInitials(t.title, project?.name ?? '');
+      final colors = BadgeUtils.getBadgeColor(t.id);
+      return SelectOption(
+        value: t.id,
+        label: t.title,
+        leading: WsInitialBadge(
+          initials: initials,
+          backgroundColor: colors.$1,
+          textColor: colors.$2,
+          size: WsInitialBadgeSize.small,
+        ),
+        onAction: () => widget.onOpenTask(t.id),
+        // TODO: l10n
+        actionTooltip: 'Open task',
+      );
+    }).toList();
+
+    final selectedTask = filteredTasks.where((t) => t.id == selectedId).firstOrNull;
+
+    Widget? leadingWidget;
+    if (selectedTask != null) {
+      final project = projectTaskState.projects.firstWhereOrNull(
+        (p) => p.id == selectedTask.projectId,
+      );
+      final initials = BadgeUtils.getTaskInitials(
+        selectedTask.title,
+        project?.name ?? '',
+      );
+      final colors = BadgeUtils.getBadgeColor(selectedTask.id);
+      leadingWidget = WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      );
+    }
+
+    return InlineField(
+      label: 'Task',
+      value: selectedTask?.title ?? '',
+      placeholder: 'Select Task',
+      leading: leadingWidget,
+      controller: _taskFieldController,
+      editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _taskFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _taskFieldController.handleEditorClose();
+        },
+        value: selectedId,
+        placeholder: 'Select Task',
+        searchable: true,
+        options: options,
+        actionBuilder: (context, query, close) {
+          final exactMatchExists = tasks.any(
+            (t) =>
+                t.title.toLowerCase() == query.toLowerCase() &&
+                t.projectId == draftProjectId,
+          );
+          if (exactMatchExists && query.isNotEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return SelectCreateAction(
+            label: query.isEmpty ? 'Create new task' : 'Create task "$query"',
+            onTap: () async {
+              if (draftProjectId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please select a project first'),
+                  ),
+                );
+                return;
+              }
+              final newTask = await projectTaskState.createTask(
+                draftProjectId,
+                query.isEmpty ? 'New task' : query,
+                '',
+              );
+              projectTaskState.updateDraft(taskId: newTask.id);
+              if (isRunning) {
+                context.read<TimeTrackerBloc>().add(
+                  TimeTrackerActiveEntryUpdated(
+                    projectId: draftProjectId,
+                    taskId: newTask.id,
+                    comment: _commentController.text,
+                  ),
+                );
+              }
+              close();
+              _taskFieldController.exitEditMode();
+            },
+          );
+        },
+        onChanged: (value) async {
+          if (value == null) {
+            projectTaskState.updateDraft(clearTaskId: true);
+          } else {
+            projectTaskState.updateDraft(taskId: value);
+          }
+          if (isRunning) {
+            context.read<TimeTrackerBloc>().add(
+              TimeTrackerActiveEntryUpdated(
+                projectId: draftProjectId,
+                taskId: value,
+                comment: _commentController.text,
+              ),
+            );
+          }
+          _taskFieldController.exitEditMode();
+        },
+      ),
+    );
+  }
+
+  Widget _buildCommentInput(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
+    final projectTaskState = context.read<ProjectTaskState>();
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
+
+    return InlineField(
+      label: 'Comment',
+      value: _commentController.text,
+      placeholder: 'Add a comment...',
+      controller: _commentFieldController,
+      textController: _commentController,
+      editWidget: PrimaryInput(
+        label: null,
+        hintText: 'Add a comment...',
+        controller: _commentController,
+        autofocus: true,
+        onChanged: (value) {
+          if (isRunning) {
+            context.read<TimeTrackerBloc>().add(
+              TimeTrackerActiveEntryUpdated(
+                projectId: draftProjectId,
+                taskId: projectTaskState.draftTaskId,
+                comment: value,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
