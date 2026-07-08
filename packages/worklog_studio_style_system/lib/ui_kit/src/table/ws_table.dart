@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class WsTableColumn<T> {
@@ -107,9 +107,7 @@ class WsTable<T> extends StatelessWidget {
           final col = entry.value;
           final isLast = entry.key == columns.length - 1;
           final cell = Padding(
-            padding: EdgeInsets.only(
-              right: isLast ? 0 : theme.spacings.md,
-            ),
+            padding: EdgeInsets.only(right: isLast ? 0 : theme.spacings.md),
             child: Align(
               alignment: col.alignment,
               child: Text(
@@ -190,22 +188,22 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
               vertical: theme.spacings.lg,
             ),
             child: Row(
-            children: widget.columns.asMap().entries.map((entry) {
-            final col = entry.value;
-            final isLast = entry.key == widget.columns.length - 1;
-            final cell = Padding(
-            padding: EdgeInsets.only(
-              right: isLast ? 0 : theme.spacings.md,
-            ),
-            child: Align(
-            alignment: col.alignment,
-            child: col.builder(context, widget.item, _isHovered),
-            ),
-            );
-            if (col.fixedWidth != null) {
-            return SizedBox(width: col.fixedWidth, child: cell);
-            }
-              return Expanded(flex: col.flex, child: cell);
+              children: widget.columns.asMap().entries.map((entry) {
+                final col = entry.value;
+                final isLast = entry.key == widget.columns.length - 1;
+                final cell = Padding(
+                  padding: EdgeInsets.only(
+                    right: isLast ? 0 : theme.spacings.md,
+                  ),
+                  child: Align(
+                    alignment: col.alignment,
+                    child: col.builder(context, widget.item, _isHovered),
+                  ),
+                );
+                if (col.fixedWidth != null) {
+                  return SizedBox(width: col.fixedWidth, child: cell);
+                }
+                return Expanded(flex: col.flex, child: cell);
               }).toList(),
             ),
           ),

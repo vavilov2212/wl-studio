@@ -103,8 +103,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       (e, emit) => emit(state.copyWith(filters: e.filters)),
     );
     on<HistoryFilterExpandedOverrideSet>(
-      (e, emit) =>
-          emit(state.copyWith(filterExpandedOverride: e.value)),
+      (e, emit) => emit(state.copyWith(filterExpandedOverride: e.value)),
     );
     on<HistorySortFieldChanged>(
       (e, emit) => emit(state.copyWith(sortField: e.field)),

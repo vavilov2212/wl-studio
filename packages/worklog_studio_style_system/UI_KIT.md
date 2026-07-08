@@ -441,6 +441,7 @@ SegmentedToggle<ViewMode>(
   ],
   value: _mode,
   onChanged: (v) {},
+  compact: false,   // true = smaller icons, aligns with ButtonSize.xs controls
 )
 ```
 
@@ -500,6 +501,8 @@ ClearableFilterPill(
   child: Select(...),
 )
 ```
+
+Always reserves `ClearableFilterPill.overlap` (10px) above and to the right of `child` for the clear badge, even when inactive. Sibling rows without a pill can pad themselves by the same constant to stay aligned.
 
 ---
 

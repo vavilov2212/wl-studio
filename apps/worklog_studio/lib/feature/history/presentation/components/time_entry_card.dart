@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
@@ -163,5 +163,4 @@ class TimeEntryCard extends StatelessWidget {
       ),
     );
   }
-
 }

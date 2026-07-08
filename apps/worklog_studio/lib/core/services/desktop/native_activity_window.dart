@@ -93,8 +93,13 @@ class NativeActivityWindow {
 
     if (_hwnd == null) return; // creation failed
 
+    // Recover from a minimized state first (the shell can minimize the
+    // window via its taskbar button). IsWindowVisible returns TRUE for a
+    // minimized window, so without this check the window would stay iconic.
+    if (win32.IsIconic(_hwnd!) != win32.FALSE) {
+      win32.ShowWindow(_hwnd!, win32.SW_SHOWNOACTIVATE);
+    }
     _applyFrame(frame);
-    _setCloak(false);
     if (win32.IsWindowVisible(_hwnd!) == win32.FALSE) {
       win32.ShowWindow(_hwnd!, activate ? win32.SW_SHOW : win32.SW_SHOWNA);
     }
@@ -132,11 +137,13 @@ class NativeActivityWindow {
     _setStatus('Enter to save, Esc to cancel');
   }
 
-  /// Hides the window via [DWMWA_CLOAK] (DWM compositor only - the
-  /// Win32 window stays "visible" at the OS level so no WM_SHOWWINDOW
-  /// is ever sent to the process).
+  /// Hides the window via [ShowWindow] SW_HIDE. This window hosts no
+  /// Flutter engine, so hiding at the Win32 level is safe (the DWMWA_CLOAK
+  /// trick was only ever needed for engine-backed windows) and it clears
+  /// WS_VISIBLE, which removes the taskbar button and Alt-Tab entry -
+  /// cloaking left a ghost taskbar item the shell could minimize.
   void hide() {
-    if (_hwnd != null) _setCloak(true);
+    if (_hwnd != null) win32.ShowWindow(_hwnd!, win32.SW_HIDE);
     _countdownTimer?.cancel();
     _countdownTimer = null;
     _stopKeyPolling();
@@ -426,18 +433,6 @@ class NativeActivityWindow {
       frame.height.toInt(),
       win32.SWP_NOACTIVATE,
     );
-  }
-
-  void _setCloak(bool cloak) {
-    final h = _hwnd;
-    if (h == null) return;
-    final value = calloc<Int32>();
-    try {
-      value.value = cloak ? 1 : 0;
-      win32.DwmSetWindowAttribute(h, win32.DWMWA_CLOAK, value.cast(), sizeOf<Int32>());
-    } finally {
-      calloc.free(value);
-    }
   }
 
   void _setText(String text) {

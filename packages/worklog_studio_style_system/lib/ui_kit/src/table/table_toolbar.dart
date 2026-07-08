@@ -16,7 +16,7 @@ class TableToolbar extends StatelessWidget {
     this.activeFilterCount = 0,
     this.isSortExpanded = false,
     this.onSortTap,
-    this.mainAxisAlignment =  MainAxisAlignment.end,
+    this.mainAxisAlignment = MainAxisAlignment.end,
   });
 
   @override
