@@ -437,4 +437,25 @@ User overrides on the plan:
 - `dart analyze <files>` catches errors in lib/ files that `flutter test` never compiles (e.g. app.dart) - run it after DI/import changes.
 
 **[What's Next]**
-- Remaining unaddressed plan items: Item 1 (document canonical feature scaffold in CLAUDE.md), Item 5 (go_router - highest complexity, own branch), Item 6 (repository interface naming/location convention), Item 21 (split ProjectTaskState), Item 46 (EntityResolver consolidation), Item 49 (drawer widget tests).
+- See Entry #10.
+
+---
+
+### Refactoring Entry #10 - Items 1, 6, 49
+
+**[Verified Facts]**
+- Items 1/6: Documented the canonical feature scaffold and repository interface conventions in CLAUDE.md section 1a (vertical-slice layout, interfaces in `lib\domain\` with bare-noun + `Repository` naming, `@LazySingleton` + `getIt` resolution rule).
+- Item 49: Added `test/feature/drawers/` with 15 widget tests (5 per drawer): create vs edit mode rendering, save flow, delete confirm and cancel paths. Placed under `test/feature/` (NOT `test/widget/`) so `fvm flutter test test/core/ test/feature/` picks them up.
+- Test count: 264 -> 279.
+
+**[Distilled Rules]**
+- Widget-test harness for drawers: MultiProvider with `AppNavigationController` (Provider), `TimeTrackerBloc` (BlocProvider.value), `ProjectTaskState` (ChangeNotifierProvider.value), `EntityResolver` (ChangeNotifierProvider create) + `MaterialApp(theme: AppTheme.lightThemeData)`. Set `tester.view.physicalSize = Size(1400, 1600+)` with `addTearDown(tester.view.reset)` to avoid overflow errors.
+- Delete flow interaction: tap `Icons.more_horiz` -> settle -> tap 'Delete' (popover action) -> settle -> confirmation InfoBar appears -> tap 'Delete'/'Cancel'.
+- InlineField enters edit mode on tap of its view-mode text (e.g. tap the placeholder), then `enterText` into the revealed TextField which shares the same controller.
+
+**[Pitfalls & What to Avoid]**
+- CRITICAL: Never construct a Bloc in `setUp` for `testWidgets` tests. `setUp` runs outside the FakeAsync zone, so the bloc's event pipeline binds to the real zone and `add()`ed events complete only AFTER the test's expectations run (repo asserts see stale state). Construct the bloc inside the testWidgets body (e.g. via an `initBloc()` helper). ChangeNotifiers like `ProjectTaskState` are tolerant of setUp construction; Blocs are not.
+- `flutter test <file>` triggers a workspace-level `pub get` on every invocation (~10-20s overhead per run on this repo).
+
+**[What's Next]**
+- Remaining unaddressed plan items, all flagged high-complexity/own-branch: Item 5 (go_router migration - plan says own isolated branch and PR), Item 21 (split ProjectTaskState into repository cache + selection state), Item 46 (move EntityResolver resolution into feature BLoCs). These need a user decision before starting.
