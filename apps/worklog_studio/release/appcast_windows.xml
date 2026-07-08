@@ -6,8 +6,12 @@
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
-    <title>Version 1.0.13-dev.5</title>
+    <title>Version 1.0.13</title>
     <sparkle:releaseNotes><![CDATA[<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;padding:12px 16px;color:#1c1e21;background:#fff;margin:0}ul{margin:0;padding-left:18px}li{margin:3px 0;line-height:1.5}</style><ul>
+      <li>Merge pull request #11: structural refactoring + v1.0.13</li>
+      <li>Merge branch 'main' into dev</li>
+      <li>release: update appcast_windows.xml for v1.0.13-dev.5</li>
+      <li>release: windows v1.0.13</li>
       <li>Merge branch 'dev' of github.com:vavilov2212/worklog_studio into dev</li>
       <li>release: windows v1.0.13-dev.5</li>
       <li>docs: distill refactoring logs into POST_MORTEM_REFACTOR.md, reset CLAUDE.md</li>
@@ -50,14 +54,26 @@
       <li>refactor: delete unreferenced mock_data.dart (Item 31)</li>
       <li>refactor: isolate work_log prototype feature (Item 30)</li>
       <li>refactor: quick wins - dead code removal, folder renames, dep cleanup</li>
+      <li>release: update appcast_windows.xml for v1.0.13-dev.4</li>
+      <li>release: windows v1.0.13-dev.4</li>
+      <li>Merge branch 'dev' of github.com:vavilov2212/worklog_studio into dev</li>
+      <li>fix: discard appcast local changes before branch switch in CI</li>
+      <li>release: update appcast_windows.xml for v1.0.13-dev.2</li>
+      <li>release: windows v1.0.13-dev.3</li>
+      <li>fix: stage app_icon.ico in publish.ps1 so bump flavor icon reaches CI</li>
+      <li>release: windows v1.0.13-dev.2</li>
+      <li>feat: auto-sync app icon in bump.ps1 based on version flavor</li>
+      <li>feat: auto-save project/task edits, unsaved-entry banners, bar chart UX improvements</li>
+      <li>release: update appcast_windows.xml for v1.0.12</li>
+      <li>release: update appcast_windows.xml for v1.0.13-dev.1</li>
 </ul>]]></sparkle:releaseNotes>
-    <pubDate>Wed, 08 Jul 2026 02:47:58 GMT</pubDate>
+    <pubDate>Wed, 08 Jul 2026 03:02:06 GMT</pubDate>
     <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
-      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.13-dev.5/worklog_studio_setup_1.0.13-dev.5.exe"
-      sparkle:version="96"
-      sparkle:shortVersionString="1.0.13-dev.5"
-      length="14529832"
+      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.13/worklog_studio_setup_1.0.13.exe"
+      sparkle:version="97"
+      sparkle:shortVersionString="1.0.13"
+      length="14532133"
       type="application/octet-stream"/>
   </item>
 </channel>
