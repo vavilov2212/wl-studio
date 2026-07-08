@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';

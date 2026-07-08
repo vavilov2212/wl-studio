@@ -4,10 +4,10 @@ import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' as win32;
 
-import 'native_mini_panel/mini_panel_layout.dart';
-import 'native_mini_panel/mini_panel_painter.dart';
-import 'native_mini_panel/mini_panel_state.dart';
-import 'native_mini_panel/mini_panel_tooltip.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel/mini_panel_layout.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel/mini_panel_painter.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel/mini_panel_state.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel/mini_panel_tooltip.dart';
 
 export 'native_mini_panel/mini_panel_layout.dart';
 export 'native_mini_panel/mini_panel_painter.dart' show MiniPanelFonts;

@@ -1,3 +1,4 @@
+// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
 import 'dart:async';
 
 import 'package:flutter/material.dart';

@@ -96,7 +96,7 @@ class InfoBar extends StatelessWidget {
           ),
           if (actions != null) ...[
             SizedBox(width: theme.spacings.md),
-            Flexible(child: actions!),
+            actions!,
           ],
         ],
       ),

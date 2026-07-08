@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'app_bar_config.dart';
+import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_config.dart';
 
 class AppBarService extends ValueNotifier<AppBarConfig> {
   AppBarService() : super(const AppBarConfig.hidden());

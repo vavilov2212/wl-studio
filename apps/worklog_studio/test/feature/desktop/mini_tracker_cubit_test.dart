@@ -2,8 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service_registry.dart';
 import 'package:worklog_studio/core/services/desktop/no_op_desktop_service.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/feature/desktop/ipc/ipc_models.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
+import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 
 class _RecordingDesktopService extends NoOpDesktopService {
   _RecordingDesktopService() : super.base();
@@ -133,17 +134,19 @@ void main() {
     });
   });
 
-  group('MiniTrackerCubit.commands', () {
-    test('emitCommand replays on the commands stream', () async {
+  group('MiniPanelCommandBus', () {
+    test('emit replays on the stream', () async {
+      final bus = MiniPanelCommandBus();
       final received = <MiniPanelCommand>[];
-      final sub = cubit.commands.listen(received.add);
+      final sub = bus.stream.listen(received.add);
 
-      cubit.emitCommand(MiniPanelCommand.focusComment);
-      cubit.emitCommand(MiniPanelCommand.acceptComment);
+      bus.emit(MiniPanelCommand.focusComment);
+      bus.emit(MiniPanelCommand.acceptComment);
       await Future<void>.delayed(Duration.zero);
 
       expect(received, [MiniPanelCommand.focusComment, MiniPanelCommand.acceptComment]);
       await sub.cancel();
+      bus.dispose();
     });
   });
 

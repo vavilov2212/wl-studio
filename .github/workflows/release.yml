@@ -380,6 +380,7 @@ jobs:
           # Stash the written file, switch to the target branch, restore it,
           # then commit only that file (avoids accidentally pushing source changes).
           cp apps/worklog_studio/release/appcast_windows.xml /tmp/appcast_windows.xml
+          git checkout -- apps/worklog_studio/release/appcast_windows.xml
           git fetch origin "$TARGET_BRANCH"
           git checkout -b _appcast-update "origin/$TARGET_BRANCH"
           cp /tmp/appcast_windows.xml apps/worklog_studio/release/appcast_windows.xml

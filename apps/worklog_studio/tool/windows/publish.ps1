@@ -43,7 +43,7 @@ if (git tag -l $tag) {
 # ---------------------------------------------
 # 5. Commit and push — CI handles the tag
 # ---------------------------------------------
-git add pubspec.yaml
+git add pubspec.yaml windows\runner\resources\app_icon.ico
 git commit -m "release: windows $tag"
 git push origin $branch
 

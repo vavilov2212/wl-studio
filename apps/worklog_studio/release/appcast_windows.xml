@@ -6,18 +6,58 @@
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
-    <title>Version 1.0.12</title>
+    <title>Version 1.0.13-dev.5</title>
     <sparkle:releaseNotes><![CDATA[<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;padding:12px 16px;color:#1c1e21;background:#fff;margin:0}ul{margin:0;padding-left:18px}li{margin:3px 0;line-height:1.5}</style><ul>
-      <li>release: windows v1.0.12</li>
-      <li>Merge pull request #10 from vavilov2212/dev</li>
+      <li>Merge branch 'dev' of github.com:vavilov2212/worklog_studio into dev</li>
+      <li>release: windows v1.0.13-dev.5</li>
+      <li>docs: distill refactoring logs into POST_MORTEM_REFACTOR.md, reset CLAUDE.md</li>
+      <li>docs: add refactoring log entry #10 to CLAUDE.md</li>
+      <li>test(item-49): add widget tests for the three drawer widgets</li>
+      <li>docs(items-1-6): document canonical feature scaffold and repository conventions</li>
+      <li>docs: add refactoring log entries #8 and #9 to CLAUDE.md</li>
+      <li>refactor(items-18-19): extract ProjectSelector and TaskSelector components</li>
+      <li>refactor(item-23): register all repositories with get_it</li>
+      <li>refactor(item-22): inject SettingsRepository into WindowsDesktopService via get_it</li>
+      <li>refactor(item-40): remove addPostFrameCallback from drawer _updateDraft methods</li>
+      <li>refactor(item-27): move badge color palette to style system package</li>
+      <li>refactor(item-26): add SidebarColors tokens and replace Colors.white hardcodes</li>
+      <li>refactor(item-28): replace hardcoded SizedBox pixel values with spacing tokens</li>
+      <li>refactor(item-25): replace hardcoded Color(0xFF...) in mini panel with theme tokens</li>
+      <li>refactor(item-8): split mini_panel.dart into focused component files</li>
+      <li>refactor(item-20): extract DeleteConfirmationRow and replace duplicate AnimatedSwitcher blocks</li>
+      <li>refactor(item-17): extract DrawerFormCubit<lt;T>gt; and migrate all three drawers</li>
+      <li>test: add TrackerPanelCubit unit tests covering all public methods (Item 51)</li>
+      <li>test: add BLoC unit tests for HistoryBloc, TasksBloc, ProjectsBloc (Item 52)</li>
+      <li>docs: add refactoring log entries for items 13-16 (feature BLoCs)</li>
+      <li>refactor: create HistoryBloc, TasksBloc, ProjectsBloc; remove PageUiPreferences (items 13-16)</li>
+      <li>docs: add refactoring log entry for item 12 (TrackerPanelCubit)</li>
+      <li>refactor: extract TrackerPanelCubit from GlobalTimeTrackerPanel (item 12)</li>
+      <li>docs: add refactoring log entries for items 8, 9, 10, 11</li>
+      <li>refactor: split tasks_page and projects_page into coordinator + list + table components (items 10, 11)</li>
+      <li>refactor: split history_page.dart into 4 focused files (Item 9)</li>
+      <li>refactor: split mini_panel.dart - extract timer text and list item (Item 8)</li>
+      <li>docs: log Item 7 completion in CLAUDE.md refactoring log</li>
+      <li>refactor: split app_shell.dart into 4 focused files (Item 7)</li>
+      <li>docs: log refactoring entry #6 in CLAUDE.md (items 53-60, 24, 30, 31)</li>
+      <li>refactor: remove silent IdleMonitor catch + complete work_log isolation (items 24, 30, 31)</li>
+      <li>refactor: extract BarChartData builder + move settings to presentation/ (items 53, 56)</li>
+      <li>docs: log refactoring entries #4 and #5 in CLAUDE.md (items 41-48, 50)</li>
+      <li>test: add unit tests for ProjectTaskState, EntityResolver, WorkLogRawDataBloc (items 47, 48, 50)</li>
+      <li>refactor: standardize all imports to package: URIs (item 44)</li>
+      <li>refactor: separate MiniPanelCommandBus from MiniTrackerCubit (item 42)</li>
+      <li>refactor: convert MiniTrackerState to Freezed (item 41)</li>
+      <li>refactor: centralize date/duration formatting into DateFormatter (items 39, 58)</li>
+      <li>refactor: delete unreferenced mock_data.dart (Item 31)</li>
+      <li>refactor: isolate work_log prototype feature (Item 30)</li>
+      <li>refactor: quick wins - dead code removal, folder renames, dep cleanup</li>
 </ul>]]></sparkle:releaseNotes>
-    <pubDate>Mon, 06 Jul 2026 06:11:42 GMT</pubDate>
+    <pubDate>Wed, 08 Jul 2026 02:47:58 GMT</pubDate>
     <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
-      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.12/worklog_studio_setup_1.0.12.exe"
-      sparkle:version="91"
-      sparkle:shortVersionString="1.0.12"
-      length="14526278"
+      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.13-dev.5/worklog_studio_setup_1.0.13-dev.5.exe"
+      sparkle:version="96"
+      sparkle:shortVersionString="1.0.13-dev.5"
+      length="14529832"
       type="application/octet-stream"/>
   </item>
 </channel>

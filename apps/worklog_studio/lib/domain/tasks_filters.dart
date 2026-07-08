@@ -1,5 +1,5 @@
-import 'resolved_task.dart';
-import 'task.dart';
+import 'package:worklog_studio/domain/resolved_task.dart';
+import 'package:worklog_studio/domain/task.dart';
 
 class TasksFilters {
   final Set<String> projectIds;

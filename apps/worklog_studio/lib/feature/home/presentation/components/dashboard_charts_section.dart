@@ -456,106 +456,185 @@ class _Donut extends StatelessWidget {
   }
 }
 
-// Picks a round interval so the Y-axis shows ~4 gridlines regardless of scale.
-double _niceYInterval(double maxY) {
-  if (maxY <= 0) return 1;
-  final raw = maxY / 4;
+// Width reserved for left Y-axis labels — must match SideTitles.reservedSize.
+const double _kLeftReservedSize = 36.0;
+
+// Returns interval and chartMaxY as a clean pair.
+// chartMaxY is always (numSteps+1)*interval so the top gridline is a round
+// number one step above the tallest bar - no floating 7.2h or 0.6h labels.
+({double interval, double maxY}) _chartScale(double maxHours) {
   const steps = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0];
-  return steps.firstWhere((v) => v >= raw, orElse: () => (raw / 5).ceil() * 5.0);
+  if (maxHours <= 0) return (interval: 1.0, maxY: 4.0);
+  final raw = maxHours / 4;
+  final interval = steps.firstWhere((v) => v >= raw, orElse: () => (raw / 5).ceil() * 5.0);
+  final numSteps = (maxHours / interval).ceil() + 1;
+  return (interval: interval, maxY: interval * numSteps);
 }
 
-class _BarChart extends StatelessWidget {
+class _BarChart extends StatefulWidget {
   final DashboardChartData data;
 
   const _BarChart({required this.data});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
+  State<_BarChart> createState() => _BarChartState();
+}
 
-    final maxHours = data.bars
+class _BarChartState extends State<_BarChart> {
+  int? _hoveredIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHours = widget.data.bars
         .map((b) => b.duration.inMinutes / 60)
         .fold<double>(0, (max, v) => v > max ? v : max);
-    final chartMaxY = maxHours <= 0 ? 1.0 : maxHours * 1.2;
-    final interval = _niceYInterval(chartMaxY);
+    final scale = _chartScale(maxHours);
+    final interval = scale.interval;
+    final chartMaxY = scale.maxY;
+
+    final n = widget.data.bars.length;
 
     return SizedBox(
       height: 220,
-      child: BarChart(
-        BarChartData(
-          maxY: chartMaxY,
-          alignment: BarChartAlignment.spaceAround,
-          barTouchData: BarTouchData(enabled: false),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: interval,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: palette.border.primary.withValues(alpha: 0.5),
-              strokeWidth: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final chartAreaWidth = constraints.maxWidth - _kLeftReservedSize;
+          return MouseRegion(
+            onExit: (_) {
+              if (mounted) setState(() => _hoveredIndex = null);
+            },
+            onHover: (event) {
+              if (n == 0 || chartAreaWidth <= 0) return;
+              final zoneWidth = chartAreaWidth / n;
+              final x = event.localPosition.dx - _kLeftReservedSize;
+              final i = (x / zoneWidth).floor().clamp(0, n - 1);
+              if (i != _hoveredIndex) setState(() => _hoveredIndex = i);
+            },
+            child: BarChart(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              _buildBarChartData(chartMaxY: chartMaxY, interval: interval),
             ),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 36,
-                interval: interval,
-                getTitlesWidget: (value, meta) {
-                  if (value == 0) return const SizedBox.shrink();
-                  final label = value % 1 == 0
-                      ? '${value.toInt()}h'
-                      : '${value.toStringAsFixed(1)}h';
-                  return Text(
-                    label,
-                    style: theme.commonTextStyles.caption.copyWith(
-                      color: palette.text.muted,
-                    ),
-                  );
-                },
+          );
+        },
+      ),
+    );
+  }
+
+  BarChartData _buildBarChartData({
+    required double chartMaxY,
+    required double interval,
+  }) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return BarChartData(
+      maxY: chartMaxY,
+      alignment: BarChartAlignment.spaceAround,
+      barTouchData: BarTouchData(
+        enabled: false,
+        touchTooltipData: BarTouchTooltipData(
+          tooltipRoundedRadius: 20,
+          tooltipPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          getTooltipColor: (_) => palette.accent.primary,
+          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+            final h = rod.toY;
+            if (h == 0) return null;
+            final label = h % 1 == 0
+                ? '${h.toInt()}h'
+                : '${h.toStringAsFixed(1)}h';
+            return BarTooltipItem(
+              label,
+              theme.commonTextStyles.captionBold.copyWith(
+                color: Colors.white,
               ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= data.bars.length) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: EdgeInsets.only(top: theme.spacings.xs),
-                    child: Text(
-                      data.bars[index].label,
-                      style: theme.commonTextStyles.caption.copyWith(
-                        color: palette.text.muted,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          barGroups: data.bars.asMap().entries.map((entry) {
-            final hours = entry.value.duration.inMinutes / 60;
-            return BarChartGroupData(
-              x: entry.key,
-              barRods: [
-                BarChartRodData(
-                  toY: hours,
-                  color: palette.accent.primary,
-                  width: 32,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
             );
-          }).toList(),
+          },
         ),
       ),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: interval,
+        getDrawingHorizontalLine: (_) => FlLine(
+          color: palette.border.primary.withValues(alpha: 0.5),
+          strokeWidth: 1,
+        ),
+      ),
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        topTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 36,
+            interval: interval,
+            getTitlesWidget: (value, meta) {
+              if (value == meta.max) return const SizedBox.shrink();
+              final label = value % 1 == 0
+                  ? '${value.toInt()}h'
+                  : '${value.toStringAsFixed(1)}h';
+              return Text(
+                label,
+                style: theme.commonTextStyles.caption.copyWith(
+                  color: palette.text.muted,
+                ),
+              );
+            },
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (value, meta) {
+              final index = value.toInt();
+              if (index < 0 || index >= widget.data.bars.length) {
+                return const SizedBox.shrink();
+              }
+              final isActive = index == _hoveredIndex;
+              return Padding(
+                padding: EdgeInsets.only(top: theme.spacings.xs),
+                child: Text(
+                  widget.data.bars[index].label,
+                  style: isActive
+                      ? theme.commonTextStyles.captionBold.copyWith(
+                          color: palette.accent.primary,
+                        )
+                      : theme.commonTextStyles.caption.copyWith(
+                          color: palette.text.muted,
+                        ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      barGroups: widget.data.bars.asMap().entries.map((entry) {
+        final index = entry.key;
+        final hours = entry.value.duration.inMinutes / 60;
+        final isHovered = index == _hoveredIndex;
+        return BarChartGroupData(
+          x: index,
+          showingTooltipIndicators: isHovered ? [0] : [],
+          barRods: [
+            BarChartRodData(
+              toY: hours,
+              color: palette.accent.primary,
+              width: 32,
+              borderRadius: BorderRadius.circular(4),
+              backDrawRodData: BackgroundBarChartRodData(
+                show: isHovered,
+                toY: chartMaxY,
+                color: palette.accent.primary.withValues(alpha: 0.08),
+              ),
+            ),
+          ],
+        );
+      }).toList(),
     );
   }
 }

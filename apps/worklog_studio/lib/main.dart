@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
 
-import 'runner/runner.dart' as runner;
+import 'package:worklog_studio/runner/runner.dart' as runner;
 
 void main(List<String> args) async {
   AppEnvironment.init(config: const AppConfig(flavor: Flavor.production));

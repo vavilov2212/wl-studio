@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
+import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -101,7 +101,7 @@ class TimeEntryCard extends StatelessWidget {
                             ),
                           )
                         : Text(
-                            _formatDuration(
+                            DateFormatter.formatDurationHms(
                               resolvedEntry.duration(DateTime.now()),
                             ),
                             style: theme.commonTextStyles.labelMedium.copyWith(
@@ -111,7 +111,7 @@ class TimeEntryCard extends StatelessWidget {
                           ),
                     SizedBox(height: theme.spacings.xxs),
                     Text(
-                      DateFormatUtils.formatTimeRangeWithDate(
+                      DateFormatter.formatTimeRange(
                         resolvedEntry.startAt,
                         resolvedEntry.endAt,
                       ),
@@ -164,19 +164,4 @@ class TimeEntryCard extends StatelessWidget {
     );
   }
 
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours.toString().padLeft(2, '0');
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour == 0
-        ? 12
-        : (time.hour > 12 ? time.hour - 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '${hour.toString().padLeft(2, '0')}:$minute $period';
-  }
 }

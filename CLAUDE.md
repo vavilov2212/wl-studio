@@ -1,3 +1,5 @@
+👉 ВАЖНО: При написании любого нового кода, добавлении фич или рефакторинге ТЫ ОБЯЗАН сначала прочитать файл POST_MORTEM_REFACTOR.md и строго соблюдать зафиксированные там архитектурные правила и Production Guardrails.
+
 # Worklog Studio Monorepo Configuration & Guidelines
 
 > Output style and tool-priority rules (verbosity, native tools → MCP → LSP → Bash) live in `~/.claude/CLAUDE.md` (global) and apply here too.
@@ -27,9 +29,9 @@ To optimize context limits and minimize token waste, your file-reading, search, 
 Always use `fvm` as a wrapper for commands. Never run global `flutter` or `dart`.
 - **Bootstrap Monorepo:** `fvm exec melos bootstrap` (Run from root)
 - **Clean Project:** `fvm exec melos clean`
-- **Get/Resolve Dependencies:** `fvm exec melos bootstrap` from root — never run bare `flutter pub get` / `dart pub get` in a subdirectory (see `melos-dependency-manager` skill)
+- **Get/Resolve Dependencies:** `fvm exec melos bootstrap` from root - never run bare `flutter pub get` / `dart pub get` in a subdirectory (see `melos-dependency-manager` skill)
 - **Run Code Generation:** `fvm flutter pub run build_runner build --delete-conflicting-outputs` (Inside specific package/app directory)
-- **Run Tests:** `fvm flutter test test/core/ test/feature/ --reporter expanded` (From `apps\worklog_studio\`) — see `apps\worklog_studio\CLAUDE.md` for the mandatory TDD workflow.
+- **Run Tests:** `fvm flutter test test/core/ test/feature/ --reporter expanded` (From `apps\worklog_studio\`) - see `apps\worklog_studio\CLAUDE.md` for the mandatory TDD workflow.
 
 ## 5. Git Commit Conventions
 - **Never** add a `Co-Authored-By: Claude` (or any AI-attribution) trailer to commit messages. Commits must list only the human author.

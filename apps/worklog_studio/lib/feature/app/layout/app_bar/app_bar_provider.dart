@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 
-import 'app_bar_config.dart';
-import 'app_bar_service.dart';
+import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_config.dart';
+import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_service.dart';
 
 class AppBarProvider extends StatelessWidget {
   const AppBarProvider({super.key, required this.config, required this.child});

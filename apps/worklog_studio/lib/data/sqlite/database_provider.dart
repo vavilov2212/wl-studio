@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:l/l.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 
-import 'db_create.dart';
+import 'package:worklog_studio/data/sqlite/db_create.dart';
 
 class DatabaseProvider {
   static const _dbName = 'worklog.db';

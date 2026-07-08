@@ -1,4 +1,4 @@
-import 'idle_event.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_event.dart';
 
 abstract class IdleMonitor {
   /// Start monitoring idle time in seconds

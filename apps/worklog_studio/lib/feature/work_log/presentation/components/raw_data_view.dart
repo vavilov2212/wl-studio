@@ -1,3 +1,4 @@
+// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/feature/work_log/presentation/components/plan_json.dart';
 import 'package:worklog_studio/feature/work_log/presentation/components/raw_txt.dart';

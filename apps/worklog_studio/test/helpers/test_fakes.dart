@@ -2,12 +2,13 @@
 
 /// Test helpers shared across all test files.
 ///
-/// Provides two pure in-memory test doubles that replace real infrastructure
+/// Provides pure in-memory test doubles that replace real infrastructure
 /// without any platform code, database I/O, or network calls:
 ///
 ///   • [FakeClock]               – deterministic, manually-controllable time source.
-///   • [FakeTimeEntryRepository] – in-memory list-backed implementation of
-///                                 [TimeEntryRepository] with extra test-seeding helpers.
+///   • [FakeTimeEntryRepository] – in-memory [TimeEntryRepository].
+///   • [FakeProjectRepository]   – in-memory [ProjectRepository].
+///   • [FakeTaskRepository]      – in-memory [TaskRepository].
 ///
 /// Why fakes instead of mocks?
 /// Fakes are preferred here because both collaborators have non-trivial stateful
@@ -18,6 +19,8 @@
 import 'dart:io';
 
 import 'package:worklog_studio/domain/backup.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/time_tracker.dart';
 
@@ -196,4 +199,78 @@ class FakeBackupRepository implements BackupRepository {
 
   /// Synchronous read-only snapshot of the store.
   List<BackupInfo> get all => List.unmodifiable(_backups);
+}
+
+// ---------------------------------------------------------------------------
+// FakeProjectRepository
+// ---------------------------------------------------------------------------
+
+class FakeProjectRepository implements ProjectRepository {
+  final List<Project> _store = [];
+
+  @override
+  Future<List<Project>> getAll() async => List.unmodifiable(_store);
+
+  @override
+  Future<Project?> getById(String id) async {
+    try {
+      return _store.firstWhere((p) => p.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> insert(Project project) async => _store.add(project);
+
+  @override
+  Future<void> update(Project project) async {
+    final idx = _store.indexWhere((p) => p.id == project.id);
+    if (idx == -1) throw StateError('Project not found: ${project.id}');
+    _store[idx] = project;
+  }
+
+  @override
+  Future<void> delete(String id) async => _store.removeWhere((p) => p.id == id);
+
+  List<Project> get all => List.unmodifiable(_store);
+}
+
+// ---------------------------------------------------------------------------
+// FakeTaskRepository
+// ---------------------------------------------------------------------------
+
+class FakeTaskRepository implements TaskRepository {
+  final List<Task> _store = [];
+
+  @override
+  Future<List<Task>> getAll() async => List.unmodifiable(_store);
+
+  @override
+  Future<List<Task>> getByProjectId(String projectId) async =>
+      _store.where((t) => t.projectId == projectId).toList();
+
+  @override
+  Future<Task?> getById(String id) async {
+    try {
+      return _store.firstWhere((t) => t.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> insert(Task task) async => _store.add(task);
+
+  @override
+  Future<void> update(Task task) async {
+    final idx = _store.indexWhere((t) => t.id == task.id);
+    if (idx == -1) throw StateError('Task not found: ${task.id}');
+    _store[idx] = task;
+  }
+
+  @override
+  Future<void> delete(String id) async => _store.removeWhere((t) => t.id == id);
+
+  List<Task> get all => List.unmodifiable(_store);
 }

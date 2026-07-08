@@ -1,3 +1,4 @@
+// PROTOTYPE: This feature is not wired into any app route and is kept for reference only.
 import 'package:flutter/material.dart' hide Drawer;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/feature/work_log/bloc/work_log_raw_data/work_log_raw_data_bloc.dart';

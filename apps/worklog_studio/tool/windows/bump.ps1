@@ -79,7 +79,15 @@ $pubspec | Set-Content pubspec.yaml -Encoding UTF8
 Write-Host "pubspec.yaml updated" -ForegroundColor Green
 
 # ─────────────────────────────────────────────
-# 4. Run unit tests
+# 4. Sync app icon for build flavor
+# ─────────────────────────────────────────────
+$iconSource = if ($newName -match '-dev\.') { 'app_icon_dev.ico' } else { 'app_icon_prod.ico' }
+$iconDest   = 'windows\runner\resources\app_icon.ico'
+Copy-Item "windows\runner\resources\$iconSource" $iconDest -Force
+Write-Host "App icon set to $iconSource" -ForegroundColor Green
+
+# ─────────────────────────────────────────────
+# 5. Run unit tests
 # ─────────────────────────────────────────────
 & "$PSScriptRoot\run_tests.ps1"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

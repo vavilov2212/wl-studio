@@ -6,6 +6,7 @@ class ColorsPalette {
   final BorderColors border;
   final TextColors text;
   final AccentColors accent;
+  final SidebarColors sidebar;
 
   const ColorsPalette({
     required this.base,
@@ -13,6 +14,7 @@ class ColorsPalette {
     required this.border,
     required this.text,
     required this.accent,
+    required this.sidebar,
   });
 }
 
@@ -74,5 +76,27 @@ class AccentColors {
     required this.success,
     required this.warning,
     required this.nav,
+  });
+}
+
+class SidebarColors {
+  final Color border;
+  final Color iconBg;
+  final Color icon;
+  final Color textPrimary;
+  final Color arrow;
+  final Color sectionLabel;
+  final Color textSecondary;
+  final Color textMuted;
+
+  const SidebarColors({
+    required this.border,
+    required this.iconBg,
+    required this.icon,
+    required this.textPrimary,
+    required this.arrow,
+    required this.sectionLabel,
+    required this.textSecondary,
+    required this.textMuted,
   });
 }

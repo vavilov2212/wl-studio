@@ -3,7 +3,7 @@ import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' as win32;
 
-import 'mini_panel_painter.dart';
+import 'package:worklog_studio/core/services/desktop/native_mini_panel/mini_panel_painter.dart';
 
 // DrawText flags (DT_* not exported by win32 package).
 const _dtLeft = 0x00000000;

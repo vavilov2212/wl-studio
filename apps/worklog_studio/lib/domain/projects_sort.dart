@@ -1,5 +1,5 @@
-import 'resolved_project.dart';
-import 'sort_direction.dart';
+import 'package:worklog_studio/domain/resolved_project.dart';
+import 'package:worklog_studio/domain/sort_direction.dart';
 
 enum ProjectsSortField { name, timeTracked }
 
