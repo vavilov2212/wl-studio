@@ -140,6 +140,58 @@ Deliberate non-migration: `GlobalTimeTrackerPanel`'s project/task selectors were
 to the shared `ProjectSelector`/`TaskSelector` - they delegate to `TrackerPanelCubit` with
 `isRunning` semantics and `exitEditMode` behavior that differ from the drawer draft flow.
 
+### 1.6 History page scroll compaction (session 2026-07-08)
+
+The history page header compacts when the entry list is scrolled past 50px. Architecture
+decisions worth reusing on other pages:
+
+- **Cosmetic scroll state stays in the widget.** `_isScrolled` is a `ValueNotifier<bool>`
+  in `_HistoryScreenState`, fed by the existing `NotificationListener<ScrollNotification>`
+  and consumed via one `ValueListenableBuilder` wrapping the page body. It never touches
+  `HistoryBloc` - it is pure presentation state per guardrail 2.2. The KPI strip's
+  hide-on-scroll shares the same bool (one threshold, one source of truth).
+- **Compaction is two discrete states animated with implicit widgets** (`AnimatedPadding`,
+  `AnimatedSize`, `AnimatedDefaultTextStyle`, `AnimatedOpacity`, `AnimatedContainer`),
+  all sharing `_compactDuration` (200ms, same as the KPI strip's `AnimatedSwitcher`) and
+  `_compactCurve` (easeOutCubic). No explicit AnimationControllers.
+- **Only vertical paddings compact.** Horizontal page padding stays constant so the
+  table does not reflow horizontally during the transition.
+- **`ScrollController` is owned by the page** and passed into `TimeEntryList`; the
+  go-to-top button and the stats-toggle's scroll-to-top both drive it.
+- **`inline` mode pattern for composable bars:** `HistorySortBar` and `HistoryFilterBar`
+  expose `inline: true` which returns the bare controls `Row` (no Align, no padding, no
+  scrollbar). The caller (`_CompactToolbarRow` in `time_entry_list.dart`) composes them
+  into one right-aligned, horizontally scrollable row with a vertical divider. The
+  stacked (non-inline) layout is untouched. Reuse this pattern instead of duplicating
+  bar internals when a layout wants to recompose existing toolbars.
+- **Page-wide mouse-wheel scrolling:** a `Listener(behavior: HitTestBehavior.translucent)`
+  over the page routes `PointerScrollEvent`s into the list through
+  `GestureBinding.instance.pointerSignalResolver.register(...)` (see pitfall 3.14).
+
+### 1.7 Style-system component changes (session 2026-07-08)
+
+- `SegmentedToggle` gained `compact: bool` and explicit heights (36px normal / 28px
+  compact) that mirror `PrimaryButton`'s hardcoded height constants; segments stretch
+  vertically inside a fixed-height track. Styling inverted to muted track
+  (`surfaceMuted` + full `border.primary`) with a white selected thumb so the whole box
+  reads as the control (see pitfall 3.15).
+- `ClearableFilterPill.overlap` (10.0) is now a public static const - the space the pill
+  always reserves above/right of its child for the clear badge. Sibling rows without a
+  pill pad themselves by this constant to stay aligned (see pitfall 3.13).
+- Both are documented in `UI_KIT.md`.
+
+### 1.8 Native activity window + hotkeys (session 2026-07-08)
+
+- `NativeActivityWindow.hide()` uses `ShowWindow(SW_HIDE)`, NOT `DWMWA_CLOAK`. The cloak
+  trick exists only to protect Flutter-engine-backed windows from `WM_SHOWWINDOW`
+  suspend crashes; this window is pure Win32 (no engine), and cloaking left a ghost
+  taskbar entry (see pitfall 3.12). `show()` first recovers from a shell-minimized
+  state via `IsIconic` -> `SW_SHOWNOACTIVATE`, then applies the frame, then shows if
+  Win32-hidden.
+- Default global hotkeys are Ctrl+Alt+M / Ctrl+Alt+A / Ctrl+Alt+X (`HotkeyService`).
+  Both Ctrl+Shift and Alt+Shift are Windows' built-in input-language switch gestures
+  and can silently swallow the chord - never default to either pair.
+
 ---
 
 ## 2. PRODUCTION GUARDRAILS
@@ -198,6 +250,24 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
 - No italic text anywhere in UI - hierarchy is expressed via size/color only.
 - Asset freeze for new UI: use `Placeholder()` and standard Material `Icons`, no new
   binary assets without an explicit decision.
+- **Never pass an explicit `size:` to an `Icon` used as `leftIconWidget`/`rightIconWidget`
+  of `PrimaryButton`.** The button wraps icons in a `SizedBox(iconDimension)` (xs: 12,
+  sm: 14, md: 18, lg: 22) and sizes them via `IconTheme`; a larger explicit size paints
+  past that box and the icon looks shifted toward the bottom-right (pitfall 3.11).
+- **`AnimatedDefaultTextStyle` must receive a style with an explicit `color`.** It
+  REPLACES the ambient `DefaultTextStyle` instead of merging like `Text(style:)` does;
+  a token style without color renders white (pitfall 3.16).
+- **Control-height source of truth:** `PrimaryButton` heights are hardcoded (xs 28,
+  sm 36, md 40, lg 44) and do NOT match the `ControlSize` token table (32/40/48/52).
+  Any new inline control that must align with buttons (toggles, pills) aligns to the
+  BUTTON constants. `SegmentedToggle` does this explicitly.
+- **Anything placed on the same row as `ClearableFilterPill`-wrapped controls must
+  compensate for `ClearableFilterPill.overlap`** (10px always reserved on top/right,
+  even when inactive - by design, to keep the widget tree shape stable). Either
+  bottom-align the row (`CrossAxisAlignment.end`) or pad by the constant.
+- Purely visual scroll-reaction state (compact headers, hide-on-scroll strips) lives in
+  a `ValueNotifier` inside the screen State, consumed via `ValueListenableBuilder` -
+  never in the feature BLoC.
 
 ### 2.5 Localization
 
@@ -247,6 +317,25 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
 - Commit messages: no AI-attribution trailers; and never use em/en dashes in any generated
   text, code, comments, or scripts - a plain hyphen only (dash characters have corrupted
   PowerShell scripts via encoding before).
+
+### 2.8 Windows native windows and global hotkeys
+
+- **Pure Win32 windows (no Flutter engine) hide with `ShowWindow(SW_HIDE)`.**
+  `DWMWA_CLOAK` is reserved exclusively for Flutter-engine-backed HWNDs (it exists to
+  avoid `WM_SHOWWINDOW` suspend crashes). Cloaking a plain window leaves `WS_VISIBLE`
+  set: the taskbar button, Alt-Tab entry, and thumbnail survive as an unclickable ghost,
+  and the shell can activate/minimize the invisible window (pitfall 3.12).
+- **Every native `show()` path must handle the minimized state first:**
+  `IsWindowVisible` returns TRUE for minimized windows, so a plain
+  "if not visible then ShowWindow" check silently leaves an iconic window minimized.
+  Check `IsIconic` and restore with `SW_SHOWNOACTIVATE` (or `SW_RESTORE` when focus is
+  wanted) before applying frames.
+- **Never default global hotkeys to Ctrl+Shift+X or Alt+Shift+X on Windows** - both
+  chords are OS input-language switch gestures with 2+ keyboard layouts installed and
+  can swallow the combo before the third key lands. Current defaults: Ctrl+Alt+M/A/X.
+- Changing hotkey DEFAULTS does not affect users with previously saved bindings -
+  `HotkeyService` stored settings override `defaultHotKeyFor`. A default change needs
+  either a settings migration or a release-notes instruction to re-save.
 
 ---
 
@@ -335,6 +424,69 @@ do not re-add frame deferral.
   (`NativeMiniPanel`), not a second Flutter engine - Flutter engine EGL races
   (flutter/flutter#155685) are why. Do not resurrect `desktop_multi_window`.
 
+### 3.11 Icons inside PrimaryButton paint outside their box when given an explicit size
+**Symptom:** an icon-only button's glyph looks shifted toward the bottom-right corner,
+with excess space on the left/top.
+**Cause:** `PrimaryButton._wrapIcon` puts the icon in a `SizedBox(iconDimension)` where
+iconDimension is 12 (xs) / 14 (sm). An `Icon(..., size: 16)` overrides the `IconTheme`
+and overflows the 12-14px box; the overflow paints down-right.
+**Fix:** pass `Icon(iconData)` with NO size and let the button's `IconTheme` size it.
+
+### 3.12 DWMWA_CLOAK on a plain Win32 window creates an unkillable taskbar ghost
+**Symptom:** after "hiding" the native activity window it stays in the taskbar/Alt-Tab
+with a thumbnail; clicking it does nothing; later programmatic `show()` calls appear
+dead; closing via the X button "fixes" everything.
+**Cause chain:** cloak only hides the DWM visual - `WS_VISIBLE` stays set, so the
+taskbar entry survives; the user clicks it; the shell activates/minimizes the invisible
+window; `show()` checked `IsWindowVisible` (TRUE for minimized windows) and skipped
+`ShowWindow`, and uncloaking does not un-minimize - the window stays iconic forever.
+The X button worked because `DestroyWindow` forces a clean re-create.
+**Fix:** `SW_HIDE` on hide; `IsIconic` -> `SW_SHOWNOACTIVATE` at the top of show.
+See guardrail 2.8.
+
+### 3.13 ClearableFilterPill silently misaligns sibling rows by 10px
+**Symptom:** a select next to pill-wrapped selects sits ~10px higher and its right edge
+overhangs the pill-wrapped column.
+**Cause:** the pill ALWAYS pads its child `top/right` by `ClearableFilterPill.overlap`
+(10px) to reserve clear-badge space - deliberately even when inactive, because toggling
+the padding would change layout and recreate the child's State.
+**Fix:** bottom-align mixed rows (`CrossAxisAlignment.end`) and/or pad the pill-less
+sibling by the now-public `ClearableFilterPill.overlap` constant. Do NOT "fix" the pill
+by making the padding conditional - the stable-tree-shape comment in the widget explains
+why that breaks open Combobox state.
+
+### 3.14 Page-wide wheel scrolling without double-scroll: PointerSignalResolver
+To make the mouse wheel scroll a list even when the cursor is over headers/blank space,
+wrap the page in `Listener(behavior: HitTestBehavior.translucent, onPointerSignal: ...)`
+and inside the handler call
+`GestureBinding.instance.pointerSignalResolver.register(event, callback)` - never apply
+the scroll directly. The resolver keeps only the FIRST registered callback, and dispatch
+runs leaf-up, so when the cursor is over the real `Scrollable` the Scrollable wins and
+the page handler is ignored; over dead space the page handler wins. Direct handling
+(without the resolver) double-scrolls whenever the cursor is over the list. Guard with
+`_scrollController.hasClients` and clamp to `min/maxScrollExtent` before `jumpTo`.
+
+### 3.15 "Component looks the wrong size" disputes: measure, do not eyeball
+When a widget "looks smaller/larger" than a neighbor, write a throwaway `testWidgets`
+probe that pumps both widgets and prints `tester.getSize(...)` before changing any code
+(run it from `test\probe\`, delete after). This session the SegmentedToggle "height bug"
+turned out to be 36px == 36px exactly; the real problem was styling (white track on the
+near-white canvas made only the inner 30px thumb read as the control). Geometry fixes
+and perception fixes are different fixes - identify which one you need first.
+
+### 3.16 AnimatedDefaultTextStyle renders text white when the style has no color
+`Text(style: s)` MERGES `s` with the ambient `DefaultTextStyle`, so token styles without
+an explicit color inherit the theme color. `AnimatedDefaultTextStyle(style: s)` REPLACES
+the ambient style; a color-less token style then paints with the render default (white).
+Always `copyWith(color: palette.text.*)` when moving a text into
+`AnimatedDefaultTextStyle`.
+
+### 3.17 Buttons whose visible effect lives off-screen feel broken
+The KPI-strip toggle "did nothing" when the page was scrolled because the strip renders
+only at the top of the page. When a control's effect is not in the viewport, pair the
+state change with navigation to where the effect appears (the toggle now scrolls to top
+when turning the strip on). Audit any toggle that shows/hides an anchored region.
+
 ---
 
 ## 4. FUTURE BACKLOG
@@ -377,6 +529,30 @@ Honest list of what is NOT done, with the reason it was deferred.
   tokens) but `darkColorsPalette` still duplicates the light values.
 - **`time_entry_drawer.dart.saved`** stray file exists in
   `feature/history/presentation/components/` - dead artifact, delete on next touch.
+
+Added in session 2026-07-08:
+
+- **History compaction has no widget tests.** The compact/normal header states,
+  go-to-top visibility, stats-toggle scroll-to-top, and the `_CompactToolbarRow`
+  composition were verified only by hand and by the deleted size-probe test. Widget
+  tests belong in `test\feature\history\` (see 2.6 for the harness pattern).
+- **Magic numbers pending tokenization:** the compact title `fontSize: 15` in
+  `history_page.dart` (no NunitoSans small-heading token exists); the 50px scroll
+  threshold (duplicated conceptually with the KPI strip logic, now one bool but the
+  constant is inline); `SegmentedToggle`'s 36/28 heights mirror `PrimaryButton`'s
+  private height constants by copy - a shared button-height token in the style system
+  would remove the coupling. Also note the `ControlSize` table (32/40/48/52) does not
+  match actual `PrimaryButton` heights (28/36/40/44) - unify someday.
+- **`NativeActivityWindow` still has zero automated coverage** (pure Win32 FFI, no test
+  seam). The hide/show/IsIconic logic is verified only behaviorally. If it regresses
+  again, consider extracting a testable state machine around the Win32 calls.
+- **Hotkey default change is silent for existing users:** stored bindings from older
+  builds override the new Ctrl+Alt defaults until re-saved in Settings. No migration
+  was written (deliberate - low impact); revisit if users report "wrong" defaults.
+- **Commit c571665 mixed concerns:** it bundled this session's history/hotkey/window
+  work with unrelated working-tree edits (ws_table, time_entry_card/drawer, app icon)
+  that were already dirty. Nothing to fix, but bisecting through it later will be
+  noisier than usual.
 
 ### 4.3 Standing environment constraints
 - Windows-only development; never crawl `macos/`, `ios/`, `android/`, `linux/`, `web/`
