@@ -149,27 +149,31 @@ class _TotalRow extends StatelessWidget {
         children: [
           Expanded(
             flex: 3,
-            child: Text(
-              'Total', // TODO: l10n
-              style: theme.commonTextStyles.body2Bold.copyWith(
-                color: palette.text.primary,
-              ),
-            ),
-          ),
-          SizedBox(width: theme.spacings.md),
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.only(right: theme.spacings.md),
               child: Text(
-                DateFormatter.formatDurationHm(data.totalDuration),
+                'Total', // TODO: l10n
                 style: theme.commonTextStyles.body2Bold.copyWith(
                   color: palette.text.primary,
                 ),
               ),
             ),
           ),
-          SizedBox(width: theme.spacings.md),
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: EdgeInsets.only(right: theme.spacings.md),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  DateFormatter.formatDurationHm(data.totalDuration),
+                  style: theme.commonTextStyles.body2Bold.copyWith(
+                    color: palette.text.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
           const Expanded(flex: 2, child: SizedBox.shrink()),
         ],
       ),
