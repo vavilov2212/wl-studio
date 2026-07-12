@@ -70,6 +70,7 @@ class _Range {
 }
 
 class ReportsAggregator {
+  // TODO: l10n
   static const _monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -196,14 +197,14 @@ class ReportsAggregator {
   static String _label(DashboardPeriod period, _Range range) {
     switch (period) {
       case DashboardPeriod.today:
-        return '${_monthNames[range.start.month - 1]} ${range.start.day}';
+        return '${_monthNames[range.start.month - 1]} ${range.start.day}'; // TODO: l10n
       case DashboardPeriod.week:
       case DashboardPeriod.custom:
         final lastDay = range.end.subtract(const Duration(days: 1));
-        return '${_monthNames[range.start.month - 1]} ${range.start.day} - '
-            '${_monthNames[lastDay.month - 1]} ${lastDay.day}';
+        return '${_monthNames[range.start.month - 1]} ${range.start.day} → '
+            '${_monthNames[lastDay.month - 1]} ${lastDay.day}'; // TODO: l10n
       case DashboardPeriod.month:
-        return '${_monthNames[range.start.month - 1]} ${range.start.year}';
+        return '${_monthNames[range.start.month - 1]} ${range.start.year}'; // TODO: l10n
     }
   }
 }
