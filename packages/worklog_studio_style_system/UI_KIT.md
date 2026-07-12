@@ -473,6 +473,44 @@ WsTable<Project>(
 
 ---
 
+### WsGroupedTable
+
+Hierarchical data table with collapsible group rows and indented item rows. Generically typed as `WsGroupedTable<G, I>` where `G` is the group type and `I` is the item type. Expand/collapse state is local (`setState`) - cosmetic only.
+
+```dart
+WsGroupedTable<ProjectGroup, TaskRow>(
+  groups: _projectGroups,
+  columns: [
+    WsGroupedTableColumn<ProjectGroup, TaskRow>(
+      title: 'Name',
+      groupCellBuilder: (ctx, group) => Text(group.name),
+      itemCellBuilder: (ctx, group, item) => Text(item.title),
+      flex: 3,
+    ),
+    WsGroupedTableColumn<ProjectGroup, TaskRow>(
+      title: 'Hours',
+      groupCellBuilder: (ctx, group) => Text(group.hoursLabel),
+      itemCellBuilder: (ctx, group, item) => Text(item.hoursLabel),
+      flex: 1,
+      alignment: Alignment.centerRight,
+    ),
+  ],
+  itemsOf: (group) => group.tasks,
+  groupKeyBuilder: (group) => ValueKey(group.id),
+  itemKeyBuilder: (group, item) => ValueKey('${group.id}_${item.id}'),
+  totalRowBuilder: (ctx) => MyTotalRow(),  // optional
+  initiallyExpanded: true,   // all groups open by default
+  showHeader: true,
+)
+```
+
+- Group rows: 40px height, `body2Bold`, `background.surface` + `surfaceMuted` on hover, chevron toggle.
+- Item rows: 36px height, `body2`, `background.canvas` + `surfaceMuted@50%` on hover, `spacings.x2l` indent on first cell.
+- When `groups.isEmpty`: shows centered "No data" muted label.
+- `didUpdateWidget` resets expand/collapse when group key set changes.
+
+---
+
 ### TableToolbar
 
 Filter + sort + settings icon row, typically placed above a `WsTable`.
