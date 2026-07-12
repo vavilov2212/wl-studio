@@ -61,7 +61,7 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
   @override
   void didUpdateWidget(WsGroupedTable<G, I> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_groupsUnchanged(oldWidget.groups, widget.groups)) {
+    if (!_groupsUnchanged(oldWidget.groups, oldWidget.groupKeyBuilder, widget.groups, widget.groupKeyBuilder)) {
       _expandedGroups.clear();
       if (widget.initiallyExpanded) {
         _expandedGroups.addAll(
@@ -71,11 +71,17 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
     }
   }
 
-  bool _groupsUnchanged(List<G> oldGroups, List<G> newGroups) {
+  bool _groupsUnchanged(
+    List<G> oldGroups,
+    Key Function(G) oldKeyBuilder,
+    List<G> newGroups,
+    Key Function(G) newKeyBuilder,
+  ) {
     if (oldGroups.length != newGroups.length) return false;
     for (var i = 0; i < newGroups.length; i++) {
-      if (widget.groupKeyBuilder(oldGroups[i]) !=
-          widget.groupKeyBuilder(newGroups[i])) return false;
+      if (oldKeyBuilder(oldGroups[i]) != newKeyBuilder(newGroups[i])) {
+        return false;
+      }
     }
     return true;
   }
@@ -105,6 +111,7 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
       final items = widget.itemsOf(group);
 
       rows.add(_GroupRow<G, I>(
+        key: widget.groupKeyBuilder(group),
         group: group,
         columns: widget.columns,
         isExpanded: isExpanded,
@@ -216,6 +223,7 @@ class _GroupRow<G, I> extends StatefulWidget {
   final VoidCallback onToggle;
 
   const _GroupRow({
+    super.key,
     required this.group,
     required this.columns,
     required this.isExpanded,
