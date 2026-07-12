@@ -123,12 +123,12 @@ class ReportsData {
   final DateTime rangeEnd;
   final String rangeLabel;
   final Duration totalDuration;
-  final List<DashboardSlice> byProject; // reused for donut + breakdown bar
+  final List<ReportSlice> byProject; // for donut + breakdown bar
   final List<ReportsProjectGroup> projectGroups; // for table
 }
 ```
 
-`DashboardSlice` is reused from `feature/home/dashboard_chart_aggregator.dart` (already has id, label, duration, percentOfTotal).
+`ReportSlice` mirrors `DashboardSlice` but is defined inside `reports_aggregator.dart` (avoids cross-feature dependency on `feature/home/`). Fields: `id`, `label`, `duration`, `percentOfTotal`.
 
 ---
 
@@ -156,7 +156,7 @@ class ReportsAggregator {
 4. Within each project group: group by `taskId` (null -> "Unassigned" task row)
 5. Compute `totalDuration` = sum of all in-range entry durations
 6. Compute `percentOfTotal` for every group and row = `duration.inMinutes / totalDuration.inMinutes` (0.0 when total is zero)
-7. Build `byProject` slices from project groups (reuses the same data, different shape)
+7. Build `byProject` as `List<ReportSlice>` from project groups (same data, different shape)
 8. Sort: project groups by `totalDuration` descending; tasks within each group by `duration` descending
 9. "No Project" group always sorts to the bottom regardless of duration
 
@@ -193,7 +193,7 @@ abstract class ReportsState with _$ReportsState {
 
 Default: `period: DashboardPeriod.week`, `anchorDate: truncate(now, week)`.
 
-Forward-step guard: `DashboardChartsBloc.canStepForward()` is a public static method - reuse it directly.
+Forward-step guard: duplicate the 3-line `canStepForward` logic inside `ReportsBloc` as a private static method - avoids cross-feature dependency on `feature/home/`.
 
 ---
 
@@ -227,7 +227,7 @@ class WsGroupedTable<G, I> extends StatefulWidget {
 
 - State: `Set<Key> _expandedGroups` in `_WsGroupedTableState`; toggled on group row tap (`setState` - cosmetic only per guardrail 2.2)
 - `initiallyExpanded: true` seeds `_expandedGroups` with all group keys in `initState`
-- When `groups` list changes identity (new period), `didUpdateWidget` reseeds expanded state
+- When `groups` list changes (detected via `widget.groups != oldWidget.groups` length/key check), `didUpdateWidget` resets `_expandedGroups` back to `initiallyExpanded` default - no attempt to preserve old keys
 - Render: `Column` with a fixed header row + `Expanded(ListView.builder)` over a flat virtual list of group rows and (when expanded) item rows + optional total row
 - Each row: `InkWell` wrapping a `Row` of cells; hover tracked via `MouseRegion` + local `bool _isHovered` per row item (same as `WsTable`)
 - Group row first cell: chevron icon (`expand_more` / `chevron_right`) + group content side by side; clicking anywhere on the row toggles expansion
