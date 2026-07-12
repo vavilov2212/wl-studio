@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/reports/reports_aggregator.dart';
-import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class ReportsSummaryPanel extends StatelessWidget {
@@ -51,7 +50,7 @@ class ReportsSummaryPanel extends StatelessWidget {
                   sections: data.byProject.map((slice) {
                     return PieChartSectionData(
                       value: slice.duration.inMinutes.toDouble(),
-                      color: _colorFor(slice.id, palette),
+                      color: slice.id.isEmpty ? palette.text.muted : BadgeUtils.getBadgeColor(slice.id).$2,
                       showTitle: false,
                       radius: 40,
                     );
@@ -76,7 +75,7 @@ class ReportsSummaryPanel extends StatelessWidget {
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: _colorFor(slice.id, palette),
+                          color: slice.id.isEmpty ? palette.text.muted : BadgeUtils.getBadgeColor(slice.id).$2,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -111,11 +110,6 @@ class ReportsSummaryPanel extends StatelessWidget {
         _BreakdownBar(slices: data.byProject),
       ],
     );
-  }
-
-  Color _colorFor(String projectId, ColorsPalette palette) {
-    if (projectId.isEmpty) return palette.text.muted;
-    return BadgeUtils.getBadgeColor(projectId).$2;
   }
 
   String _formatHours(Duration d) {
