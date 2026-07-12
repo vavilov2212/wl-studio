@@ -37,7 +37,7 @@ class WsGroupedTable<G, I> extends StatefulWidget {
     required this.groupKeyBuilder,
     required this.itemKeyBuilder,
     this.totalRowBuilder,
-    this.initiallyExpanded = true,
+    this.initiallyExpanded = false,
     this.showHeader = true,
   });
 
@@ -101,6 +101,7 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
     final theme = context.theme;
     final palette = theme.colorsPalette;
     final borderColor = palette.border.primary.withValues(alpha: 0.4);
+    final rowDividerColor = palette.border.primary;
 
     final List<Widget> rows = [];
 
@@ -120,6 +121,7 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
 
       if (isExpanded) {
         for (final item in items) {
+          rows.add(Divider(height: 1, thickness: 1, color: rowDividerColor));
           rows.add(_ItemRow<G, I>(
             key: widget.itemKeyBuilder(group, item),
             group: group,
@@ -131,7 +133,7 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
 
       final isLastGroup = gi == widget.groups.length - 1;
       if (!isLastGroup || widget.totalRowBuilder != null) {
-        rows.add(Divider(height: 1, thickness: 1, color: borderColor));
+        rows.add(Divider(height: 1, thickness: 1, color: rowDividerColor));
       }
     }
 
@@ -151,10 +153,12 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.showHeader) _buildHeader(context, borderColor),
             if (widget.groups.isEmpty)
-              Expanded(
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: theme.spacings.x3l),
                 child: Center(
                   child: Text(
                     'No data', // TODO: l10n
@@ -165,8 +169,10 @@ class _WsGroupedTableState<G, I> extends State<WsGroupedTable<G, I>> {
                 ),
               )
             else
-              Expanded(
-                child: ListView(children: rows),
+              ListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: rows,
               ),
           ],
         ),

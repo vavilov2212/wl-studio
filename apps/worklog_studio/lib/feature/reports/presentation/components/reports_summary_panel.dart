@@ -106,8 +106,6 @@ class ReportsSummaryPanel extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: theme.spacings.lg),
-        _BreakdownBar(slices: data.byProject),
       ],
     );
   }
@@ -115,48 +113,5 @@ class ReportsSummaryPanel extends StatelessWidget {
   String _formatHours(Duration d) {
     final h = d.inMinutes / 60;
     return '${h.toStringAsFixed(1)}h';
-  }
-}
-
-class _BreakdownBar extends StatelessWidget {
-  final List<ReportSlice> slices;
-
-  const _BreakdownBar({required this.slices});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    final visible = slices.where((s) => s.duration.inMinutes > 0).toList();
-    if (visible.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 12,
-      child: Row(
-        children: List.generate(visible.length, (i) {
-          final slice = visible[i];
-          final isFirst = i == 0;
-          final isLast = i == visible.length - 1;
-          final radius = theme.radiuses.pill;
-          return Flexible(
-            flex: (slice.percentOfTotal * 1000).round().clamp(1, 1000),
-            child: Container(
-              decoration: BoxDecoration(
-                color: slice.id.isEmpty
-                    ? palette.text.muted
-                    : BadgeUtils.getBadgeColor(slice.id).$2,
-                borderRadius: BorderRadius.only(
-                  topLeft: isFirst ? Radius.circular(radius) : Radius.zero,
-                  bottomLeft: isFirst ? Radius.circular(radius) : Radius.zero,
-                  topRight: isLast ? Radius.circular(radius) : Radius.zero,
-                  bottomRight: isLast ? Radius.circular(radius) : Radius.zero,
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
   }
 }

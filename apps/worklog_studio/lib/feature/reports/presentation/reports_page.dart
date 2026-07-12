@@ -58,22 +58,31 @@ class ReportsScreen extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: theme.spacings.lg),
-                  if (isEmpty)
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          'No time logged for this period.', // TODO: l10n
-                          style: theme.commonTextStyles.body.copyWith(
-                            color: palette.text.muted,
-                          ),
-                        ),
-                      ),
-                    )
-                  else ...[
-                    ReportsSummaryPanel(data: data),
-                    SizedBox(height: theme.spacings.lg),
-                    Expanded(child: ReportsTable(data: data)),
-                  ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: theme.spacings.x2l),
+                      child: isEmpty
+                          ? SizedBox(
+                              height: 200,
+                              child: Center(
+                                child: Text(
+                                  'No time logged for this period.', // TODO: l10n
+                                  style: theme.commonTextStyles.body.copyWith(
+                                    color: palette.text.muted,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ReportsSummaryPanel(data: data),
+                                SizedBox(height: theme.spacings.lg),
+                                ReportsTable(data: data),
+                              ],
+                            ),
+                    ),
+                  ),
                 ],
               ),
             );
