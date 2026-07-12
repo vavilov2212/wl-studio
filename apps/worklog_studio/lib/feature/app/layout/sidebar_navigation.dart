@@ -116,6 +116,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 children: [
                   _navItem(AppRoute.dashboard, 'Dashboard', Icons.grid_view_rounded),
                   _navItem(AppRoute.history, 'History', Icons.history_rounded),
+                  _navItem(AppRoute.reports, 'Reports', Icons.bar_chart_rounded), // TODO: l10n
                   if (!_collapsed)
                     Padding(
                       padding: EdgeInsets.only(

@@ -10,6 +10,7 @@ import 'package:worklog_studio/feature/app/layout/app_drawer_host.dart';
 import 'package:worklog_studio/feature/app/layout/app_route.dart';
 import 'package:worklog_studio/feature/app/layout/sidebar_navigation.dart';
 import 'package:worklog_studio/feature/history/presentation/history_page.dart';
+import 'package:worklog_studio/feature/reports/presentation/reports_page.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
 import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
 import 'package:worklog_studio/feature/settings/presentation/general_settings_screen.dart';
@@ -125,6 +126,8 @@ class _AppShellState extends State<AppShell> {
         );
       case AppRoute.history:
         return const HistoryScreen();
+      case AppRoute.reports:
+        return const ReportsScreen();
       case AppRoute.projects:
         return const ProjectsScreen();
       case AppRoute.tasks:
