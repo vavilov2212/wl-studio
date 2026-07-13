@@ -1,13 +1,89 @@
-# POST MORTEM: Structural Refactoring (2026-07)
+# POST MORTEM: Worklog Studio - Book of Law
 
-> **Status: authoritative.** This document is the distilled outcome of the full structural
-> refactoring cycle (plan: `docs/superpowers/plans/2026-07-07-structural-refactoring.md`,
-> ~55 items executed across Tiers 1-10). It supersedes the per-session refactoring log that
-> previously lived in `CLAUDE.md`. Every rule below was paid for with a real bug, a failed
-> test run, or a dead end - treat them as laws of this codebase, not suggestions.
+> **Status: authoritative, living document.** This is the accumulated architectural memory
+> of the codebase, distilled after every non-trivial development session. It was seeded by
+> the full structural refactoring cycle (plan:
+> `docs/superpowers/plans/2026-07-07-structural-refactoring.md`, ~55 items executed across
+> Tiers 1-10, originally filed as `POST_MORTEM_REFACTOR.md`, renamed here to drop the
+> refactor-only framing) and is extended with a new session block every time a feature,
+> refactor, redesign, deploy, or debugging run produces a reusable lesson. Every rule below
+> was paid for with a real bug, a failed test run, or a dead end - treat them as laws of
+> this codebase, not suggestions. Session-specific detail lives in the numbered subsections
+> and pitfall entries (tagged with the session date); the four top-level sections
+> (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> Final state at time of writing: **279/279 tests green**, `dart analyze` clean on all
-> touched files, all work committed to `dev` in per-item commits.
+> State at last update (2026-07-12, [feature] Reports page):
+> **295/295 tests green**, `flutter analyze` clean on `lib\feature\reports\` and
+> `ui_kit\src\table\`, confirmed against commit `1d59469` after the Bash tool recovered
+> from a mid-session safety-classifier outage (pitfall 3.23).
+
+---
+
+## 0. PROJECT MAP & OPERATING RULES
+
+Standing configuration that used to live directly in the project's `CLAUDE.md`. It moved
+here so `CLAUDE.md` can stay a thin pointer (see the note at the top of that file); nothing
+below is a "lesson learned" like sections 1-4, it is a priori project structure and tooling
+policy that this whole document assumes as background.
+
+> Output style and tool-priority rules (verbosity, native tools -> MCP -> LSP -> Bash) live
+> in the user's global `~/.claude/CLAUDE.md` and apply here too.
+
+### 0.1 Path map
+This is a Flutter monorepository managed via Melos.
+- **Root directory:** workspace root containing `melos.yaml`.
+- **Main application:** `apps\worklog_studio\`
+  * *Entry points:* `apps\worklog_studio\lib\main.dart` and
+    `apps\worklog_studio\lib\main_development.dart`.
+- **UI kit & design system:** `packages\worklog_studio_style_system\`
+  * *Entry point:* `packages\worklog_studio_style_system\lib\worklog_studio_style_system.dart`
+    (barrel export file).
+  * **UI kit reference:** `packages\worklog_studio_style_system\UI_KIT.md` - read this
+    first on any UI task. Contains all components, props, tokens, and theme architecture.
+    Do not crawl source files to discover what exists; consult this file instead.
+
+### 0.2 Environment constraints (strictly Windows)
+- The development environment is **Windows**. All filesystem paths must use backslashes
+  (`\`).
+- Completely ignore and never crawl platform-specific directories for other OS targets
+  (`macos\`, `ios\`, `android\`, `linux\`, `web\`) - but see pitfall 3.8: web-specific
+  *source* files can still be live dependencies even though the `web\` target itself is
+  ignored.
+
+### 0.3 Strict token optimization & file exclusions
+To optimize context limits and minimize token waste, file-reading, search, or listing
+tools (native `Read`/`Grep`/`Glob`, or the `filesystem` MCP server as fallback) **MUST
+NEVER** access, search, or index:
+- `.fvm\` (internal SDK cache)
+- `.git\` (version control metadata)
+- `.dart_tool\` (local transient dart files)
+- `**\build\` (all build and compilation artifacts)
+- `*.freezed.dart` and `*.g.dart` (all auto-generated code-gen files - but see 2.3/3.1:
+  these files are still hand-edited, just never bulk-scanned)
+
+### 0.4 Git commit conventions
+- **Never** add a `Co-Authored-By: Claude` (or any AI-attribution) trailer to commit
+  messages. Commits must list only the human author.
+- See also 2.7 for the rest of git hygiene (grep before delete, `git mv`, commit per item,
+  no em/en dashes).
+
+### 0.5 Active project skills matrix
+7 custom Project Skills are configured. Align behavior with the matching skill whenever a
+prompt fits its description:
+1. `codebase-navigator-pro` - code exploration, logic tracing, onboarding. Enforces
+   "Grep-First" strategy.
+2. `codegen-sentinel` - editing models or classes with annotations. Enforces the
+   `.freezed.dart` exclusion and reminds about build_runner (broken, see 3.1).
+3. `l10n-asset-stubber` - UI tasks. Enforces an asset freeze (`Placeholder()`, standard
+   `Icons`) and requires hardcoded strings to carry `// TODO: l10n` (see 2.5).
+4. `melos-dependency-manager` - modifying `pubspec.yaml` files, syncing versions, using
+   Melos.
+5. `design-system-guard` - protects the separation between app logic and the UI kit;
+   prevents hardcoded colors/paddings in `apps\` (see 2.4).
+6. `surgical-refactor-pro` - deep code reviews, optimizing widget trees, splitting
+   widgets, cleaning memory leaks (`dispose`).
+7. `windows-desktop-expert` - desktop lifecycle, shortcuts, window sizing, native Windows
+   integration (see 2.8).
 
 ---
 
@@ -192,6 +268,54 @@ decisions worth reusing on other pages:
   Both Ctrl+Shift and Alt+Shift are Windows' built-in input-language switch gestures
   and can silently swallow the chord - never default to either pair.
 
+### 1.9 Reports page (session 2026-07-12, [feature])
+
+Built via `docs/superpowers/plans/2026-07-12-reports-page.md`, executed with
+subagent-driven-development (5 tasks + a post-completion fix pass), journal at
+`docs/worklog/2026-07-12-reports-page.md`, commits `c7b1b11..1d59469`.
+
+- **New feature slice `feature/reports/`** follows the canonical scaffold (1.1) with one
+  deliberate deviation: `reports_aggregator.dart` (pure static aggregation logic, zero
+  Flutter/BLoC imports) sits directly under `feature/reports/`, not inside a `data/`
+  subfolder - it is domain-shaped but feature-local, not a repository, so it does not earn
+  its own `data/` layer. Full layout:
+  `reports_aggregator.dart` (models + `ReportsAggregator.aggregate()`),
+  `bloc/reports_{bloc,event,state,bloc.freezed}.dart`,
+  `presentation/reports_page.dart`, `presentation/components/{reports_summary_panel,
+  reports_table}.dart`.
+- **`ReportsBloc` is provided at `MainApp` level** in `app.dart`, after
+  `BlocProvider<HistoryBloc>` - consistent with 1.3 (pages are recreated on tab change; a
+  screen-level provider would lose period/range selection on every navigation).
+- **New style-system widget `WsGroupedTable<G, I>`**
+  (`packages\worklog_studio_style_system\lib\ui_kit\src\table\ws_grouped_table.dart`) - a
+  generic two-level expandable table (groups containing items), exported from the ui_kit
+  barrel and documented in `UI_KIT.md`. Expand/collapse is local `setState` (correct per
+  2.2 - purely cosmetic). Defaults to **collapsed** (`initiallyExpanded: false`); the
+  constructor parameter exists so a future call site can opt into expanded-by-default.
+- **Content-hugging table inside a scrolling page - the pattern to reuse:** when a table
+  (or any list-shaped widget) must size itself to its content instead of filling the
+  remaining screen height, the table's internal list uses
+  `ListView(shrinkWrap: true, physics: NeverScrollableScrollPhysics())` with the
+  containing `Column` set to `mainAxisSize: MainAxisSize.min`, and the PAGE wraps its
+  scrollable content region in exactly one `Expanded(SingleChildScrollView(...))`. Do not
+  nest a second `Expanded(ListView(...))` inside the table AND wrap the table itself in
+  `Expanded` at the page level - that produces two competing "fill available space"
+  constraints with no finite bound and the table stretches to the bottom of the window
+  regardless of row count (see pitfall 3.21). This contrasts with `WsTable`'s
+  full-height-filling layout used elsewhere - the two widgets solve different layout
+  problems, do not merge them.
+- **Row-divider visual weight is a distinct token usage from container borders:** the
+  outer card border uses `palette.border.primary.withValues(alpha: 0.4)` (subtle
+  container edge); the in-list row dividers between every group/item row use
+  `palette.border.primary` at full opacity (deliberately more visible, per explicit
+  product request) - see guardrail 2.4.
+- **`DashboardPeriod` enum is reused, not redefined** - imported from
+  `feature/home/dashboard_chart_aggregator.dart`. Range logic itself (week/month/custom
+  boundaries) is duplicated in `ReportsAggregator` rather than calling
+  `DashboardChartAggregator`, because the two features' output shapes diverge enough that
+  sharing the aggregation function would need a shared intermediate type not worth
+  introducing for two call sites - acceptable duplication, not an oversight.
+
 ---
 
 ## 2. PRODUCTION GUARDRAILS
@@ -206,9 +330,18 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
   imports across 29 files to make `git mv` safe.
 - **Never import `package:provider/provider.dart` alongside `flutter_bloc` for
   `context.read/watch/select`** - flutter_bloc re-exports provider and the duplicate
-  triggers a conflict lint. **Exception:** the `Consumer<T>` widget specifically fails to
-  resolve through the transitive export in some files - when you use `Consumer`, add the
-  explicit provider import.
+  triggers a conflict lint. **Exception:** the `Consumer<T>` widget AND the `Selector<T,
+  R>` widget specifically fail to resolve through the transitive export in some files -
+  when you use either, add the explicit `package:provider/provider.dart` import (added
+  2026-07-12: `Selector<EntityResolver, List<ResolvedTimeEntry>>` in `reports_page.dart`
+  needed it, same as `Consumer` already did).
+- **Never import a sub-path from another package** (e.g.
+  `package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart`).
+  Only import a package's barrel file. *Why:* sub-path imports couple you to internal
+  file layout that can move freely; if a type you need is not exported from the barrel,
+  either add it to the barrel or avoid naming the type explicitly (inline the value, use
+  a ternary, or let Dart infer the local variable's type) rather than reaching around the
+  barrel (pitfall 3.18).
 - After any `git mv` of a Dart file, grep BOTH `lib/` and `test/` for the old import path.
 
 ### 2.2 State management
@@ -226,6 +359,14 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
 - The `_sentinel = Object()` copyWith pattern is the house style for state classes that
   need "explicitly set this nullable field to null" semantics
   (e.g. `filterExpandedOverride: null`).
+- **Any `StatefulWidget` with local hover/selection state that is emitted as an item in a
+  `ListView`/`Column`'s `children` MUST receive `super.key` in its constructor, and the
+  call site MUST pass an explicit `key:` (a stable identity, e.g. `ValueKey`).** *Why:*
+  without a key Flutter reconciles list children by position; after any list mutation
+  (sort, filter, expand/collapse) hover/selection state silently bleeds onto the row that
+  now occupies the old position instead of following its original row. Confirmed with
+  `WsGroupedTable`'s `_GroupRow`/`_ItemRow` (2026-07-12, pitfall 3.19) - the same fix
+  already applied to `WsTable`'s row widgets during the 2026-07 refactor.
 
 ### 2.3 Code generation (Freezed / injectable)
 
@@ -268,6 +409,24 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
 - Purely visual scroll-reaction state (compact headers, hide-on-scroll strips) lives in
   a `ValueNotifier` inside the screen State, consumed via `ValueListenableBuilder` -
   never in the feature BLoC.
+- **Row-divider color vs. container-border color are different tokens by alpha, not by
+  hue.** In-list separators between table/list rows use `palette.border.primary` at full
+  opacity (visible on purpose); the outer card/container border around the same widget
+  uses `palette.border.primary.withValues(alpha: 0.4)` (subtle). Do not use the subtle
+  alpha for row dividers - they read as invisible (added 2026-07-12, `WsGroupedTable`).
+- **Never nest a `shrinkWrap: true` list inside an `Expanded`.** The two are
+  contradictory: `Expanded` says "fill all available space", `shrinkWrap: true` says
+  "size to content" - combining them produces a widget that stretches to fill the parent
+  regardless of content (pitfall 3.21). When a list must hug its content width the list
+  belongs in, use `ListView(shrinkWrap: true, physics: NeverScrollableScrollPhysics())`
+  with `mainAxisSize: MainAxisSize.min` on the containing `Column`, and put the single
+  `Expanded` at the PAGE level around a `SingleChildScrollView`, not around the list
+  itself (see 1.9 for the full pattern).
+- **When aligning a footer/total row against a header row built by another widget, copy
+  its exact spacer technique, not just its flex values.** `Padding(right: token)` placed
+  INSIDE each `Expanded` child produces different pixel math than a standalone
+  `SizedBox(token)` placed BETWEEN `Expanded` siblings, even with identical flex ratios
+  (pitfall 3.22).
 
 ### 2.5 Localization
 
@@ -317,6 +476,11 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
 - Commit messages: no AI-attribution trailers; and never use em/en dashes in any generated
   text, code, comments, or scripts - a plain hyphen only (dash characters have corrupted
   PowerShell scripts via encoding before).
+- **If the Bash tool reports a "temporarily unavailable" safety-classifier error, retry
+  once or twice, then fall back to manual code inspection and say so explicitly** - do
+  not report a task as fully verified when `fvm flutter analyze`/`fvm flutter test`
+  could not actually be run (pitfall 3.23). Read-only tools (Read/Grep/Glob) are
+  unaffected and remain reliable evidence for a manual review.
 
 ### 2.8 Windows native windows and global hotkeys
 
@@ -487,6 +651,86 @@ only at the top of the page. When a control's effect is not in the viewport, pai
 state change with navigation to where the effect appears (the toggle now scrolls to top
 when turning the strip on). Audit any toggle that shows/hides an anchored region.
 
+### 3.18 Typing a private helper with an unexported type forces a sub-path import
+**Symptom:** a private helper (e.g. `Color _colorFor(...)`) needs an explicit return/param
+type like `ColorsPalette`, which is not exported from the style-system barrel, so the only
+way to name it is `import 'package:worklog_studio_style_system/theme/colors_palette/
+colors_palette_entity.dart'` - a forbidden sub-path import (guardrail 2.1).
+**Cause:** reaching for an explicit type annotation out of habit, when Dart's inference
+already gives the same safety.
+**Fix:** inline the expression (ternary/ternary chain) instead of a separately-typed
+helper, or let the local variable's type be inferred (`final color = ...`). Confirmed in
+`reports_summary_panel.dart` (2026-07-12): `_colorFor` returning `ColorsPalette` was
+replaced by an inline `slice.id.isEmpty ? palette.text.muted :
+BadgeUtils.getBadgeColor(slice.id).$2` ternary at each call site.
+
+### 3.19 Missing `super.key` on a StatefulWidget rendered as a list item bleeds hover state
+**Symptom:** after a list re-renders (e.g. groups reordered/filtered), the hover/highlight
+visual appears on the WRONG row - the one that now occupies the position the hovered row
+used to have.
+**Cause:** without a `Key`, Flutter's element reconciliation matches new widgets to old
+elements by TYPE + POSITION in the children list, not by logical identity. A `State`
+object (and its `_isHovered` field) gets reused for whatever widget now lands in that
+slot.
+**Fix:** give the widget constructor `super.key` and pass a stable `key:` (e.g.
+`ValueKey(id)`) at every call site that builds it inside a list. Confirmed twice in this
+codebase: `WsTable` row widgets during the 2026-07 refactor, and `WsGroupedTable`'s
+`_GroupRow`/`_ItemRow` on 2026-07-12 (commit `11a859d`). See guardrail 2.2.
+
+### 3.20 A widget's "did anything meaningful change" comparison must read both widgets with their OWN builder function
+**Symptom:** `didUpdateWidget`-style diffing (e.g. `_groupsUnchanged(oldGroups,
+oldWidget.groupKeyBuilder, newGroups, widget.groupKeyBuilder)` in `WsGroupedTable`)
+silently misbehaves if a caller ever passes a DIFFERENT `groupKeyBuilder` closure across
+rebuilds (e.g. one that captures rebuilt local state) - because the comparison used
+`widget.groupKeyBuilder` (the NEW widget's builder) to key BOTH the old and the new
+groups, instead of `oldWidget.groupKeyBuilder` for the old side.
+**Cause:** grabbing the nearest-in-scope variable (`widget.x`) instead of the
+semantically correct one (`oldWidget.x`) when writing an old-vs-new comparison.
+**Fix:** always pair `oldWidget.<builder>` with the OLD collection and `widget.<builder>`
+with the NEW collection. Low blast radius when builders happen to be pure/stateless
+functions (as they are today), but fix it anyway - it is a latent bug waiting for a
+stateful builder. Fixed in commit `11a859d`.
+
+### 3.21 A table/list stretches to fill the whole screen regardless of row count
+**Symptom:** a table with 2 rows visually occupies the entire remaining vertical space
+down to the bottom of the window, with a large empty area below the last row.
+**Cause:** the table was wrapped in `Expanded` at the page level, AND the table's
+internal row list was ALSO wrapped in `Expanded(ListView(...))` internally - two nested
+"fill all available space" constraints with nothing bounding the outer one to the
+content's actual height.
+**Fix:** the list that should hug its content becomes
+`ListView(shrinkWrap: true, physics: NeverScrollableScrollPhysics())` inside a
+`Column(mainAxisSize: MainAxisSize.min)`; the SINGLE `Expanded` in the whole chain wraps
+a `SingleChildScrollView` at the page level, not the table itself. Fixed in
+`reports_page.dart` / `ws_grouped_table.dart`, 2026-07-12 (see 1.9, guardrail 2.4).
+
+### 3.22 Footer row misaligned against header row despite identical flex values
+**Symptom:** a `_TotalRow`'s "Hours" column sits ~8-10px off from the header's "Hours"
+column even though both use `Expanded(flex: 1)` for that slot.
+**Cause:** the header row (`WsGroupedTable._buildHeader`) puts `Padding(right: token)`
+INSIDE each `Expanded` child to create inter-column gaps; `_TotalRow` instead placed
+standalone `SizedBox(token)` widgets BETWEEN the `Expanded` siblings. Both approaches
+produce "gaps between columns" visually, but they consume the parent `Row`'s width
+differently, so equal flex ratios no longer map to equal pixel widths.
+**Fix:** when a second widget must align to a row built by another widget, copy its exact
+spacer placement (inside-vs-between `Expanded`), not just its flex numbers. Fixed in
+commit `c590acd`.
+
+### 3.23 Bash tool blocked mid-session by a safety-classifier outage
+**Symptom:** every Bash invocation (including harmless read-only-equivalent commands like
+`fvm flutter analyze`) fails with `"claude-sonnet-4-6 is temporarily unavailable, so auto
+mode cannot determine the safety of Bash right now."`, while `git status`/native
+Read/Grep/Glob keep working.
+**Cause:** an upstream safety-classifier dependency of the Bash tool became temporarily
+unavailable; unrelated to the repository or the command being run.
+**Fix:** retry after a short wait; if it keeps failing, proceed with everything that does
+not need Bash (file edits, manual code review, journal/doc updates) and explicitly tell
+the user that `flutter analyze`/`flutter test` still need to be run manually before the
+change is considered verified (guardrail 2.7). Do not claim tests "pass" when they were
+only reviewed by eye. Encountered 2026-07-12 while wrapping up the Reports page
+post-completion fixes; commit `1d59469` landed before analyze/test could be run, but both
+were confirmed clean shortly after in the same session once Bash recovered.
+
 ---
 
 ## 4. FUTURE BACKLOG
@@ -553,6 +797,39 @@ Added in session 2026-07-08:
   work with unrelated working-tree edits (ws_table, time_entry_card/drawer, app icon)
   that were already dirty. Nothing to fix, but bisecting through it later will be
   noisier than usual.
+
+Added in session 2026-07-12 (Reports page, [feature]):
+
+- ~~`flutter analyze`/`flutter test` were never re-run against the final commit
+  (`1d59469`)~~ **Resolved same session:** once the Bash tool recovered from the
+  safety-classifier outage (pitfall 3.23), `fvm flutter analyze
+  apps\worklog_studio\lib\feature\reports\
+  packages\worklog_studio_style_system\lib\ui_kit\src\table\` came back clean and
+  `fvm flutter test test/core/ test/feature/ --reporter expanded` passed 295/295. Left
+  here as a reminder of the pattern (manual read-through is not a substitute for running
+  the tools once they are available again), not as an outstanding action.
+- **Reports feature has zero widget-test coverage.** `ReportsScreen`,
+  `ReportsSummaryPanel`, `ReportsTable`, and `WsGroupedTable` are covered only by the
+  domain test (`test\core\reports_aggregator_test.dart`) and the bloc test
+  (`test\feature\reports\reports_bloc_test.dart`) - no `testWidgets` exercise the actual
+  rendered table/chart/toolbar. Follow the drawer-class harness pattern (2.6) if this
+  gets picked up.
+- **Magic numbers pending tokenization (Reports UI):** donut chart geometry (180x180,
+  `radius: 40`, `centerSpaceRadius: 45`, `sectionsSpace: 2` - fl_chart requires literal
+  values), `_ProgressBar` height `6`, `WsGroupedTable` row heights `40`/`36`, legend dot
+  size `8`, legend `maxWidth: 140`, icon sizes `14`/`16`/`18`, `Select` width `110`. Same
+  category as the 2026-07-08 entry above - no design tokens exist yet for these; sweep
+  opportunistically if/when a control-metrics token system is introduced.
+- **`ReportsAggregator.aggregate(entries: const [])` is called twice per toolbar
+  rebuild** (once in `_PeriodToolbar` for the non-custom range label, once again inside
+  `_CustomRangeLabel`) purely to obtain `rangeLabel` from an otherwise-empty aggregation.
+  Cheap (empty list) but redundant - extract a dedicated pure `rangeLabel()` function as
+  a follow-up if `ReportsAggregator` grows more expensive.
+- **`WsGroupedTable.initiallyExpanded`** defaults to `false` (changed from `true` during
+  this session's post-completion fixes) with no current call site that opts into
+  expanded-by-default - if that need never materializes, consider whether the parameter
+  is still pulling its weight, or whether "always collapsed" should become the hardcoded
+  behavior instead of a configurable default.
 
 ### 4.3 Standing environment constraints
 - Windows-only development; never crawl `macos/`, `ios/`, `android/`, `linux/`, `web/`

@@ -1,5 +1,10 @@
 # Reports Page - Work Journal
 
+> **Archived.** Distilled into `POST_MORTEM.md` (section 1.9, guardrail additions in 2.1/
+> 2.2/2.4/2.7, pitfalls 3.18-3.23, backlog addendum "2026-07-12 (Reports page, [feature])").
+> This raw journal is kept for detailed commit-by-commit traceability; treat POST_MORTEM.md
+> as the authoritative source for rules going forward.
+
 **Plan:** `docs/superpowers/plans/2026-07-12-reports-page.md`
 **Date:** 2026-07-12
 **Branch:** dev
