@@ -12,10 +12,10 @@
 > and pitfall entries (tagged with the session date); the four top-level sections
 > (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> State at last update (2026-07-12, [feature] Reports page):
-> **295/295 tests green**, `flutter analyze` clean on `lib\feature\reports\` and
-> `ui_kit\src\table\`, confirmed against commit `1d59469` after the Bash tool recovered
-> from a mid-session safety-classifier outage (pitfall 3.23).
+> State at last update (2026-07-15, [feature] Reports charts block):
+> **308/308 tests green**, `flutter analyze` clean on `lib\feature\reports\`,
+> `lib\feature\home\`, and `lib\feature\common\utils\`, confirmed against commit
+> `500459c` (charts card with donuts + stacked bar view + hover legend overlay).
 
 ---
 
@@ -247,6 +247,48 @@ subagent-driven-development (5 tasks + a post-completion fix pass), journal at
   `DashboardChartAggregator`, because the two features' output shapes diverge enough that
   sharing the aggregation function would need a shared intermediate type not worth
   introducing for two call sites - acceptable duplication, not an oversight.
+
+### 1.10 Reports charts block (session 2026-07-15, [feature])
+
+Built via `docs/superpowers/plans/2026-07-15-reports-charts-block.md` (spec:
+`docs/superpowers/specs/2026-07-15-reports-charts-block-design.md`), executed inline
+task-by-task with the journal at `docs/worklog/2026-07-15-reports-charts-block.md`,
+commits `deff358..500459c`.
+
+- **`DashboardChartView` lives in `dashboard_chart_aggregator.dart`** (moved from the
+  home bloc file, next to `DashboardPeriod`) so Reports can import it without touching
+  another feature's bloc - the "shared enum moves to a shared file" rule (1.1). The
+  move needed zero import changes because every consumer already imported the
+  aggregator file.
+- **`chartScale` is a shared util** at `lib\feature\common\utils\chart_scale.dart`
+  (extracted from the Dashboard's private `_chartScale`, now unit-tested in
+  `test\core\chart_scale_test.dart`). Both bar charts use it; keep any future chart
+  axis math there.
+- **`ReportsAggregator` gained `byTask` slices and stacked `bars`**
+  (`ReportsBar`/`ReportsBarSegment`). Bucketing (today -> hourly clipped to entry
+  hours, week -> 7 days, month -> calendar weeks, custom -> no bars) intentionally
+  duplicates `DashboardChartAggregator._buildBuckets` - same deliberate-duplication
+  decision as the range logic (1.9). Segment order inside every bar equals the
+  `byProject` order (duration desc, No Project last); zero-duration segments are
+  omitted, so `segments.isEmpty` means "nothing logged in this bucket".
+- **`ReportsSummaryPanel` is a dumb BaseCard widget** (props `data`/`view`/`period` +
+  `onViewChanged` callback; the page dispatches `ReportsViewChanged`). Custom period
+  forces the donut view and hides the SegmentedToggle (custom ranges have no bar
+  buckets, mirroring the Dashboard). Period controls stay at PAGE level because they
+  drive the table too.
+- **Stacked-bar hover overlay pattern:** fl_chart tooltips stay disabled; a
+  `MouseRegion` maps pointer x to a bar index (zone width = (width - reserved Y-axis
+  36px) / barCount), and the legend is a `Positioned` card inside a `Stack`, wrapped
+  in `IgnorePointer` (otherwise it steals the hover and flickers), preferring the
+  right side of the bar, flipping left near the edge, clamped to chart bounds.
+  `_kLeftReservedSize` must equal `SideTitles.reservedSize` or hover zones drift.
+- **Hand-editing a freezed file to add a field:** most of the boilerplate
+  (==/hashCode/toString/copyWith signatures/param lists/bodies/patterns-extension) is
+  textually identical between the mixin and the concrete class, so `replace_all`
+  string edits hit both at once; only the getters line, the concrete constructor
+  (`this.view = DashboardChartView.donut`), and the field declaration
+  (`@override@JsonKey() final DashboardChartView view;`) need unique edits. Copied
+  from `dashboard_charts_bloc.freezed.dart`, confirmed in `reports_bloc.freezed.dart`.
 
 ---
 
@@ -762,6 +804,20 @@ Added in session 2026-07-12 (Reports page, [feature]):
   expanded-by-default - if that need never materializes, consider whether the parameter
   is still pulling its weight, or whether "always collapsed" should become the hardcoded
   behavior instead of a configurable default.
+
+Added in session 2026-07-15 (Reports charts block, [feature]):
+
+- **Reports charts UI still has zero widget-test coverage** (the 2026-07-12 gap
+  carries over): the rewritten `ReportsSummaryPanel`, its donut pair, the stacked bar
+  chart, and the hover overlay are verified only by analyze + the domain/bloc tests.
+  Note the dashboard DOES have `test\feature\home\dashboard_charts_section_test.dart` -
+  use it as the harness template if reports widget tests get picked up.
+- **New magic numbers pending tokenization:** overlay width `200`, overlay offset
+  `24`, bar width `32`, bar corner radius `4`, chart height `220`, breakpoint `900`,
+  `_kLeftReservedSize` `36` - same fl_chart-literal category as the existing 4.2
+  entries.
+- **Selected chart view (donut/bar) is not persisted** across app restarts on either
+  the Dashboard or Reports - deliberate parity, revisit only if users ask.
 
 ### 4.3 Standing environment constraints
 - Windows-only development; never crawl `macos/`, `ios/`, `android/`, `linux/`, `web/`
