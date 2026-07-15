@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/utils/chart_scale.dart';
 import 'package:worklog_studio/feature/home/bloc/dashboard_charts_bloc.dart';
 import 'package:worklog_studio/feature/home/dashboard_chart_aggregator.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
@@ -459,18 +460,6 @@ class _Donut extends StatelessWidget {
 // Width reserved for left Y-axis labels — must match SideTitles.reservedSize.
 const double _kLeftReservedSize = 36.0;
 
-// Returns interval and chartMaxY as a clean pair.
-// chartMaxY is always (numSteps+1)*interval so the top gridline is a round
-// number one step above the tallest bar - no floating 7.2h or 0.6h labels.
-({double interval, double maxY}) _chartScale(double maxHours) {
-  const steps = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0];
-  if (maxHours <= 0) return (interval: 1.0, maxY: 4.0);
-  final raw = maxHours / 4;
-  final interval = steps.firstWhere((v) => v >= raw, orElse: () => (raw / 5).ceil() * 5.0);
-  final numSteps = (maxHours / interval).ceil() + 1;
-  return (interval: interval, maxY: interval * numSteps);
-}
-
 class _BarChart extends StatefulWidget {
   final DashboardChartData data;
 
@@ -488,7 +477,7 @@ class _BarChartState extends State<_BarChart> {
     final maxHours = widget.data.bars
         .map((b) => b.duration.inMinutes / 60)
         .fold<double>(0, (max, v) => v > max ? v : max);
-    final scale = _chartScale(maxHours);
+    final scale = chartScale(maxHours);
     final interval = scale.interval;
     final chartMaxY = scale.maxY;
 
