@@ -1634,3 +1634,24 @@ Append a short session block (date 2026-07-15, [feature] Reports charts block) r
 git add POST_MORTEM.md
 git commit -m "docs: post-mortem entry for reports charts block"
 ```
+
+---
+
+## Appendix: Task Dependency Graph
+
+```
+Task 1 (enum move) ----------------+
+                                   +--> Task 5 (bloc view) --+
+Task 2 (chartScale util) ---+      |                         |
+                            |      |                         +--> Task 6 (charts card UI) --> Task 7 (hover overlay) --> Task 8 (verify + docs)
+Task 3 (byTask) --> Task 4 (bars) -+-------------------------+
+```
+
+- Task 1: no prerequisites.
+- Task 2: no prerequisites.
+- Task 3: no prerequisites.
+- Task 4: requires Task 3 (extends the same ReportsData constructor and aggregate flow).
+- Task 5: requires Task 1 (imports DashboardChartView from the aggregator file).
+- Task 6: requires Tasks 1, 2, 3, 4, 5 (consumes the enum, chartScale, byTask, bars, view state).
+- Task 7: requires Task 6 (replaces a widget inside the file Task 6 writes).
+- Task 8: requires Tasks 1-7 (final verification and docs).
