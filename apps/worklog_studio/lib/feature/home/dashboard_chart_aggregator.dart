@@ -2,6 +2,8 @@ import 'package:worklog_studio/domain/resolved_time_entry.dart';
 
 enum DashboardPeriod { today, week, month, custom }
 
+enum DashboardChartView { donut, bar }
+
 class DashboardSlice {
   final String id;
   final String label;

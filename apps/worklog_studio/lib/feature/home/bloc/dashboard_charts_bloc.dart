@@ -8,8 +8,6 @@ part 'dashboard_charts_event.dart';
 part 'dashboard_charts_state.dart';
 part 'dashboard_charts_bloc.freezed.dart';
 
-enum DashboardChartView { donut, bar }
-
 class DashboardChartsBloc extends Bloc<DashboardChartsEvent, DashboardChartsState> {
   final Clock _clock;
 
