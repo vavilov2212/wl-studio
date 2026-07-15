@@ -76,7 +76,14 @@ class ReportsScreen extends StatelessWidget {
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ReportsSummaryPanel(data: data),
+                                ReportsSummaryPanel(
+                                  data: data,
+                                  view: reportsState.view,
+                                  period: reportsState.period,
+                                  onViewChanged: (value) => context
+                                      .read<ReportsBloc>()
+                                      .add(ReportsViewChanged(value)),
+                                ),
                                 SizedBox(height: theme.spacings.lg),
                                 ReportsTable(data: data),
                               ],
