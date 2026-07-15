@@ -256,4 +256,138 @@ void main() {
       expect(data.byTask, isEmpty);
     });
   });
+
+  group('ReportsAggregator.aggregate bars', () {
+    test('week period -> 7 day buckets with per-project stacked segments', () {
+      final entries = [
+        _makeEntry(
+          id: 'e1',
+          start: DateTime(2026, 7, 7, 9),
+          end: DateTime(2026, 7, 7, 11),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+        _makeEntry(
+          id: 'e2',
+          start: DateTime(2026, 7, 7, 11),
+          end: DateTime(2026, 7, 7, 12),
+          projectId: 'p2',
+          projectName: 'Beta',
+        ),
+        _makeEntry(
+          id: 'e3',
+          start: DateTime(2026, 7, 9, 9),
+          end: DateTime(2026, 7, 9, 10),
+        ),
+      ];
+      final data = ReportsAggregator.aggregate(
+        entries: entries,
+        period: DashboardPeriod.week,
+        anchorDate: weekAnchor,
+        now: now,
+      );
+      expect(data.bars.length, equals(7));
+      expect(data.bars[0].label, equals('Mon 6'));
+      expect(data.bars[0].total, equals(Duration.zero));
+      expect(data.bars[0].segments, isEmpty);
+      // Tue Jul 7: Alpha 2h stacked before Beta 1h (byProject order).
+      expect(data.bars[1].label, equals('Tue 7'));
+      expect(data.bars[1].total, equals(const Duration(hours: 3)));
+      expect(data.bars[1].segments.length, equals(2));
+      expect(data.bars[1].segments[0].projectId, equals('p1'));
+      expect(data.bars[1].segments[0].projectName, equals('Alpha'));
+      expect(
+        data.bars[1].segments[0].duration,
+        equals(const Duration(hours: 2)),
+      );
+      expect(data.bars[1].segments[1].projectId, equals('p2'));
+      // Thu Jul 9: single No Project segment.
+      expect(data.bars[3].segments.single.projectId, equals(''));
+      expect(data.bars[3].segments.single.projectName, equals('No Project'));
+    });
+
+    test('today period -> hourly buckets clipped to hours with entries', () {
+      final entries = [
+        _makeEntry(
+          id: 'e1',
+          start: DateTime(2026, 7, 6, 9),
+          end: DateTime(2026, 7, 6, 10),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+        _makeEntry(
+          id: 'e2',
+          start: DateTime(2026, 7, 6, 12),
+          end: DateTime(2026, 7, 6, 13),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+      ];
+      final data = ReportsAggregator.aggregate(
+        entries: entries,
+        period: DashboardPeriod.today,
+        anchorDate: DateTime(2026, 7, 6),
+        now: now,
+      );
+      expect(data.bars.length, equals(4)); // 9 AM .. 12 PM
+      expect(data.bars.first.label, equals('9 AM'));
+      expect(data.bars.last.label, equals('12 PM'));
+      expect(data.bars[1].total, equals(Duration.zero));
+      expect(
+        data.bars.first.segments.single.duration,
+        equals(const Duration(hours: 1)),
+      );
+    });
+
+    test('month period -> calendar week buckets', () {
+      // July 2026 starts on Wednesday -> offset 2; 31 days -> 5 week buckets.
+      final entries = [
+        _makeEntry(
+          id: 'e1',
+          start: DateTime(2026, 7, 1, 9),
+          end: DateTime(2026, 7, 1, 10),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+        _makeEntry(
+          id: 'e2',
+          start: DateTime(2026, 7, 31, 9),
+          end: DateTime(2026, 7, 31, 11),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+      ];
+      final data = ReportsAggregator.aggregate(
+        entries: entries,
+        period: DashboardPeriod.month,
+        anchorDate: DateTime(2026, 7, 15),
+        now: DateTime(2026, 7, 31, 23),
+      );
+      expect(data.bars.length, equals(5));
+      expect(data.bars.first.label, equals('Week 1'));
+      expect(data.bars.first.total, equals(const Duration(hours: 1)));
+      expect(data.bars.last.label, equals('Week 5'));
+      expect(data.bars.last.total, equals(const Duration(hours: 2)));
+    });
+
+    test('custom period -> no bars', () {
+      final data = ReportsAggregator.aggregate(
+        entries: [
+          _makeEntry(
+            id: 'e1',
+            start: DateTime(2026, 7, 2, 9),
+            end: DateTime(2026, 7, 2, 10),
+            projectId: 'p1',
+            projectName: 'Alpha',
+          ),
+        ],
+        period: DashboardPeriod.custom,
+        anchorDate: DateTime(2026, 7, 1),
+        now: now,
+        customRangeStart: DateTime(2026, 7, 1),
+        customRangeEnd: DateTime(2026, 7, 3),
+      );
+      expect(data.bars, isEmpty);
+    });
+  });
 }

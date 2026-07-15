@@ -15,6 +15,30 @@ class ReportSlice {
   });
 }
 
+class ReportsBarSegment {
+  final String projectId;
+  final String projectName;
+  final Duration duration;
+
+  const ReportsBarSegment({
+    required this.projectId,
+    required this.projectName,
+    required this.duration,
+  });
+}
+
+class ReportsBar {
+  final String label;
+  final Duration total;
+  final List<ReportsBarSegment> segments;
+
+  const ReportsBar({
+    required this.label,
+    required this.total,
+    required this.segments,
+  });
+}
+
 class ReportsTaskRow {
   final String? taskId;
   final String taskName;
@@ -52,6 +76,7 @@ class ReportsData {
   final Duration totalDuration;
   final List<ReportSlice> byProject;
   final List<ReportSlice> byTask;
+  final List<ReportsBar> bars;
   final List<ReportsProjectGroup> projectGroups;
 
   const ReportsData({
@@ -61,6 +86,7 @@ class ReportsData {
     required this.totalDuration,
     required this.byProject,
     required this.byTask,
+    required this.bars,
     required this.projectGroups,
   });
 }
@@ -77,6 +103,9 @@ class ReportsAggregator {
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
+
+  // TODO: l10n
+  static const _weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   static ReportsData aggregate({
     required List<ResolvedTimeEntry> entries,
@@ -181,6 +210,8 @@ class ReportsAggregator {
         return b.duration.compareTo(a.duration);
       });
 
+    final bars = _buildBars(period, range, inRange, now, byProject);
+
     return ReportsData(
       rangeStart: range.start,
       rangeEnd: range.end,
@@ -188,7 +219,129 @@ class ReportsAggregator {
       totalDuration: Duration(minutes: totalMinutes),
       byProject: byProject,
       byTask: byTask,
+      bars: bars,
       projectGroups: projectGroups,
+    );
+  }
+
+  static List<ReportsBar> _buildBars(
+    DashboardPeriod period,
+    _Range range,
+    List<ResolvedTimeEntry> inRange,
+    DateTime now,
+    List<ReportSlice> byProject,
+  ) {
+    switch (period) {
+      case DashboardPeriod.today:
+        return _hourlyBars(inRange, now, byProject);
+      case DashboardPeriod.week:
+        return _dailyBars(range, inRange, now, byProject);
+      case DashboardPeriod.month:
+        return _weeklyBars(range, inRange, now, byProject);
+      case DashboardPeriod.custom:
+        // Custom ranges are donut-only in the UI (variable day counts don't
+        // map to a fixed bucket layout) - bars are simply unused.
+        return const [];
+    }
+  }
+
+  static List<ReportsBar> _barsFromBuckets({
+    required int bucketCount,
+    required String Function(int index) labelOf,
+    required int Function(ResolvedTimeEntry entry) bucketIndexOf,
+    required List<ResolvedTimeEntry> inRange,
+    required DateTime now,
+    required List<ReportSlice> byProject,
+  }) {
+    final perBucket = List.generate(bucketCount, (_) => <String, Duration>{});
+    for (final e in inRange) {
+      final i = bucketIndexOf(e);
+      if (i < 0 || i >= bucketCount) continue;
+      final pid = e.projectId ?? '';
+      perBucket[i][pid] =
+          (perBucket[i][pid] ?? Duration.zero) + e.duration(now);
+    }
+    return List.generate(bucketCount, (i) {
+      final durs = perBucket[i];
+      final segments = byProject
+          .where((p) => (durs[p.id] ?? Duration.zero) > Duration.zero)
+          .map((p) => ReportsBarSegment(
+                projectId: p.id,
+                projectName: p.label,
+                duration: durs[p.id]!,
+              ))
+          .toList();
+      final total = segments.fold<Duration>(
+          Duration.zero, (sum, s) => sum + s.duration);
+      return ReportsBar(label: labelOf(i), total: total, segments: segments);
+    });
+  }
+
+  static List<ReportsBar> _hourlyBars(
+    List<ResolvedTimeEntry> inRange,
+    DateTime now,
+    List<ReportSlice> byProject,
+  ) {
+    if (inRange.isEmpty) return const [];
+    final hours = inRange.map((e) => e.startAt.hour).toList();
+    final minHour = hours.reduce((a, b) => a < b ? a : b);
+    final maxHour = hours.reduce((a, b) => a > b ? a : b);
+    return _barsFromBuckets(
+      bucketCount: maxHour - minHour + 1,
+      labelOf: (i) => _hourLabel(minHour + i),
+      bucketIndexOf: (e) => e.startAt.hour - minHour,
+      inRange: inRange,
+      now: now,
+      byProject: byProject,
+    );
+  }
+
+  static String _hourLabel(int hour) {
+    final period = hour < 12 ? 'AM' : 'PM';
+    final display = hour % 12 == 0 ? 12 : hour % 12;
+    return '$display $period';
+  }
+
+  static List<ReportsBar> _dailyBars(
+    _Range range,
+    List<ResolvedTimeEntry> inRange,
+    DateTime now,
+    List<ReportSlice> byProject,
+  ) {
+    return _barsFromBuckets(
+      bucketCount: 7,
+      labelOf: (i) {
+        final date = range.start.add(Duration(days: i));
+        return '${_weekdayLabels[i]} ${date.day}';
+      },
+      bucketIndexOf: (e) =>
+          _dateOnly(e.startAt).difference(range.start).inDays,
+      inRange: inRange,
+      now: now,
+      byProject: byProject,
+    );
+  }
+
+  static List<ReportsBar> _weeklyBars(
+    _Range range,
+    List<ResolvedTimeEntry> inRange,
+    DateTime now,
+    List<ReportSlice> byProject,
+  ) {
+    final monthStart = range.start;
+    final firstWeekdayOffset = monthStart.weekday - 1;
+    final daysInMonth = range.end.difference(monthStart).inDays;
+    final weekCount = ((daysInMonth + firstWeekdayOffset - 1) ~/ 7) + 1;
+    return _barsFromBuckets(
+      bucketCount: weekCount,
+      labelOf: (i) => 'Week ${i + 1}', // TODO: l10n
+      bucketIndexOf: (e) =>
+          (_dateOnly(e.startAt).difference(monthStart).inDays +
+              firstWeekdayOffset) ~/
+          7,
+      inRange: inRange,
+      now: now,
+      byProject: byProject,
     );
   }
 
