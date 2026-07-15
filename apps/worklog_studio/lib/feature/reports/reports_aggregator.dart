@@ -51,6 +51,7 @@ class ReportsData {
   final String rangeLabel;
   final Duration totalDuration;
   final List<ReportSlice> byProject;
+  final List<ReportSlice> byTask;
   final List<ReportsProjectGroup> projectGroups;
 
   const ReportsData({
@@ -59,6 +60,7 @@ class ReportsData {
     required this.rangeLabel,
     required this.totalDuration,
     required this.byProject,
+    required this.byTask,
     required this.projectGroups,
   });
 }
@@ -101,6 +103,8 @@ class ReportsAggregator {
     final Map<String, String> projectNames = {};
     final Map<String, Map<String, Duration>> taskDurs = {};
     final Map<String, Map<String, String>> taskNames = {};
+    final Map<String, Duration> flatTaskDurs = {};
+    final Map<String, String> flatTaskNames = {};
 
     for (final e in inRange) {
       final pid = e.projectId ?? ''; // '' sentinel = No Project
@@ -115,6 +119,8 @@ class ReportsAggregator {
       taskDurs[pid]![tid] = (taskDurs[pid]![tid] ?? Duration.zero) + dur;
       taskNames[pid] ??= {};
       taskNames[pid]![tid] ??= tname;
+      flatTaskNames[tid] ??= tname;
+      flatTaskDurs[tid] = (flatTaskDurs[tid] ?? Duration.zero) + dur;
     }
 
     final totalMinutes = projectDurs.values
@@ -159,12 +165,29 @@ class ReportsAggregator {
       percentOfTotal: g.percentOfTotal,
     )).toList();
 
+    final byTask = flatTaskDurs.keys.map((tid) {
+      final tDur = flatTaskDurs[tid]!;
+      return ReportSlice(
+        id: tid,
+        label: flatTaskNames[tid]!,
+        duration: tDur,
+        percentOfTotal:
+            totalMinutes == 0 ? 0.0 : tDur.inMinutes / totalMinutes,
+      );
+    }).toList()
+      ..sort((a, b) {
+        if (a.id.isEmpty) return 1;
+        if (b.id.isEmpty) return -1;
+        return b.duration.compareTo(a.duration);
+      });
+
     return ReportsData(
       rangeStart: range.start,
       rangeEnd: range.end,
       rangeLabel: _label(period, range),
       totalDuration: Duration(minutes: totalMinutes),
       byProject: byProject,
+      byTask: byTask,
       projectGroups: projectGroups,
     );
   }

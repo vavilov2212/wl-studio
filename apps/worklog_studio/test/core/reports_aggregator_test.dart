@@ -200,4 +200,60 @@ void main() {
       expect(data.totalDuration, equals(const Duration(hours: 1)));
     });
   });
+
+  group('ReportsAggregator.aggregate byTask', () {
+    test('flat task slices across projects, sorted desc, Unassigned last', () {
+      final entries = [
+        _makeEntry(
+          id: 'e1',
+          start: DateTime(2026, 7, 7, 9),
+          end: DateTime(2026, 7, 7, 10),
+          projectId: 'p1',
+          projectName: 'Alpha',
+          taskId: 't1',
+          taskName: 'Design',
+        ),
+        _makeEntry(
+          id: 'e2',
+          start: DateTime(2026, 7, 7, 10),
+          end: DateTime(2026, 7, 7, 13),
+          projectId: 'p2',
+          projectName: 'Beta',
+          taskId: 't2',
+          taskName: 'Build',
+        ),
+        _makeEntry(
+          id: 'e3',
+          start: DateTime(2026, 7, 8, 9),
+          end: DateTime(2026, 7, 8, 10),
+          projectId: 'p1',
+          projectName: 'Alpha',
+        ),
+      ];
+      final data = ReportsAggregator.aggregate(
+        entries: entries,
+        period: DashboardPeriod.week,
+        anchorDate: weekAnchor,
+        now: now,
+      );
+      expect(data.byTask.length, equals(3));
+      expect(data.byTask[0].id, equals('t2'));
+      expect(data.byTask[0].label, equals('Build'));
+      expect(data.byTask[0].duration, equals(const Duration(hours: 3)));
+      expect(data.byTask[0].percentOfTotal, closeTo(3 / 5, 0.001));
+      expect(data.byTask[1].label, equals('Design'));
+      expect(data.byTask.last.id, equals(''));
+      expect(data.byTask.last.label, equals('Unassigned'));
+    });
+
+    test('empty entries -> empty byTask', () {
+      final data = ReportsAggregator.aggregate(
+        entries: [],
+        period: DashboardPeriod.week,
+        anchorDate: weekAnchor,
+        now: now,
+      );
+      expect(data.byTask, isEmpty);
+    });
+  });
 }
