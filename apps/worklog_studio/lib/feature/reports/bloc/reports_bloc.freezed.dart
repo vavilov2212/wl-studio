@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ReportsState {
 
- DashboardPeriod get period; DateTime get anchorDate; DateTime? get customRangeStart; DateTime? get customRangeEnd;
+ DashboardPeriod get period; DateTime get anchorDate; DashboardChartView get view; DateTime? get customRangeStart; DateTime? get customRangeEnd;
 /// Create a copy of ReportsState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $ReportsStateCopyWith<ReportsState> get copyWith => _$ReportsStateCopyWithImpl<R
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,period,anchorDate,customRangeStart,customRangeEnd);
+int get hashCode => Object.hash(runtimeType,period,anchorDate,view,customRangeStart,customRangeEnd);
 
 @override
 String toString() {
-  return 'ReportsState(period: $period, anchorDate: $anchorDate, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
+  return 'ReportsState(period: $period, anchorDate: $anchorDate, view: $view, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $ReportsStateCopyWith<$Res>  {
   factory $ReportsStateCopyWith(ReportsState value, $Res Function(ReportsState) _then) = _$ReportsStateCopyWithImpl;
 @useResult
 $Res call({
- DashboardPeriod period, DateTime anchorDate, DateTime? customRangeStart, DateTime? customRangeEnd
+ DashboardPeriod period, DateTime anchorDate, DashboardChartView view, DateTime? customRangeStart, DateTime? customRangeEnd
 });
 
 
@@ -63,11 +63,12 @@ class _$ReportsStateCopyWithImpl<$Res>
 
 /// Create a copy of ReportsState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? anchorDate = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
   return _then(_self.copyWith(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as DashboardPeriod,anchorDate: null == anchorDate ? _self.anchorDate : anchorDate // ignore: cast_nullable_to_non_nullable
-as DateTime,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
+as DateTime,view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
+as DashboardChartView,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
 as DateTime?,customRangeEnd: freezed == customRangeEnd ? _self.customRangeEnd : customRangeEnd // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
@@ -108,28 +109,28 @@ return $default(_that);case _:
 }
 }
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReportsState() when $default != null:
-return $default(_that.period,_that.anchorDate,_that.customRangeStart,_that.customRangeEnd);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   return orElse();
 
 }
 }
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DateTime? customRangeStart,  DateTime? customRangeEnd)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)  $default,) {final _that = this;
 switch (_that) {
 case _ReportsState():
-return $default(_that.period,_that.anchorDate,_that.customRangeStart,_that.customRangeEnd);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   throw StateError('Unexpected subclass');
 
 }
 }
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DashboardPeriod period,  DateTime anchorDate,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DashboardPeriod period,  DateTime anchorDate,  DashboardChartView view,  DateTime? customRangeStart,  DateTime? customRangeEnd)?  $default,) {final _that = this;
 switch (_that) {
 case _ReportsState() when $default != null:
-return $default(_that.period,_that.anchorDate,_that.customRangeStart,_that.customRangeEnd);case _:
+return $default(_that.period,_that.anchorDate,_that.view,_that.customRangeStart,_that.customRangeEnd);case _:
   return null;
 
 }
@@ -141,11 +142,12 @@ return $default(_that.period,_that.anchorDate,_that.customRangeStart,_that.custo
 
 
 class _ReportsState extends ReportsState {
-  const _ReportsState({required this.period, required this.anchorDate, this.customRangeStart, this.customRangeEnd}): super._();
+  const _ReportsState({required this.period, required this.anchorDate, this.view = DashboardChartView.donut, this.customRangeStart, this.customRangeEnd}): super._();
 
 
 @override final  DashboardPeriod period;
 @override final  DateTime anchorDate;
+@override@JsonKey() final  DashboardChartView view;
 @override final  DateTime? customRangeStart;
 @override final  DateTime? customRangeEnd;
 
@@ -159,16 +161,16 @@ _$ReportsStateCopyWith<_ReportsState> get copyWith => __$ReportsStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportsState&&(identical(other.period, period) || other.period == period)&&(identical(other.anchorDate, anchorDate) || other.anchorDate == anchorDate)&&(identical(other.view, view) || other.view == view)&&(identical(other.customRangeStart, customRangeStart) || other.customRangeStart == customRangeStart)&&(identical(other.customRangeEnd, customRangeEnd) || other.customRangeEnd == customRangeEnd));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,period,anchorDate,customRangeStart,customRangeEnd);
+int get hashCode => Object.hash(runtimeType,period,anchorDate,view,customRangeStart,customRangeEnd);
 
 @override
 String toString() {
-  return 'ReportsState(period: $period, anchorDate: $anchorDate, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
+  return 'ReportsState(period: $period, anchorDate: $anchorDate, view: $view, customRangeStart: $customRangeStart, customRangeEnd: $customRangeEnd)';
 }
 
 
@@ -179,7 +181,7 @@ abstract mixin class _$ReportsStateCopyWith<$Res> implements $ReportsStateCopyWi
   factory _$ReportsStateCopyWith(_ReportsState value, $Res Function(_ReportsState) _then) = __$ReportsStateCopyWithImpl;
 @override @useResult
 $Res call({
- DashboardPeriod period, DateTime anchorDate, DateTime? customRangeStart, DateTime? customRangeEnd
+ DashboardPeriod period, DateTime anchorDate, DashboardChartView view, DateTime? customRangeStart, DateTime? customRangeEnd
 });
 
 
@@ -196,11 +198,12 @@ class __$ReportsStateCopyWithImpl<$Res>
 
 /// Create a copy of ReportsState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? period = null,Object? anchorDate = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? period = null,Object? anchorDate = null,Object? view = null,Object? customRangeStart = freezed,Object? customRangeEnd = freezed,}) {
   return _then(_ReportsState(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as DashboardPeriod,anchorDate: null == anchorDate ? _self.anchorDate : anchorDate // ignore: cast_nullable_to_non_nullable
-as DateTime,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
+as DateTime,view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
+as DashboardChartView,customRangeStart: freezed == customRangeStart ? _self.customRangeStart : customRangeStart // ignore: cast_nullable_to_non_nullable
 as DateTime?,customRangeEnd: freezed == customRangeEnd ? _self.customRangeEnd : customRangeEnd // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));

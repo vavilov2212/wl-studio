@@ -17,3 +17,8 @@ class ReportsCustomRangeSelected extends ReportsEvent {
   final DateTime end;
   ReportsCustomRangeSelected(this.start, this.end);
 }
+
+class ReportsViewChanged extends ReportsEvent {
+  final DashboardChartView view;
+  ReportsViewChanged(this.view);
+}

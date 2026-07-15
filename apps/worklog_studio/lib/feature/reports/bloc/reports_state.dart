@@ -7,6 +7,7 @@ abstract class ReportsState with _$ReportsState {
   const factory ReportsState({
     required DashboardPeriod period,
     required DateTime anchorDate,
+    @Default(DashboardChartView.donut) DashboardChartView view,
     DateTime? customRangeStart,
     DateTime? customRangeEnd,
   }) = _ReportsState;

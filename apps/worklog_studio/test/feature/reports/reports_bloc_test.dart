@@ -84,5 +84,31 @@ void main() {
       final anchor = DateTime(2026, 6, 1);
       expect(ReportsBloc.canStepForward(DashboardPeriod.custom, anchor, now), isFalse);
     });
+
+    test('initial state: view is donut', () async {
+      final bloc = ReportsBloc(clock: clock);
+      expect(bloc.state.view, equals(DashboardChartView.donut));
+      await bloc.close();
+    });
+
+    test('ReportsViewChanged(bar) -> view flips to bar', () async {
+      final bloc = ReportsBloc(clock: clock);
+      bloc.add(ReportsViewChanged(DashboardChartView.bar));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.view, equals(DashboardChartView.bar));
+      await bloc.close();
+    });
+
+    test('view survives period change and stepping', () async {
+      final bloc = ReportsBloc(clock: clock);
+      bloc.add(ReportsViewChanged(DashboardChartView.bar));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(ReportsPeriodChanged(DashboardPeriod.month));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(ReportsPeriodStepped(-1));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.view, equals(DashboardChartView.bar));
+      await bloc.close();
+    });
   });
 }
