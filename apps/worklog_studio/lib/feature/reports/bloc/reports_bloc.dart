@@ -25,6 +25,7 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
     on<ReportsPeriodStepped>(_onPeriodStepped);
     on<ReportsCustomRangeSelected>(_onCustomRangeSelected);
     on<ReportsViewChanged>(_onViewChanged);
+    on<ReportsSyncedFromDashboard>(_onSyncedFromDashboard);
   }
 
   void _onPeriodChanged(
@@ -66,6 +67,19 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
     Emitter<ReportsState> emit,
   ) {
     emit(state.copyWith(view: event.view));
+  }
+
+  void _onSyncedFromDashboard(
+    ReportsSyncedFromDashboard event,
+    Emitter<ReportsState> emit,
+  ) {
+    emit(state.copyWith(
+      period: event.period,
+      anchorDate: event.anchorDate,
+      view: event.view,
+      customRangeStart: event.customRangeStart,
+      customRangeEnd: event.customRangeEnd,
+    ));
   }
 
   static bool canStepForward(

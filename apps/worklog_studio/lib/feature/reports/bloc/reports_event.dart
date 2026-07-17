@@ -22,3 +22,21 @@ class ReportsViewChanged extends ReportsEvent {
   final DashboardChartView view;
   ReportsViewChanged(this.view);
 }
+
+/// Mirrors the Dashboard charts card state into Reports so a jump between the
+/// pages lands on the same period, range and chart view.
+class ReportsSyncedFromDashboard extends ReportsEvent {
+  final DashboardPeriod period;
+  final DateTime anchorDate;
+  final DashboardChartView view;
+  final DateTime? customRangeStart;
+  final DateTime? customRangeEnd;
+
+  ReportsSyncedFromDashboard({
+    required this.period,
+    required this.anchorDate,
+    required this.view,
+    this.customRangeStart,
+    this.customRangeEnd,
+  });
+}

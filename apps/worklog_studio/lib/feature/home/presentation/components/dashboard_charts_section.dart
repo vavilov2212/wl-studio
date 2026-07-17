@@ -3,11 +3,13 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/common/presentation/components/stacked_bar_chart.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/home/bloc/dashboard_charts_bloc.dart';
 import 'package:worklog_studio/feature/home/dashboard_chart_aggregator.dart';
+import 'package:worklog_studio/feature/reports/bloc/reports_bloc.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -142,9 +144,11 @@ class _ChartsHeader extends StatelessWidget {
           ],
         );
 
-        final viewToggle = state.period == DashboardPeriod.custom
-            ? const SizedBox.shrink()
-            : SegmentedToggle<DashboardChartView>(
+        final rightControls = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state.period != DashboardPeriod.custom) ...[
+              SegmentedToggle<DashboardChartView>(
                 value: state.view,
                 options: const [
                   SegmentedToggleOption(
@@ -157,12 +161,17 @@ class _ChartsHeader extends StatelessWidget {
                   ),
                 ],
                 onChanged: (value) => bloc.add(DashboardChartsEvent.viewChanged(value)),
-              );
+              ),
+              SizedBox(width: theme.spacings.sm),
+            ],
+            _OpenInReportsButton(state: state, rangeLabel: rangeLabel),
+          ],
+        );
 
         if (isWide) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [periodControls, viewToggle],
+            children: [periodControls, rightControls],
           );
         }
 
@@ -170,7 +179,7 @@ class _ChartsHeader extends StatelessWidget {
           spacing: theme.spacings.sm,
           runSpacing: theme.spacings.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [periodControls, viewToggle],
+          children: [periodControls, rightControls],
         );
       },
     );
@@ -267,6 +276,59 @@ class _CustomRangeLabel extends StatelessWidget {
               SizedBox(width: theme.spacings.xxs),
               Icon(Icons.edit_calendar_rounded, size: 14, color: palette.text.muted),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Jumps to the Reports page mirroring the current charts setup; the tooltip
+/// spells out exactly which period, range and chart view will carry over.
+class _OpenInReportsButton extends StatelessWidget {
+  final DashboardChartsState state;
+  final String rangeLabel;
+
+  const _OpenInReportsButton({required this.state, required this.rangeLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+    // Reports renders custom ranges donut-only, so demonstrate the view that
+    // will actually appear after the jump.
+    final effectiveView = state.period == DashboardPeriod.custom
+        ? DashboardChartView.donut
+        : state.view;
+    final viewLabel = effectiveView == DashboardChartView.bar
+        ? 'bar chart'
+        : 'donut charts'; // TODO: l10n
+
+    return Tooltip(
+      message: 'Open in Reports: $rangeLabel, $viewLabel', // TODO: l10n
+      waitDuration: const Duration(milliseconds: 300),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: theme.radiuses.sm.circular,
+        child: InkWell(
+          onTap: () {
+            context.read<ReportsBloc>().add(ReportsSyncedFromDashboard(
+                  period: state.period,
+                  anchorDate: state.anchorDate,
+                  view: state.view,
+                  customRangeStart: state.customRangeStart,
+                  customRangeEnd: state.customRangeEnd,
+                ));
+            context.read<AppNavigationController>().openReports();
+          },
+          borderRadius: theme.radiuses.sm.circular,
+          child: Padding(
+            padding: EdgeInsets.all(theme.spacings.xxs),
+            child: Icon(
+              Icons.open_in_new_rounded,
+              size: 18,
+              color: palette.text.secondary,
+            ),
           ),
         ),
       ),

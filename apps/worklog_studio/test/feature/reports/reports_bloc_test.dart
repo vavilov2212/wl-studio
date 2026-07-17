@@ -99,6 +99,38 @@ void main() {
       await bloc.close();
     });
 
+    test('ReportsSyncedFromDashboard mirrors period, anchor and view', () async {
+      final bloc = ReportsBloc(clock: clock);
+      bloc.add(ReportsSyncedFromDashboard(
+        period: DashboardPeriod.month,
+        anchorDate: DateTime(2026, 6, 1),
+        view: DashboardChartView.bar,
+      ));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.period, equals(DashboardPeriod.month));
+      expect(bloc.state.anchorDate, equals(DateTime(2026, 6, 1)));
+      expect(bloc.state.view, equals(DashboardChartView.bar));
+      await bloc.close();
+    });
+
+    test('ReportsSyncedFromDashboard carries a custom range', () async {
+      final bloc = ReportsBloc(clock: clock);
+      final start = DateTime(2026, 6, 10);
+      final end = DateTime(2026, 6, 20);
+      bloc.add(ReportsSyncedFromDashboard(
+        period: DashboardPeriod.custom,
+        anchorDate: start,
+        view: DashboardChartView.donut,
+        customRangeStart: start,
+        customRangeEnd: end,
+      ));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.period, equals(DashboardPeriod.custom));
+      expect(bloc.state.customRangeStart, equals(start));
+      expect(bloc.state.customRangeEnd, equals(end));
+      await bloc.close();
+    });
+
     test('view survives period change and stepping', () async {
       final bloc = ReportsBloc(clock: clock);
       bloc.add(ReportsViewChanged(DashboardChartView.bar));

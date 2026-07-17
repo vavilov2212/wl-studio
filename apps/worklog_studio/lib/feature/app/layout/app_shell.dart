@@ -38,6 +38,7 @@ class _AppShellState extends State<AppShell> {
       openTask: _openTask,
       openProject: _openProject,
       openHistoryEntry: _openHistoryEntry,
+      openReports: () => _onRouteSelected(AppRoute.reports),
     );
     _navSub = DesktopServiceRegistry.instance.navigationStream.listen((route) {
       if (route == 'history') {
