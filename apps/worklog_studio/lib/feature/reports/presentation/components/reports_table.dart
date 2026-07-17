@@ -11,6 +11,14 @@ class ReportsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Progress bars are relative to the busiest project (it shows a full
+    // bar); the share of the grand total is spelled out next to the hours.
+    final maxGroupMinutes = data.projectGroups.fold<int>(
+      0,
+      (max, g) =>
+          g.totalDuration.inMinutes > max ? g.totalDuration.inMinutes : max,
+    );
+
     return WsGroupedTable<ReportsProjectGroup, ReportsTaskRow>(
       groups: data.projectGroups,
       columns: [
@@ -26,23 +34,31 @@ class ReportsTable extends StatelessWidget {
         ),
         WsGroupedTableColumn<ReportsProjectGroup, ReportsTaskRow>(
           title: 'Hours', // TODO: l10n
-          groupCellBuilder: (ctx, group) =>
-              Text(DateFormatter.formatDurationHm(group.totalDuration)),
-          itemCellBuilder: (ctx, group, item) =>
-              Text(DateFormatter.formatDurationHm(item.duration)),
+          groupCellBuilder: (ctx, group) => _HoursCell(
+            duration: group.totalDuration,
+            percentOfTotal: group.percentOfTotal,
+          ),
+          itemCellBuilder: (ctx, group, item) => _HoursCell(
+            duration: item.duration,
+            percentOfTotal: item.percentOfTotal,
+          ),
           flex: 1,
           alignment: Alignment.centerRight,
         ),
         WsGroupedTableColumn<ReportsProjectGroup, ReportsTaskRow>(
           title: 'Progress', // TODO: l10n
           groupCellBuilder: (ctx, group) => _ProgressBar(
-            value: group.percentOfTotal,
+            value: maxGroupMinutes == 0
+                ? 0
+                : group.totalDuration.inMinutes / maxGroupMinutes,
             color: group.projectId.isEmpty
                 ? ctx.theme.colorsPalette.text.muted
                 : BadgeUtils.getBadgeColor(group.projectId).$2,
           ),
           itemCellBuilder: (ctx, group, item) => _ProgressBar(
-            value: item.percentOfTotal,
+            value: maxGroupMinutes == 0
+                ? 0
+                : item.duration.inMinutes / maxGroupMinutes,
             color: group.projectId.isEmpty
                 ? ctx.theme.colorsPalette.text.muted
                 : BadgeUtils.getBadgeColor(group.projectId).$2,
@@ -88,6 +104,35 @@ class _ProjectCell extends StatelessWidget {
             group.projectName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoursCell extends StatelessWidget {
+  final Duration duration;
+  final double percentOfTotal;
+
+  const _HoursCell({required this.duration, required this.percentOfTotal});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(DateFormatter.formatDurationHm(duration)),
+        SizedBox(width: theme.spacings.xxs),
+        Text(
+          '${(percentOfTotal * 100).round()}%',
+          style: theme.commonTextStyles.caption.copyWith(
+            color: palette.text.muted,
           ),
         ),
       ],
