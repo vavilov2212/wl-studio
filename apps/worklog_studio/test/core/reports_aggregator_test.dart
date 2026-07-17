@@ -294,16 +294,16 @@ void main() {
       expect(data.bars[1].label, equals('Tue 7'));
       expect(data.bars[1].total, equals(const Duration(hours: 3)));
       expect(data.bars[1].segments.length, equals(2));
-      expect(data.bars[1].segments[0].projectId, equals('p1'));
-      expect(data.bars[1].segments[0].projectName, equals('Alpha'));
+      expect(data.bars[1].segments[0].id, equals('p1'));
+      expect(data.bars[1].segments[0].label, equals('Alpha'));
       expect(
         data.bars[1].segments[0].duration,
         equals(const Duration(hours: 2)),
       );
-      expect(data.bars[1].segments[1].projectId, equals('p2'));
+      expect(data.bars[1].segments[1].id, equals('p2'));
       // Thu Jul 9: single No Project segment.
-      expect(data.bars[3].segments.single.projectId, equals(''));
-      expect(data.bars[3].segments.single.projectName, equals('No Project'));
+      expect(data.bars[3].segments.single.id, equals(''));
+      expect(data.bars[3].segments.single.label, equals('No Project'));
     });
 
     test('today period -> hourly buckets clipped to hours with entries', () {

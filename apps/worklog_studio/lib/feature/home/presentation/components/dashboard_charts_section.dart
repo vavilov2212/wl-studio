@@ -475,7 +475,7 @@ class _BarChartState extends State<_BarChart> {
   @override
   Widget build(BuildContext context) {
     final maxHours = widget.data.bars
-        .map((b) => b.duration.inMinutes / 60)
+        .map((b) => b.total.inMinutes / 60)
         .fold<double>(0, (max, v) => v > max ? v : max);
     final scale = chartScale(maxHours);
     final interval = scale.interval;
@@ -604,7 +604,7 @@ class _BarChartState extends State<_BarChart> {
       ),
       barGroups: widget.data.bars.asMap().entries.map((entry) {
         final index = entry.key;
-        final hours = entry.value.duration.inMinutes / 60;
+        final hours = entry.value.total.inMinutes / 60;
         final isHovered = index == _hoveredIndex;
         return BarChartGroupData(
           x: index,

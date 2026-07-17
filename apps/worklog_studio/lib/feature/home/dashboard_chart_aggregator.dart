@@ -1,4 +1,5 @@
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/feature/common/utils/chart_bars.dart';
 
 enum DashboardPeriod { today, week, month, custom }
 
@@ -18,20 +19,13 @@ class DashboardSlice {
   });
 }
 
-class DashboardBucket {
-  final String label;
-  final Duration duration;
-
-  const DashboardBucket({required this.label, required this.duration});
-}
-
 class DashboardChartData {
   final DateTime rangeStart;
   final DateTime rangeEnd;
   final String rangeLabel;
   final List<DashboardSlice> byProject;
   final List<DashboardSlice> byTask;
-  final List<DashboardBucket> bars;
+  final List<ChartBar> bars;
 
   const DashboardChartData({
     required this.rangeStart,
@@ -50,7 +44,6 @@ class _Range {
 }
 
 class DashboardChartAggregator {
-  static const _weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const _monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -91,7 +84,15 @@ class DashboardChartAggregator {
       idOf: (e) => e.taskId ?? '',
       labelOf: (e) => e.taskTitle,
     );
-    final bars = _buildBuckets(period, range, inRange, now);
+    // Custom ranges are donut-only in the UI (variable day counts don't map
+    // to a fixed bucket layout) - bars are simply unused.
+    final bars = switch (period) {
+      DashboardPeriod.today => hourlyStackedBars(inRange, now),
+      DashboardPeriod.week => dailyStackedBars(range.start, inRange, now),
+      DashboardPeriod.month =>
+        monthlyStackedBars(range.start, range.end, inRange, now),
+      DashboardPeriod.custom => const <ChartBar>[],
+    };
 
     return DashboardChartData(
       rangeStart: range.start,
@@ -169,90 +170,4 @@ class DashboardChartAggregator {
     return slices;
   }
 
-  static List<DashboardBucket> _buildBuckets(
-    DashboardPeriod period,
-    _Range range,
-    List<ResolvedTimeEntry> inRange,
-    DateTime now,
-  ) {
-    switch (period) {
-      case DashboardPeriod.today:
-        return _hourlyBuckets(inRange, now);
-      case DashboardPeriod.week:
-        return _weeklyBuckets(range, inRange, now);
-      case DashboardPeriod.month:
-        return _monthlyBuckets(range, inRange, now);
-      case DashboardPeriod.custom:
-        // Custom ranges are donut-only in the UI (variable day counts don't
-        // map to a fixed bucket layout) — bars are simply unused.
-        return [];
-    }
-  }
-
-  static List<DashboardBucket> _hourlyBuckets(
-    List<ResolvedTimeEntry> inRange,
-    DateTime now,
-  ) {
-    if (inRange.isEmpty) return [];
-    final hours = inRange.map((e) => e.startAt.hour).toList();
-    final minHour = hours.reduce((a, b) => a < b ? a : b);
-    final maxHour = hours.reduce((a, b) => a > b ? a : b);
-
-    final totals = List<Duration>.filled(maxHour - minHour + 1, Duration.zero);
-    for (final entry in inRange) {
-      totals[entry.startAt.hour - minHour] += entry.duration(now);
-    }
-
-    return List.generate(totals.length, (i) {
-      return DashboardBucket(label: _hourLabel(minHour + i), duration: totals[i]);
-    });
-  }
-
-  static String _hourLabel(int hour) {
-    final period = hour < 12 ? 'AM' : 'PM';
-    final display = hour % 12 == 0 ? 12 : hour % 12;
-    return '$display $period';
-  }
-
-  static List<DashboardBucket> _weeklyBuckets(
-    _Range range,
-    List<ResolvedTimeEntry> inRange,
-    DateTime now,
-  ) {
-    final totals = List<Duration>.filled(7, Duration.zero);
-    for (final entry in inRange) {
-      final dayIndex = _dateOnly(entry.startAt).difference(range.start).inDays;
-      if (dayIndex < 0 || dayIndex > 6) continue;
-      totals[dayIndex] += entry.duration(now);
-    }
-    return List.generate(7, (i) {
-      final date = range.start.add(Duration(days: i));
-      return DashboardBucket(
-        label: '${_weekdayLabels[i]} ${date.day}',
-        duration: totals[i],
-      );
-    });
-  }
-
-  static List<DashboardBucket> _monthlyBuckets(
-    _Range range,
-    List<ResolvedTimeEntry> inRange,
-    DateTime now,
-  ) {
-    final monthStart = range.start;
-    final firstWeekdayOffset = monthStart.weekday - 1;
-    final daysInMonth = range.end.difference(monthStart).inDays;
-    final weekCount = ((daysInMonth + firstWeekdayOffset - 1) ~/ 7) + 1;
-
-    final totals = List<Duration>.filled(weekCount, Duration.zero);
-    for (final entry in inRange) {
-      final dayOfMonth = _dateOnly(entry.startAt).difference(monthStart).inDays;
-      final weekIndex = (dayOfMonth + firstWeekdayOffset) ~/ 7;
-      totals[weekIndex] += entry.duration(now);
-    }
-    return List.generate(
-      weekCount,
-      (i) => DashboardBucket(label: 'Week ${i + 1}', duration: totals[i]),
-    );
-  }
 }

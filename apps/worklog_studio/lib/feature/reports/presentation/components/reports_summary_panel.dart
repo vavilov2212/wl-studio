@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/utils/chart_bars.dart';
 import 'package:worklog_studio/feature/common/utils/chart_scale.dart';
 import 'package:worklog_studio/feature/home/dashboard_chart_aggregator.dart';
 import 'package:worklog_studio/feature/reports/reports_aggregator.dart';
@@ -294,7 +295,7 @@ class _BarContent extends StatelessWidget {
 }
 
 class _ReportsStackedBarChart extends StatefulWidget {
-  final List<ReportsBar> bars;
+  final List<ChartBar> bars;
 
   const _ReportsStackedBarChart({required this.bars});
 
@@ -468,9 +469,9 @@ class _ReportsStackedBarChartState extends State<_ReportsStackedBarChart> {
           items.add(BarChartRodStackItem(
             from,
             to,
-            seg.projectId.isEmpty
+            seg.id.isEmpty
                 ? palette.text.muted
-                : BadgeUtils.getBadgeColor(seg.projectId).$2,
+                : BadgeUtils.getBadgeColor(seg.id).$2,
           ));
           from = to;
         }
@@ -496,7 +497,7 @@ class _ReportsStackedBarChartState extends State<_ReportsStackedBarChart> {
 }
 
 class _BarLegendOverlay extends StatelessWidget {
-  final ReportsBar bar;
+  final ChartBar bar;
 
   const _BarLegendOverlay({required this.bar});
 
@@ -545,16 +546,16 @@ class _BarLegendOverlay extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: seg.projectId.isEmpty
+                      color: seg.id.isEmpty
                           ? palette.text.muted
-                          : BadgeUtils.getBadgeColor(seg.projectId).$2,
+                          : BadgeUtils.getBadgeColor(seg.id).$2,
                       shape: BoxShape.circle,
                     ),
                   ),
                   SizedBox(width: theme.spacings.sm),
                   Expanded(
                     child: Text(
-                      seg.projectName,
+                      seg.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.commonTextStyles.caption.copyWith(
