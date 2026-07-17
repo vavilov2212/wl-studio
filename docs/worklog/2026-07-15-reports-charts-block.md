@@ -367,3 +367,35 @@ user. Executed as Tasks 9-12 in this journal.
    No widget-test repro was added: the reports panel still has no test harness
    (known gap, POST_MORTEM 4.2).
 5. **[What's Next]** Nothing pending; awaiting user verification of the fix.
+
+---
+
+## Task 14: Dev-database seeding with two months of realistic activity
+
+1. **[Verified Facts]** Task 14 done, commit `8f29663`
+   (`tool\windows\seed_dev.dart`). Target:
+   `%APPDATA%\com.example\worklog_studio\Worklog_studio-dev\worklog.db`
+   (dev flavor folder from `Flavor.appFolder`; prod and a legacy root DB live
+   next to it - untouched). Previous data (2 projects / 8 tasks / 108 entries)
+   backed up to `backups\worklog-pre-seed-*.db` before every run. Seeded:
+   5 projects, 21 tasks, 323 entries covering 2026-05-18 .. 2026-07-17.
+   Verification query run against the live DB: 0 overlapping entries,
+   0 entries ending in the future, 0 non-stopped, 0 orphan project/task refs.
+2. **[What Worked]** Persona-driven generation with a per-day time cursor
+   (work blocks, lunch, evening slots) instead of random timestamps - the
+   History page reads like a real human week: job sprints on weekdays, gym
+   Mon/Wed/Fri, English Tue/Thu, pet project and Rust on evenings/weekends,
+   a June freelance landing burst, a 3-day trip gap, hand-written joke
+   comments per task. `Random(42)` keeps reruns reproducible.
+3. **[Distilled Rules]** Windows seeding: run `fvm dart run
+   tool/windows/seed_dev.dart` FROM `apps\worklog_studio` (package resolution
+   fails outside the package - a scratchpad copy of a script cannot resolve
+   `package:` imports). Statuses are enum `.name` strings ('stopped', 'open',
+   'done'); timestamps are `millisecondsSinceEpoch` INTEGERs.
+4. **[Pitfalls & What to Avoid]** Fixed-clock evening slots (gym 17:30,
+   reading 22:30) overlap the day cursor on long days - every fixed-time block
+   must be pushed to `max(fixed, cursor + gap)`. Today's entries must be
+   capped to end before "now" or the tracker shows future work. Three
+   `worklog.db` files exist under `com.example\worklog_studio\` - always
+   target the flavor subfolder, not the legacy root file.
+5. **[What's Next]** Nothing pending.
