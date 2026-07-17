@@ -212,3 +212,132 @@ Protocol: Run -> Log -> Distill -> Repeat; one task per step, user approval betw
    POST_MORTEM 1.10/4.2 - this journal is session history only.
 4. **[Pitfalls & What to Avoid]** None on this task.
 5. **[What's Next]** Plan complete (8/8 tasks). No follow-up tasks pending.
+
+---
+
+# Follow-up batch (same session): dashboard/report chart sync, thicker progress, cross-page navigation
+
+User request: (a) dashboard bar chart must match reports (stacked project
+colors + hover legend), (b) reports table progress bar is too thin, (c) a
+Dashboard -> Reports jump carrying period + chart view, demonstrated to the
+user. Executed as Tasks 9-12 in this journal.
+
+## Task 9: Shared ChartBar models and stacked bucket builders
+
+1. **[Verified Facts]** Task 9 done, commit `f78b9b5`. Created
+   `lib\feature\common\utils\chart_bars.dart` (`ChartBar`, `ChartBarSegment`,
+   `hourlyStackedBars`/`dailyStackedBars`/`monthlyStackedBars`, internal
+   project-order computation) + `test\core\chart_bars_test.dart` (5 tests).
+   `ReportsAggregator` and `DashboardChartAggregator` both delegate via a
+   `switch (period)`; `ReportsBar`/`ReportsBarSegment`/`DashboardBucket` and
+   all private bucket helpers DELETED; reports panel renamed to
+   `seg.id`/`seg.label`; dashboard `_BarChart` compile-fixed (`b.total`).
+   Red: missing-URI on the new test; green: analyze clean on
+   home+common+reports, full suite 313/313.
+2. **[What Worked]** Keeping `DashboardPeriod` OUT of chart_bars.dart (three
+   period-specific functions instead of one switch-taking function) avoids a
+   dashboard_chart_aggregator <-> chart_bars import cycle entirely. The shared
+   builder computes project order internally (duration desc, '' last), so both
+   aggregators dropped their order-passing plumbing.
+3. **[Distilled Rules]** Stacked-bar data for ANY chart comes from
+   `chart_bars.dart`; aggregators keep only the period switch. Segment fields
+   are `id`/`label` (not projectId/projectName).
+4. **[Pitfalls & What to Avoid]** A hidden consumer surfaced only via
+   IDE diagnostics: `test\feature\home\dashboard_chart_aggregator_test.dart`
+   (my earlier Glob checked test/core only) - its `b.duration` expectations
+   needed `b.total`. Grep BOTH lib/ and test/ for a type before deleting it
+   (guardrail 2.1 applies to models, not just imports). Mid-task the Bash
+   safety classifier went down again (pitfall 3.23) - continued with file
+   edits, verified once it recovered; nothing was claimed green before the
+   actual run.
+5. **[What's Next]** Task 10: extract the shared `StackedBarChart` widget and
+   use it on BOTH pages (requires Task 9, done).
+
+---
+
+## Task 10: Shared StackedBarChart widget for both pages
+
+1. **[Verified Facts]** Task 10 done, commit `8a0ea49`. Created
+   `lib\feature\common\presentation\components\stacked_bar_chart.dart` (public
+   `StackedBarChart(bars:)` = the reports stateful hover chart +
+   `_BarLegendOverlay` + `_kLeftReservedSize` + private `_formatHours`).
+   Reports panel rewritten to consume it (local bar-chart classes deleted);
+   dashboard section's `_BarChart`/`_BarChartState`/`_kLeftReservedSize` and
+   the old fl_chart tooltip deleted, `StackedBarChart(bars: data.bars)` in
+   their place. Dashboard bars are now stacked per-project with the hover
+   legend - the sync the user asked for. Analyze: only a pre-existing
+   `use_super_parameters` info in `date_time_inline_field.dart` (unrelated,
+   surfaced by widening scope to all of feature/common); full suite 313/313.
+2. **[What Worked]** Whole-file Write for the reports panel (safer than
+   surgically deleting two big classes) and one whole-block Edit for the
+   dashboard `_BarChart` (pitfall 3.5). The existing dashboard widget test
+   ("switching to bar view renders...") kept passing unchanged because
+   `StackedBarChart` still renders a fl_chart `BarChart` internally.
+3. **[Distilled Rules]** Any future bar chart goes through
+   `StackedBarChart` - do not fork chart internals per feature. The widget
+   lives in `feature\common\presentation\components\` (first widget there;
+   the folder is the sanctioned home for shared presentational widgets).
+4. **[Pitfalls & What to Avoid]** Deleting `_BarChart` also removed the last
+   `chart_scale.dart` import from the dashboard section - the analyzer's
+   unused-import warning between the two edits was the reminder to swap
+   imports in the same batch.
+5. **[What's Next]** Task 11: thicken the reports table `_ProgressBar`
+   (height 6 -> 12). Independent of Tasks 9-10.
+
+---
+
+## Task 11: Thicker progress bars in the reports table
+
+1. **[Verified Facts]** Task 11 done, commit `c9f0b80`. `_ProgressBar` height
+   6 -> 12 in `reports_table.dart` (fits the 40/36 row heights, reads closer
+   to the chart bar weight per user feedback). Analyze clean on
+   `lib\feature\reports`. UI-only.
+2. **[What Worked]** One-line change; pill radius scales automatically.
+3. **[Distilled Rules]** Progress-bar height 12 joins the magic-number
+   inventory (POST_MORTEM 4.2) - tokenize together with the rest if a
+   control-metrics token system appears.
+4. **[Pitfalls & What to Avoid]** `git add` with a repo-root-relative path
+   fails when the shell cwd is still `apps\worklog_studio` - the Bash tool cwd
+   persists WITHIN a session unpredictably across calls; safest is `cd` to the
+   intended dir in the same command line as the git invocation.
+5. **[What's Next]** Task 12: Dashboard -> Reports jump carrying
+   period/anchor/custom range/view (TDD on `ReportsSyncedFromDashboard`),
+   `openReports` navigation handler, and an Open-in-Reports button with a
+   dynamic tooltip demonstrating what will carry over.
+
+---
+
+## Task 12: Dashboard -> Reports jump with state carryover
+
+1. **[Verified Facts]** Task 12 done, commit `a366250`. New
+   `ReportsSyncedFromDashboard` event + handler in `ReportsBloc` (mirrors
+   period/anchorDate/view/customRange; 2 new bloc tests, red -> green).
+   `AppNavigationController.openReports()` handler (+2 tests; 5 existing
+   `registerHandlers` call sites in its test updated); `AppShell` registers it
+   as `_onRouteSelected(AppRoute.reports)`. Dashboard `_ChartsHeader` gained
+   `_OpenInReportsButton` (open_in_new icon next to the toggle) whose Tooltip
+   spells out the carryover: "Open in Reports: <rangeLabel>, <bar chart|donut
+   charts>" (donut forced for custom periods - matches what Reports will
+   actually render). New widget test verifies the tooltip text reflects the
+   configured view and that tapping syncs `ReportsBloc`. Full suite 318/318;
+   analyze clean on all touched paths.
+2. **[What Worked]** `openReports` as a plain `void Function()` handler keeps
+   `AppNavigationController` (core layer) free of the `AppRoute` enum import.
+   Marker-based bisection (debugPrint after every await + 60s test timeout)
+   located a hang in minutes instead of a second 10-minute run.
+3. **[Distilled Rules]** Dashboard UI now imports `reports_bloc.dart`
+   (home -> reports, presentation-level) - the counterpart of reports
+   importing home's aggregator; acceptable pairwise coupling, do not extend it
+   further without a shared-file extraction. The sync event mirrors ALL range
+   fields including nullable custom bounds (explicit null overwrites stale
+   ranges by design of the freezed copyWith `freezed ==` sentinel).
+4. **[Pitfalls & What to Avoid]** NEW PITFALL: `await bloc.close()` INSIDE a
+   `testWidgets` body hangs forever (the FakeAsync zone never completes the
+   close future; all pumpAndSettle/expects before it pass). Fix:
+   `addTearDown(bloc.close)` right after construction - tearDowns run outside
+   the fake zone. Related to but distinct from pitfall 3.2 (construction in
+   setUp). Also: `--timeout 30s` on `flutter test` does NOT bound testWidgets
+   bodies (default 10 min still applied); use `testWidgets(...,
+   timeout: Timeout(...))` instead. Kept a 60s guard on the new test.
+5. **[What's Next]** Follow-up batch complete (Tasks 9-12). Docs distillation
+   into POST_MORTEM and final commit remain.

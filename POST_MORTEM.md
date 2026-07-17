@@ -12,10 +12,11 @@
 > and pitfall entries (tagged with the session date); the four top-level sections
 > (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> State at last update (2026-07-15, [feature] Reports charts block):
-> **308/308 tests green**, `flutter analyze` clean on `lib\feature\reports\`,
-> `lib\feature\home\`, and `lib\feature\common\utils\`, confirmed against commit
-> `500459c` (charts card with donuts + stacked bar view + hover legend overlay).
+> State at last update (2026-07-15, [feature] Reports charts block + chart sync
+> follow-up): **318/318 tests green**, `flutter analyze` clean on
+> `lib\feature\reports\`, `lib\feature\home\`, `lib\feature\common\`, and the
+> navigation files, confirmed against commit `a366250` (shared stacked bar chart
+> on both pages, thicker report progress bars, dashboard-to-reports jump).
 
 ---
 
@@ -289,6 +290,41 @@ commits `deff358..500459c`.
   (`this.view = DashboardChartView.donut`), and the field declaration
   (`@override@JsonKey() final DashboardChartView view;`) need unique edits. Copied
   from `dashboard_charts_bloc.freezed.dart`, confirmed in `reports_bloc.freezed.dart`.
+
+### 1.11 Chart sync follow-up (session 2026-07-15, [feature], commits `f78b9b5..a366250`)
+
+Same-session follow-up: dashboard/reports bar-chart unification, thicker report
+progress bars, dashboard-to-reports jump. Journal Tasks 9-12 in
+`docs/worklog/2026-07-15-reports-charts-block.md`.
+
+- **Stacked-bar data lives in `feature\common\utils\chart_bars.dart`**
+  (`ChartBar`/`ChartBarSegment` with generic `id`/`label` fields, plus
+  `hourlyStackedBars`/`dailyStackedBars`/`monthlyStackedBars`). Both aggregators
+  keep only a `switch (period)` and delegate; `ReportsBar`/`DashboardBucket` and
+  all per-aggregator bucket helpers are gone. The module deliberately does NOT
+  import `DashboardPeriod` (three period-specific functions instead of one
+  switch-taking function) - that is what avoids a
+  dashboard_chart_aggregator <-> chart_bars import cycle. Project order is
+  computed inside the builder (duration desc, '' sentinel last).
+- **The one bar-chart widget is `StackedBarChart`**
+  (`feature\common\presentation\components\stacked_bar_chart.dart`) - stateful
+  hover, per-project `rodStackItems` colors, overlay legend. Dashboard and
+  Reports both consume it; do not fork chart internals per feature. This created
+  `feature\common\presentation\components\` as the home for shared
+  presentational widgets.
+- **Dashboard -> Reports jump:** `ReportsSyncedFromDashboard` event mirrors
+  period/anchorDate/view/customRange into `ReportsBloc`;
+  `AppNavigationController.openReports()` is a plain `void Function()` handler
+  (keeps the core service free of the `AppRoute` import), registered by
+  `AppShell` as `_onRouteSelected(AppRoute.reports)`. The trigger is
+  `_OpenInReportsButton` in the dashboard charts header; its dynamic Tooltip
+  ("Open in Reports: <range>, <view>") is the user-facing demonstration that the
+  configured setup carries over (donut spelled out for custom periods because
+  Reports forces donut there).
+- **Cross-feature imports are now a documented PAIR:** reports imports home's
+  aggregator (enums), home's charts section imports `reports_bloc.dart`
+  (presentation-level dispatch). Acceptable as-is; any third edge means extract
+  a shared file instead.
 
 ---
 
@@ -704,6 +740,21 @@ change is considered verified (guardrail 2.7). Do not claim tests "pass" when th
 only reviewed by eye. Encountered 2026-07-12 while wrapping up the Reports page
 post-completion fixes; commit `1d59469` landed before analyze/test could be run, but both
 were confirmed clean shortly after in the same session once Bash recovered.
+
+### 3.24 `await bloc.close()` inside a testWidgets body hangs the test forever
+**Symptom:** a widget test passes every pump/expect, then times out at the
+10-minute default; marker prints show the last `await bloc.close()` never
+completes.
+**Cause:** `testWidgets` runs the body in a FakeAsync zone; a Bloc's `close()`
+future involves stream teardown that never completes inside that zone
+(related to but distinct from pitfall 3.2, which is about construction in
+`setUp`).
+**Fix:** register `addTearDown(bloc.close)` immediately after constructing the
+bloc in the test body - tearDown callbacks run outside the fake zone. Also
+note: `flutter test --timeout 30s` does NOT bound testWidgets bodies; use
+`testWidgets(..., timeout: Timeout(...))` for a per-test guard. Found via the
+open-in-reports widget test (2026-07-15); debugPrint markers after every await
+plus a 60s per-test timeout bisected the hang in one run.
 
 ---
 
