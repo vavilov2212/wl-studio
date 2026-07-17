@@ -297,29 +297,20 @@ class _LegendMoreRow extends StatelessWidget {
     return Tooltip(
       message: message,
       waitDuration: const Duration(milliseconds: 200),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Aligns with the color dots above (dot width + gap).
-              SizedBox(width: 8 + theme.spacings.sm),
-              Text(
-                '+${hidden.length} more', // TODO: l10n
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.accent.primary,
-                ),
-              ),
-              SizedBox(width: theme.spacings.xxs),
-              Icon(
-                Icons.expand_more_rounded,
-                size: 14,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Aligns with the color dots above (dot width + gap).
+            SizedBox(width: 8 + theme.spacings.sm),
+            Text(
+              '+${hidden.length} more', // TODO: l10n
+              style: theme.commonTextStyles.caption.copyWith(
                 color: palette.accent.primary,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
