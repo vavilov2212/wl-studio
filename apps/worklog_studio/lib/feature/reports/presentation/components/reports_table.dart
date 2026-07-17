@@ -107,7 +107,7 @@ class _ProgressBar extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Container(
-      height: 6,
+      height: 12,
       decoration: BoxDecoration(
         color: palette.background.surfaceMuted,
         borderRadius: theme.radiuses.pill.circular,
