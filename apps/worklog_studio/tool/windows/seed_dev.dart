@@ -117,24 +117,24 @@ Future<void> main() async {
   // Projects
   // -------------------------------------------------------------------------
   final work = _Project(
-    'Nimbus CRM (работа)',
-    'Основная работа: B2B CRM для логистики. Спринты, платёжный модуль, отчёты и бесконечные созвоны.',
+    'Nimbus CRM (day job)',
+    'Main job: B2B CRM for logistics. Sprints, the payments module, reports and endless meetings.',
   );
   final pet = _Project(
     'Pet: Habitly',
-    'Свой трекер привычек на Flutter. Вечерний проект мечты: однажды он доедет до стора.',
+    'My own habit tracker in Flutter. Evening dream project: one day it ships to the store.',
   );
   final freelance = _Project(
-    'Фриланс',
-    'Заказы с Upwork и по знакомым: лендинги, правки, созвоны с заказчиками.',
+    'Freelance',
+    'Upwork gigs and friends-of-friends work: landing pages, small fixes, client calls.',
   );
   final learning = _Project(
-    'Обучение',
-    'Rust, LeetCode, статьи и доклады, чтобы мозг не заржавел.',
+    'Learning',
+    'Rust, LeetCode, articles and talks, so the brain does not rust.',
   );
   final personal = _Project(
-    'Личное',
-    'Спорт, английский, книги и прочая жизнь вне кода.',
+    'Personal',
+    'Gym, English, books and the rest of life outside the code.',
   );
   final projects = [work, pet, freelance, learning, personal];
 
@@ -145,272 +145,272 @@ Future<void> main() async {
 
   final tStripe = _Task(
     work,
-    'Платёжный модуль (Stripe)',
-    'Подписки, вебхуки, инвойсы. Всё, что связано с деньгами и болью.',
+    'Payments module (Stripe)',
+    'Subscriptions, webhooks, invoices. Everything that involves money and pain.',
     createdAt: d0,
     comments: [
-      'вебхуки Stripe опять прислали сюрприз, разбираюсь',
-      'победил double-charge при ретраях, горжусь собой',
-      'читаю доки по подпискам. их писали гении и садисты одновременно',
-      'тестовые платежи в песочнице, полёт нормальный',
-      'прикрутил прорейт при апгрейде тарифа',
-      'ловил race между вебхуком и редиректом, поймал',
-      'инвойсы наконец сходятся с бухгалтерией до копейки',
+      'Stripe webhooks delivered another surprise, digging in',
+      'beat the double-charge on retries, proud of myself',
+      'reading the subscription docs, written by geniuses and sadists at once',
+      'test payments in the sandbox, all green',
+      'wired up proration for plan upgrades',
+      'chased a race between the webhook and the redirect, caught it',
+      'invoices finally match accounting to the cent',
     ],
   );
   final tBugs = _Task(
     work,
-    'Багфиксы спринта',
-    'Разгребание борды после релизов. Она не кончается никогда.',
+    'Sprint bugfixes',
+    'Cleaning up the board after releases. It never ends.',
     createdAt: d0,
     comments: [
-      'баг с таймзонами. я выиграл, но какой ценой',
-      'hotfix в пятницу вечером, классика жанра',
-      'закрыл три тикета, открыл два. итого плюс один',
-      'воспроизвёл плавающий баг с 14-й попытки',
-      'чинил пагинацию, сломал сортировку, починил обе',
-      'null pointer в проде. виноват, конечно, стажёр из 2024-го (это был я)',
+      'the timezone bug. I won, but at what cost',
+      'Friday evening hotfix, a classic',
+      'closed three tickets, opened two. net plus one',
+      'reproduced the flaky bug on attempt number 14',
+      'fixed pagination, broke sorting, fixed both',
+      'null pointer in prod. blaming the 2024 intern (it was me)',
     ],
   );
   final tMeetings = _Task(
     work,
-    'Созвоны и планирование',
-    'Стендапы, груминги, ретро и прочий синхрон.',
+    'Meetings & planning',
+    'Standups, groomings, retros and other sync rituals.',
     createdAt: d0,
     comments: [
-      'стендап перерос в архитектурный спор на час',
-      'груминг: оценили задачу в 3 поинта, все знают, что будет 8',
-      'ретро: решили меньше созваниваться. на созвоне',
-      'планирование спринта, набрали как в последний раз',
-      'демо для заказчика, ничего не упало, поразительно',
-      'один-на-один с тимлидом, обсудили рост',
+      'standup turned into an hour-long architecture debate',
+      'grooming: estimated 3 points, everyone knows it will be 8',
+      'retro: decided to have fewer meetings (during a meeting)',
+      'sprint planning, overcommitted like the last time',
+      'client demo, nothing crashed, astonishing',
+      'one-on-one with the lead, talked about growth',
     ],
   );
   final tReview = _Task(
     work,
-    'Код-ревью',
-    'PR коллег и вечные споры о нейминге.',
+    'Code review',
+    'Colleagues PRs and the eternal naming debates.',
     createdAt: d0,
     comments: [
-      'ревью PR на 2к строк. глаза устали, душа тоже',
-      'полчаса спорили про нейминг, победила дружба (и мой вариант)',
-      'нашёл в PR закомментированный код 2023 года, провёл экскурсию',
-      'апрувнул с первого раза, коллега растёт',
-      'оставил 27 комментариев, чувствую себя занудой. полезным занудой',
+      'reviewed a 2k-line PR, my eyes filed a complaint',
+      'argued about naming for half an hour, friendship won (and my variant)',
+      'found commented-out code from 2023 in a PR, gave a guided tour',
+      'approved on the first pass, the team is growing',
+      'left 27 comments, feeling like a pedant. a useful pedant',
     ],
   );
   final tRefactor = _Task(
     work,
-    'Рефакторинг отчётов',
-    'Legacy-модуль отчётов: выпиливание костылей, которые старше меня в компании.',
+    'Reports module refactoring',
+    'The legacy reports module: removing crutches older than my tenure.',
     createdAt: d0,
     completedAt: DateTime(2026, 7, 3, 18, 30),
     comments: [
-      'снёс божественный класс на 1800 строк, стало легче дышать',
-      'покрыл тестами перед раскопками, сапёр без миноискателя не ходит',
-      'нашёл TODO от 2022 года: "переделать по-нормальному". переделал',
-      'вынес генерацию PDF в отдельный сервис',
-      'финальный прогон: отчёты сходятся со старыми до копейки',
+      'deleted a 1800-line god class, breathing got easier',
+      'covered it with tests before digging, no minesweeping without a detector',
+      'found a TODO from 2022: "redo this properly". redone',
+      'extracted PDF generation into its own service',
+      'final run: the new reports match the old ones to the cent',
     ],
   );
   final tOnboarding = _Task(
     work,
-    'Онбординг джуна',
-    'Менторство: парное программирование и ответы на "а почему тут так".',
+    'Junior onboarding',
+    'Mentoring: pair programming and answering "why is it like this here".',
     createdAt: DateTime(2026, 6, 15),
     comments: [
-      'парное программирование, джун шарит больше, чем признаётся',
-      'объяснял нашу архитектуру. в процессе сам понял пару мест',
-      'разобрали его первый PR, было почти не больно',
-      'настроили окружение. полдня из-за антивируса, как обычно',
-      'дал задачку со звёздочкой, справился быстрее меня. тревожно',
+      'pair programming, the junior knows more than he admits',
+      'explained our architecture, understood two places myself in the process',
+      'went through his first PR, it was almost painless',
+      'environment setup took half a day because of the antivirus, as usual',
+      'gave him a stretch task, he finished faster than I would. concerning',
     ],
   );
 
   final tPetStats = _Task(
     pet,
-    'Экран статистики',
-    'Графики стриков, heatmap активности и красивые цифры.',
+    'Statistics screen',
+    'Streak charts, an activity heatmap and pretty numbers.',
     createdAt: d0,
     comments: [
-      'пилю heatmap стриков, выглядит уже прилично',
-      'три часа дебажил анимацию. забыл про hot restart',
-      'переписал стейт на кубиты, дышать стало легче',
-      'подобрал палитру для графиков, дизайнер во мне доволен',
-      'edge case: привычка, созданная в 23:59. ненавижу время',
+      'building the streak heatmap, looks decent already',
+      'debugged an animation for three hours, forgot about hot restart',
+      'moved the state to cubits, the code breathes easier',
+      'picked a palette for the charts, my inner designer approves',
+      'edge case: a habit created at 23:59. I hate time',
     ],
   );
   final tPetSync = _Task(
     pet,
-    'Синхронизация с облаком',
-    'Firebase, офлайн-режим и конфликты, куда без них.',
+    'Cloud sync',
+    'Firebase, offline mode and merge conflicts, obviously.',
     createdAt: DateTime(2026, 5, 30),
     comments: [
-      'офлайн-очередь работает, я почти не верю',
-      'конфликт мержа привычек: last-write-wins и не выпендриваться',
-      'firestore правила безопасности, час втыкал в симулятор',
-      'синк на двух устройствах сошёлся с первого раза. подозрительно',
+      'the offline queue works, I can hardly believe it',
+      'habit merge conflict: last-write-wins and no drama',
+      'firestore security rules, spent an hour in the simulator',
+      'sync across two devices matched on the first try. suspicious',
     ],
   );
   final tPetWidget = _Task(
     pet,
-    'Виджет на рабочий стол',
-    'Мини-виджет со стриками для Windows.',
+    'Desktop widget',
+    'A mini widget with streaks for Windows.',
     createdAt: DateTime(2026, 7, 4),
     comments: [
-      'ресёрч по win32-виджетам, вариантов меньше, чем хотелось',
-      'прототип оверлея готов, осталось чтобы не падал',
-      'виджет пережил перезагрузку, отмечаю маленькую победу',
+      'researching win32 widgets, fewer options than I hoped',
+      'the overlay prototype works, now to make it not crash',
+      'the widget survived a reboot, celebrating a small victory',
     ],
   );
   final tPetStore = _Task(
     pet,
-    'Иконка и лендинг',
-    'Иконка, скриншоты и страничка для стора.',
+    'Icon & landing page',
+    'The icon, screenshots and a store page.',
     createdAt: DateTime(2026, 6, 6),
     completedAt: DateTime(2026, 6, 21, 22, 0),
     comments: [
-      'нарисовал 6 вариантов иконки, жене нравится третья, беру третью',
-      'лендинг на одном html-файле, олдскул и быстро',
-      'скриншоты для стора, час двигал статусбар на пиксель',
+      'drew six icon variants, my wife likes the third one, taking the third one',
+      'landing page in a single html file, old school and fast',
+      'store screenshots: an hour of moving the status bar by one pixel',
     ],
   );
 
   final tUpwork = _Task(
     freelance,
-    'Поиск заказов (Upwork)',
-    'Отклики, портфолио и переписки с потенциальными клиентами.',
+    'Lead hunting (Upwork)',
+    'Proposals, portfolio updates and chats with prospects.',
     createdAt: d0,
     comments: [
-      'разослал 5 откликов, два прочитали. успех',
-      'обновил портфолио, добавил кейс с лендингом',
-      'клиент хочет "просто как у Airbnb, но за вечер". вежливо отказался',
-      'созвон-знакомство, вроде адекватные',
-      'поднял ставку в профиле. страшно, но пора',
+      'sent five proposals, two got read. success',
+      'updated the portfolio with the landing page case',
+      'client wants "like Airbnb, but in one evening". politely declined',
+      'intro call, they seem sane',
+      'raised my hourly rate. scary, but overdue',
     ],
   );
   final tDental = _Task(
     freelance,
-    'Лендинг для стоматологии',
-    'Одностраничник с формой записи для клиники "Улыбка".',
+    'Dental clinic landing page',
+    'A one-pager with a booking form for the Smile clinic.',
     createdAt: DateTime(2026, 6, 2),
     completedAt: DateTime(2026, 6, 16, 21, 0),
     comments: [
-      'сверстал первый экран, зубы на фото пугающе идеальные',
-      'форма записи + телеграм-бот для заявок',
-      'заказчик попросил "поиграть со шрифтами". поиграл. вернул как было',
-      'адаптив под мобилку, кнопка записи теперь не прыгает',
-      'финальные правки и деплой, клиника довольна',
+      'built the hero section, the stock photo teeth are terrifyingly perfect',
+      'booking form plus a telegram bot for the leads',
+      'client asked to "play with the fonts". played. reverted',
+      'mobile layout done, the booking button stopped jumping around',
+      'final tweaks and deploy, the clinic is happy',
     ],
   );
   final tCoffee = _Task(
     freelance,
-    'Правки для кофейни "Зерно"',
-    'Мелкие доработки сайта по дружбе (за кофе и деньги).',
+    'Tweaks for the Bean cafe',
+    'Small website fixes for a friend (paid in coffee and money).',
     createdAt: DateTime(2026, 7, 7),
     comments: [
-      'обновил меню на сайте, цены выросли, я тут ни при чём',
-      'прикрутил карту с новой точкой',
-      'ускорил загрузку фоток, было 8 секунд, стало полторы',
+      'updated the menu on the site, prices went up, not my doing',
+      'added the new location to the map',
+      'optimized the photos: was 8 seconds, now 1.5',
     ],
   );
   final tCalls = _Task(
     freelance,
-    'Созвоны с заказчиками',
-    'Обсуждение ТЗ, демо и "давайте созвонимся на минутку".',
+    'Client calls',
+    'Specs, demos and "quick five-minute calls".',
     createdAt: DateTime(2026, 5, 23),
     comments: [
-      '"минутка" длилась 50 минут, но ТЗ стало понятнее',
-      'демо лендинга, заказчик доволен, аванс на карте',
-      'обсудили правки, записал всё в заметки, чтобы не было "мы же говорили"',
+      'the "five minutes" lasted fifty, but the spec is clearer now',
+      'landing page demo, client happy, advance payment received',
+      'discussed the changes, wrote everything down to avoid "but we agreed"',
     ],
   );
 
   final tRust = _Task(
     learning,
-    'Курс по Rust',
-    'The Rust Book и упражнения. Borrow checker пока побеждает.',
+    'Rust course',
+    'The Rust Book plus exercises. The borrow checker is winning so far.',
     createdAt: d0,
     comments: [
-      'глава про ownership, кажется, начал понимать',
-      'borrow checker отверг мой код 12 раз. на 13-й я понял почему',
-      'написал CLI-утилиту, компилируется - значит работает',
-      'lifetimes. просто оставлю это здесь',
-      'решил упражнения главы, чувствую себя системным программистом',
+      'the ownership chapter, I think it finally clicked',
+      'the borrow checker rejected my code 12 times, on the 13th I understood why',
+      'wrote a small CLI tool, it compiles so it works',
+      'lifetimes. I will just leave this here',
+      'finished the chapter exercises, feeling like a systems programmer',
     ],
   );
   final tLeet = _Task(
     learning,
     'LeetCode',
-    'Утренняя разминка: одна задача в день.',
+    'Morning warm-up: one problem a day.',
     createdAt: d0,
     comments: [
-      'easy за 10 минут, чувствую себя гением',
-      'medium с подсказкой, но сам! почти',
-      'hard не решил, самооценка на дне, зато стрик жив',
-      'two pointers, наконец-то вижу их сразу',
-      'задача на DP, посмотрел решение, всё ещё магия',
+      'an easy one in 10 minutes, feeling like a genius',
+      'a medium with a hint, but I solved it myself! almost',
+      'failed a hard one, self-esteem at the bottom, but the streak lives',
+      'two pointers, finally spotting them instantly',
+      'a DP problem, read the solution, still magic to me',
     ],
   );
   final tArticles = _Task(
     learning,
-    'Статьи и доклады',
-    'HackerNews, хабр и конфы на ютубе на скорости 1.5x.',
+    'Articles & talks',
+    'HackerNews and conference talks at 1.5x speed.',
     createdAt: DateTime(2026, 5, 21),
     comments: [
-      'доклад про архитектуру фронта, украл пару идей для работы',
-      'статья про индексы в постгресе, наконец понял partial index',
-      'час в HackerNews, оправдываю это словом "ресёрч"',
-      'посмотрел доклад с конфы, спикер жёг',
+      'a talk on frontend architecture, stole a couple of ideas for work',
+      'an article on postgres indexes, finally understood partial indexes',
+      'an hour on HackerNews, calling it research',
+      'watched a conference talk, the speaker was on fire',
     ],
   );
 
   final tGym = _Task(
     personal,
-    'Спортзал',
-    'Пн/ср/пт, full-body. Прогресс есть, спина пока молчит.',
+    'Gym',
+    'Mon/Wed/Fri, full-body. Progress happens, the back stays silent for now.',
     createdAt: d0,
     comments: [
-      'ноги. завтра лестницы отменяются',
-      'новый рекорд в становой, спина, держись',
-      'лёгкая тренировка, вчерашний хотфикс отнял все силы',
-      'кардио и растяжка, почувствовал себя человеком',
-      'в зале толпа, полтренировки ждал скамью',
+      'leg day. stairs are cancelled tomorrow',
+      'new deadlift PR, back, please hold on',
+      'a light session, yesterday\'s hotfix took all my strength',
+      'cardio and stretching, felt human again',
+      'the gym was packed, waited half the workout for a bench',
     ],
   );
   final tEnglish = _Task(
     personal,
-    'Английский',
-    'Репетитор по вт/чт и Anki по настроению.',
+    'English lessons',
+    'A tutor on Tue/Thu plus Anki when in the mood.',
     createdAt: d0,
     comments: [
-      'разбирали conditionals, would have been - это уже слишком',
-      'спикинг про работу, объяснил что такое code review, гордость',
-      'домашка за 10 минут до урока, школьные привычки вечны',
-      'новые идиомы, пытаюсь ввернуть piece of cake везде',
+      'conditionals: "would have been" is simply too much',
+      'speaking practice about work, explained what code review is, proud',
+      'did the homework 10 minutes before the lesson, school habits are forever',
+      'new idioms, now trying to sneak "piece of cake" everywhere',
     ],
   );
   final tReading = _Task(
     personal,
-    'Чтение',
-    'Художка перед сном, чтобы не листать ленту.',
+    'Reading',
+    'Fiction before sleep instead of doomscrolling.',
     createdAt: DateTime(2026, 5, 20),
     comments: [
-      'глава "Проекта Аве Мария", не мог оторваться',
-      'полчаса чтения вместо ленты, маленькая победа',
-      'дочитал главу, спойлерить не буду даже себе',
-      'читал, уснул на третьей странице, тоже результат',
+      'a chapter of Project Hail Mary, could not put it down',
+      'half an hour of reading instead of the feed, a small win',
+      'finished a chapter, no spoilers, not even for myself',
+      'read a bit, fell asleep on page three, still counts',
     ],
   );
   final tFinance = _Task(
     personal,
-    'Финансы',
-    'Ежемесячный разбор бюджета и портфеля.',
+    'Finances',
+    'Monthly budget and portfolio review.',
     createdAt: DateTime(2026, 6, 1),
     comments: [
-      'разобрал траты за месяц, доставка еды опять лидирует',
-      'ребаланс портфеля, скучно и правильно',
-      'посчитал подушку, до цели ещё чуть-чуть',
+      'monthly spending review, food delivery leads again',
+      'portfolio rebalancing, boring and correct',
+      'counted the emergency fund, almost at the goal',
     ],
   );
 
@@ -536,7 +536,7 @@ Future<void> main() async {
         add(tCoffee, evening, m);
         evening = evening.add(Duration(minutes: m + _mins(10, 20)));
       } else if (_random.nextDouble() < 0.45) {
-        // Pet project or upwork or article.
+        // Pet project or upwork or an article.
         final choice = _random.nextDouble();
         final int m;
         final _Task eveningTask;
@@ -578,7 +578,7 @@ Future<void> main() async {
         cursor = cursor.add(Duration(minutes: m + _mins(30, 60)));
       }
 
-      // Dental landing burst took over two June weekends.
+      // The dental landing burst took over two June weekends.
       final inDental = !day.isBefore(DateTime(2026, 6, 6)) &&
           day.isBefore(DateTime(2026, 6, 15));
       if (inDental) {
@@ -616,7 +616,7 @@ Future<void> main() async {
         add(tGym, gymStart, _mins(55, 80));
       }
 
-      // Monthly finance review on first weekend of the month.
+      // Monthly finance review on the first weekend of the month.
       if (day.day <= 7 && day.weekday == DateTime.sunday) {
         add(tFinance, day.add(const Duration(hours: 18)), _mins(35, 55));
       }
