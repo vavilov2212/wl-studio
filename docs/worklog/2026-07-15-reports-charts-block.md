@@ -341,3 +341,29 @@ user. Executed as Tasks 9-12 in this journal.
    timeout: Timeout(...))` instead. Kept a 60s guard on the new test.
 5. **[What's Next]** Follow-up batch complete (Tasks 9-12). Docs distillation
    into POST_MORTEM and final commit remain.
+
+---
+
+## Task 13: Donut legend overflow fix (user-reported)
+
+1. **[Verified Facts]** Task 13 done, commit `98f55be`. User screenshots showed
+   "RIGHT OVERFLOWED BY 26/2.1 PIXELS" stripes next to both donut legends on
+   the Reports card. Cause: the legend `Column` and its label
+   `ConstrainedBox(maxWidth: 140)` were rigid inside a `Row(mainAxisSize:
+   min)`, so when the `Expanded` slot got narrower than pie(180) + gaps +
+   legend intrinsic width, the row overflowed. Fix in BOTH `_Donut` copies
+   (reports panel + dashboard section): legend `Column` wrapped in `Flexible`,
+   label wrapped in `Flexible(child: ConstrainedBox(140))` so it ellipsizes
+   below 140 when squeezed; the hours/percent text stays rigid (numbers must
+   not truncate). Analyze clean; full suite 318/318.
+2. **[What Worked]** Keeping the 140 cap INSIDE the new `Flexible` preserves
+   the wide-layout look (legend never balloons) while allowing shrink-to-fit.
+3. **[Distilled Rules]** In a `Row(mainAxisSize: min)` any child that may
+   exceed the parent slot must be `Flexible`; a bare `ConstrainedBox(maxWidth)`
+   only caps growth, it does NOT grant shrink permission.
+4. **[Pitfalls & What to Avoid]** The overflow only manifests on Reports (the
+   Total-hours column narrows the donut slots) even though the same code lived
+   on Dashboard - fix cloned widgets in ALL copies, not just the reported page.
+   No widget-test repro was added: the reports panel still has no test harness
+   (known gap, POST_MORTEM 4.2).
+5. **[What's Next]** Nothing pending; awaiting user verification of the fix.
