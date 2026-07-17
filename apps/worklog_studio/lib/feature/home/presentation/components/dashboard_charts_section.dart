@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/feature/common/presentation/components/stacked_bar_chart.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
-import 'package:worklog_studio/feature/common/utils/chart_scale.dart';
 import 'package:worklog_studio/feature/home/bloc/dashboard_charts_bloc.dart';
 import 'package:worklog_studio/feature/home/dashboard_chart_aggregator.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
@@ -61,7 +61,7 @@ class _DashboardChartsSectionBody extends StatelessWidget {
                   else if (chartsState.view == DashboardChartView.donut)
                     _DonutPair(data: data)
                   else
-                    _BarChart(data: data),
+                    StackedBarChart(bars: data.bars),
                 ],
               ),
             );
@@ -454,177 +454,6 @@ class _Donut extends StatelessWidget {
   String _formatHours(Duration duration) {
     final hours = duration.inMinutes / 60;
     return '${hours.toStringAsFixed(1)}h';
-  }
-}
-
-// Width reserved for left Y-axis labels — must match SideTitles.reservedSize.
-const double _kLeftReservedSize = 36.0;
-
-class _BarChart extends StatefulWidget {
-  final DashboardChartData data;
-
-  const _BarChart({required this.data});
-
-  @override
-  State<_BarChart> createState() => _BarChartState();
-}
-
-class _BarChartState extends State<_BarChart> {
-  int? _hoveredIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxHours = widget.data.bars
-        .map((b) => b.total.inMinutes / 60)
-        .fold<double>(0, (max, v) => v > max ? v : max);
-    final scale = chartScale(maxHours);
-    final interval = scale.interval;
-    final chartMaxY = scale.maxY;
-
-    final n = widget.data.bars.length;
-
-    return SizedBox(
-      height: 220,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final chartAreaWidth = constraints.maxWidth - _kLeftReservedSize;
-          return MouseRegion(
-            onExit: (_) {
-              if (mounted) setState(() => _hoveredIndex = null);
-            },
-            onHover: (event) {
-              if (n == 0 || chartAreaWidth <= 0) return;
-              final zoneWidth = chartAreaWidth / n;
-              final x = event.localPosition.dx - _kLeftReservedSize;
-              final i = (x / zoneWidth).floor().clamp(0, n - 1);
-              if (i != _hoveredIndex) setState(() => _hoveredIndex = i);
-            },
-            child: BarChart(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              _buildBarChartData(chartMaxY: chartMaxY, interval: interval),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  BarChartData _buildBarChartData({
-    required double chartMaxY,
-    required double interval,
-  }) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return BarChartData(
-      maxY: chartMaxY,
-      alignment: BarChartAlignment.spaceAround,
-      barTouchData: BarTouchData(
-        enabled: false,
-        touchTooltipData: BarTouchTooltipData(
-          tooltipRoundedRadius: 20,
-          tooltipPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          getTooltipColor: (_) => palette.accent.primary,
-          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final h = rod.toY;
-            if (h == 0) return null;
-            final label = h % 1 == 0
-                ? '${h.toInt()}h'
-                : '${h.toStringAsFixed(1)}h';
-            return BarTooltipItem(
-              label,
-              theme.commonTextStyles.captionBold.copyWith(
-                color: Colors.white,
-              ),
-            );
-          },
-        ),
-      ),
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: false,
-        horizontalInterval: interval,
-        getDrawingHorizontalLine: (_) => FlLine(
-          color: palette.border.primary.withValues(alpha: 0.5),
-          strokeWidth: 1,
-        ),
-      ),
-      borderData: FlBorderData(show: false),
-      titlesData: FlTitlesData(
-        topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 36,
-            interval: interval,
-            getTitlesWidget: (value, meta) {
-              if (value == meta.max) return const SizedBox.shrink();
-              final label = value % 1 == 0
-                  ? '${value.toInt()}h'
-                  : '${value.toStringAsFixed(1)}h';
-              return Text(
-                label,
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.text.muted,
-                ),
-              );
-            },
-          ),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index < 0 || index >= widget.data.bars.length) {
-                return const SizedBox.shrink();
-              }
-              final isActive = index == _hoveredIndex;
-              return Padding(
-                padding: EdgeInsets.only(top: theme.spacings.xs),
-                child: Text(
-                  widget.data.bars[index].label,
-                  style: isActive
-                      ? theme.commonTextStyles.captionBold.copyWith(
-                          color: palette.accent.primary,
-                        )
-                      : theme.commonTextStyles.caption.copyWith(
-                          color: palette.text.muted,
-                        ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      barGroups: widget.data.bars.asMap().entries.map((entry) {
-        final index = entry.key;
-        final hours = entry.value.total.inMinutes / 60;
-        final isHovered = index == _hoveredIndex;
-        return BarChartGroupData(
-          x: index,
-          showingTooltipIndicators: isHovered ? [0] : [],
-          barRods: [
-            BarChartRodData(
-              toY: hours,
-              color: palette.accent.primary,
-              width: 32,
-              borderRadius: BorderRadius.circular(4),
-              backDrawRodData: BackgroundBarChartRodData(
-                show: isHovered,
-                toY: chartMaxY,
-                color: palette.accent.primary.withValues(alpha: 0.08),
-              ),
-            ),
-          ],
-        );
-      }).toList(),
-    );
   }
 }
 
