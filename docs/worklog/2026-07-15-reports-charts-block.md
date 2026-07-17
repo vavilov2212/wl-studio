@@ -399,3 +399,33 @@ user. Executed as Tasks 9-12 in this journal.
    `worklog.db` files exist under `com.example\worklog_studio\` - always
    target the flavor subfolder, not the legacy root file.
 5. **[What's Next]** Nothing pending.
+
+---
+
+## Task 15: English seed data, capped donut legends, normalized progress bars
+
+1. **[Verified Facts]** Task 15 done, commits `40f9e6d` (seeder strings fully
+   in English, reseeded: same deterministic 323 entries), `008be5b`
+   (reports table: `_HoursCell` adds a muted percent next to the hours;
+   progress bars now relative to the busiest project via `maxGroupMinutes`,
+   items share the same denominator), `4d63550` (both `_Donut` legends capped
+   at `_maxLegendRows = 6`; overflow collapses into an accent "+N more" row
+   with a hover tooltip listing the hidden slices, `SystemMouseCursors.click`
+   as the affordance). Analyze clean; full suite 318/318.
+2. **[What Worked]** Record-typed `_LegendMoreRow` parameter
+   (`({String label, Duration duration, double percentOfTotal})`) keeps the
+   widget slice-type-agnostic, so the same code drops into both files despite
+   `ReportSlice` vs `DashboardSlice`.
+3. **[Distilled Rules]** Progress-bar semantics in the reports table: bar =
+   share of the BUSIEST project (leader shows full), number = share of the
+   grand total. The previous bar semantics (share of total) read as a bug to
+   the user ("why does the top project only fill half").
+4. **[Pitfalls & What to Avoid]** The donut legend block is now duplicated
+   across dashboard/reports as THREE pieces (_Donut, legend rows,
+   _LegendMoreRow + _formatHours helpers) - the next touch to any of them
+   should extract a shared donut widget into
+   `feature\common\presentation\components\` instead of a fourth copy-paste.
+   In the dashboard copy `_formatHours` is an instance method of `_Donut`, so
+   the file needed a top-level `_formatHoursTop` twin for `_LegendMoreRow`.
+5. **[What's Next]** Nothing pending; user to verify visuals on the reseeded
+   dev data.
