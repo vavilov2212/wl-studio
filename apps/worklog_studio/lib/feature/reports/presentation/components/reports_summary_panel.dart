@@ -202,49 +202,55 @@ class _Donut extends StatelessWidget {
                 ),
               ),
               SizedBox(width: theme.spacings.lg),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: slices.map((slice) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: slice.id.isEmpty
-                                ? palette.text.muted
-                                : BadgeUtils.getBadgeColor(slice.id).$2,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: theme.spacings.sm),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 140),
-                          child: Text(
-                            slice.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.commonTextStyles.caption.copyWith(
-                              color: palette.text.primary,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: slices.map((slice) {
+                    return Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: theme.spacings.xxs),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: slice.id.isEmpty
+                                  ? palette.text.muted
+                                  : BadgeUtils.getBadgeColor(slice.id).$2,
+                              shape: BoxShape.circle,
                             ),
                           ),
-                        ),
-                        SizedBox(width: theme.spacings.sm),
-                        Text(
-                          '${_formatHours(slice.duration)} '
-                          '(${(slice.percentOfTotal * 100).round()}%)',
-                          style: theme.commonTextStyles.caption.copyWith(
-                            color: palette.text.muted,
+                          SizedBox(width: theme.spacings.sm),
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints:
+                                  const BoxConstraints(maxWidth: 140),
+                              child: Text(
+                                slice.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.commonTextStyles.caption.copyWith(
+                                  color: palette.text.primary,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                          SizedBox(width: theme.spacings.sm),
+                          Text(
+                            '${_formatHours(slice.duration)} '
+                            '(${(slice.percentOfTotal * 100).round()}%)',
+                            style: theme.commonTextStyles.caption.copyWith(
+                              color: palette.text.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
