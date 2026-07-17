@@ -429,3 +429,19 @@ user. Executed as Tasks 9-12 in this journal.
    the file needed a top-level `_formatHoursTop` twin for `_LegendMoreRow`.
 5. **[What's Next]** Nothing pending; user to verify visuals on the reseeded
    dev data.
+
+---
+
+## Task 16: Honest affordance on the legend "+N more" row
+
+1. **[Verified Facts]** Task 16 done, commit `4cc0535`. Removed the
+   `expand_more` chevron AND the `SystemMouseCursors.click` MouseRegion from
+   `_LegendMoreRow` in both files; only the accent-colored "+N more" text
+   remains, tooltip still opens on hover. Analyze clean, 318/318.
+2. **[What Worked]** User caught an affordance lie: chevron + hand cursor
+   promise a click interaction, but the row is hover-only.
+3. **[Distilled Rules]** Hover-only elements must not carry click affordances
+   (chevrons, hand cursors, button styling). Accent color alone is the
+   "there is more here" signal.
+4. **[Pitfalls & What to Avoid]** None.
+5. **[What's Next]** Nothing pending.
