@@ -27,7 +27,7 @@ class WindowsStartupService implements StartupService {
   }
 
   String? _getExePath() {
-    final buf = wsalloc(win32.MAX_PATH);
+    final buf = win32.wsalloc(win32.MAX_PATH);
     try {
       final len = win32.GetModuleFileName(0, buf, win32.MAX_PATH);
       if (len == 0) return null;
@@ -110,7 +110,7 @@ class WindowsStartupService implements StartupService {
       if (res != win32.ERROR_SUCCESS) return null;
       final name = _kValueName.toNativeUtf16();
       final size = calloc<win32.DWORD>()..value = win32.MAX_PATH * 2;
-      final buf = wsalloc(win32.MAX_PATH);
+      final buf = win32.wsalloc(win32.MAX_PATH);
       try {
         final qRes = win32.RegQueryValueEx(
           hKey.value,
