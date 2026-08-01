@@ -9,6 +9,7 @@
 ///   • [FakeTimeEntryRepository] – in-memory [TimeEntryRepository].
 ///   • [FakeProjectRepository]   – in-memory [ProjectRepository].
 ///   • [FakeTaskRepository]      – in-memory [TaskRepository].
+///   • [FakeIdleMonitor]         – in-memory [IdleMonitor].
 ///
 /// Why fakes instead of mocks?
 /// Fakes are preferred here because both collaborators have non-trivial stateful
@@ -16,8 +17,13 @@
 /// the domain logic being tested.  A mock would force each test to re-specify
 /// that behaviour as stub calls, making tests brittle and repetitive.  With a
 /// fake, the test simply manipulates state directly and lets the real logic run.
+library;
+
+import 'dart:async';
 import 'dart:io';
 
+import 'package:worklog_studio/core/services/idle_monitor/idle_event.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/domain/backup.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -273,4 +279,40 @@ class FakeTaskRepository implements TaskRepository {
   Future<void> delete(String id) async => _store.removeWhere((t) => t.id == id);
 
   List<Task> get all => List.unmodifiable(_store);
+}
+
+// ---------------------------------------------------------------------------
+// FakeIdleMonitor
+// ---------------------------------------------------------------------------
+
+class FakeIdleMonitor implements IdleMonitor {
+  final StreamController<IdleEvent> _controller =
+      StreamController<IdleEvent>.broadcast();
+  int? lastThresholdSeconds;
+  bool stopped = false;
+
+  @override
+  Stream<IdleEvent> get onIdleEvent => _controller.stream;
+
+  @override
+  Future<void> start({required int thresholdSeconds}) async {
+    stopped = false;
+    lastThresholdSeconds = thresholdSeconds;
+  }
+
+  @override
+  Future<void> stop() async => stopped = true;
+
+  void emitThreshold({required int idleSeconds}) {
+    _controller.add(IdleThresholdReached(
+      idleSeconds: idleSeconds,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  void emitUserReturned() {
+    _controller.add(const UserReturnedFromIdle());
+  }
+
+  Future<void> close() => _controller.close();
 }
