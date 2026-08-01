@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -96,11 +95,8 @@ class MainApp extends StatelessWidget {
               clock: SystemClock(),
             );
 
-            final IdleMonitor idleMonitor = getIt<IdleMonitor>();
-
             final bloc = TimeTrackerBloc(
               service: service,
-              idleMonitor: idleMonitor,
             )..add(TimeTrackerLoaded());
             return bloc;
           },
