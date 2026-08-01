@@ -9,3 +9,7 @@ class IdleThresholdReached extends IdleEvent {
     required this.timestamp,
   });
 }
+
+class UserReturnedFromIdle extends IdleEvent {
+  UserReturnedFromIdle();
+}

@@ -40,16 +40,14 @@ class TimeTrackerService {
     return entry;
   }
 
-  Future<TimeEntry> stop() async {
+  Future<TimeEntry> stop({DateTime? endAt}) async {
     final active = await repository.getActive();
     if (active == null) {
       throw StateError('No active timer to stop');
     }
 
-    final now = clock.now();
-
     final stopped = active.copyWith(
-      endAt: now,
+      endAt: endAt ?? clock.now(),
       status: TimeEntryStatus.stopped,
     );
 
