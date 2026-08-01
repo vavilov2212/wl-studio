@@ -59,6 +59,10 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
         super(const IdleFlowIdle()) {
     _idleSub = idleMonitor.onIdleEvent.listen(_onIdleEvent);
     _blocSub = bloc.stream.listen(_onBlocState);
+    if (bloc.state.isRunning) {
+      _monitorRunning = true;
+      idleMonitor.start(thresholdSeconds: thresholdSeconds);
+    }
   }
 
   final IdleMonitor _idleMonitor;
