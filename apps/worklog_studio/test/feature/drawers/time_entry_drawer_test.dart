@@ -45,7 +45,6 @@ void main() {
   void initBloc() {
     bloc = TimeTrackerBloc(
       service: TimeTrackerService(repository: timeRepo, clock: clock),
-      idleMonitor: null,
     );
   }
 

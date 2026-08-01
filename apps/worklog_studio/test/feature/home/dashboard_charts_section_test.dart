@@ -81,7 +81,7 @@ void main() {
     final repository = FakeTimeEntryRepository();
     final bloc = TimeTrackerBloc(
       service: TimeTrackerService(repository: repository, clock: SystemClock()),
-      idleMonitor: null,
+
     )..add(const TimeTrackerEvent.loaded());
     final projectState = ProjectTaskState(
       projectRepository: _FakeProjectRepository([]),
@@ -113,7 +113,7 @@ void main() {
     ));
     final bloc = TimeTrackerBloc(
       service: TimeTrackerService(repository: repository, clock: SystemClock()),
-      idleMonitor: null,
+
     )..add(const TimeTrackerEvent.loaded());
     final projectState = ProjectTaskState(
       projectRepository: _FakeProjectRepository([
@@ -159,7 +159,7 @@ void main() {
     ));
     final bloc = TimeTrackerBloc(
       service: TimeTrackerService(repository: repository, clock: SystemClock()),
-      idleMonitor: null,
+
     )..add(const TimeTrackerEvent.loaded());
     final projectState = ProjectTaskState(
       projectRepository: _FakeProjectRepository([

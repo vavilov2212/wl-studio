@@ -27,6 +27,9 @@ import 'package:worklog_studio/core/services/backup_service.dart';
 import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/core/services/idle_monitor/no_op_idle_monitor.dart';
 import 'package:worklog_studio/core/services/idle_monitor/platform_idle_monitor.dart';
+import 'package:worklog_studio/core/services/idle_monitor/windows_idle_monitor_factory.dart';
+import 'package:worklog_studio/core/services/startup/startup_service.dart';
+import 'package:worklog_studio/core/services/startup/windows_startup_service.dart';
 
 Future<void> run(List<String> args) async {
   // Set up the Flutter framework error hook before binding initialisation so
@@ -125,13 +128,22 @@ void _initRepositories() {
     getIt.registerSingleton(AppBarService());
     getIt.registerSingleton<DrawerService>(DrawerService());
 
-    // Register IdleMonitor - only macOS has a native channel implementation.
-    // Windows/Linux/web get a silent no-op so start/stop calls are safe.
-    getIt.registerLazySingleton<IdleMonitor>(
-      () => (!kIsWeb && Platform.isMacOS)
-          ? PlatformIdleMonitor()
-          : const NoOpIdleMonitor(),
-    );
+    if (!kIsWeb && Platform.isWindows) {
+      getIt.registerLazySingleton<IdleMonitor>(
+        () => createWindowsIdleMonitor(),
+      );
+      getIt.registerLazySingleton<StartupService>(
+        () => WindowsStartupService(),
+      );
+    } else if (!kIsWeb && Platform.isMacOS) {
+      getIt.registerLazySingleton<IdleMonitor>(
+        () => PlatformIdleMonitor(),
+      );
+    } else {
+      getIt.registerLazySingleton<IdleMonitor>(
+        () => const NoOpIdleMonitor(),
+      );
+    }
   } on Object catch (e, stackTrace) {
     l.e(e, stackTrace);
     rethrow;
