@@ -1,4 +1,6 @@
-abstract class IdleEvent {}
+abstract class IdleEvent {
+  const IdleEvent();
+}
 
 class IdleThresholdReached extends IdleEvent {
   final int idleSeconds;
@@ -7,9 +9,9 @@ class IdleThresholdReached extends IdleEvent {
   IdleThresholdReached({
     required this.idleSeconds,
     required this.timestamp,
-  });
+  }) : super();
 }
 
 class UserReturnedFromIdle extends IdleEvent {
-  UserReturnedFromIdle();
+  const UserReturnedFromIdle();
 }
