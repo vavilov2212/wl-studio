@@ -74,6 +74,12 @@ class WindowsIdleMonitor implements IdleMonitor {
     final lastInputTick = _getLastInputTick();
     // Wraparound-safe: both values are unsigned 32-bit millisecond counters.
     final sinceLastInputMs = (tickNow - lastInputTick) & 0xFFFFFFFF;
+
+    // Reset sleep accumulator if user is actively typing.
+    if (!_thresholdFired && sinceLastInputMs < 10000) {
+      _suspendAccumulatedMs = 0;
+    }
+
     final totalIdleMs = sinceLastInputMs + _suspendAccumulatedMs;
 
     if (!_thresholdFired && totalIdleMs >= _thresholdMs) {

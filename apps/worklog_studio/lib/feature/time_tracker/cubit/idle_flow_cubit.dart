@@ -22,12 +22,14 @@ class IdleFlowAwaitingResolution extends IdleFlowState {
   final String? taskId;
   final String? projectId;
   final int idleSeconds;
+  final String? entryId;
 
   const IdleFlowAwaitingResolution({
     required this.idleStartTime,
     required this.idleSeconds,
     this.taskId,
     this.projectId,
+    this.entryId,
   });
 }
 
@@ -49,12 +51,14 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
       required void Function() onDiscard,
       required void Function(String taskName) onLogToTask,
     }) showResolutionWindow,
+    void Function()? hideResolutionWindow,
     int thresholdSeconds = 600,
   })  : _idleMonitor = idleMonitor,
         _bloc = bloc,
         _repository = repository,
         _reloadReminderInterval = reloadReminderInterval,
         _showResolutionWindow = showResolutionWindow,
+        _hideResolutionWindow = hideResolutionWindow,
         _thresholdSeconds = thresholdSeconds,
         super(const IdleFlowIdle()) {
     _idleSub = idleMonitor.onIdleEvent.listen(_onIdleEvent);
@@ -75,6 +79,7 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
     required void Function() onDiscard,
     required void Function(String taskName) onLogToTask,
   }) _showResolutionWindow;
+  final void Function()? _hideResolutionWindow;
   int _thresholdSeconds;
 
   StreamSubscription<IdleEvent>? _idleSub;
@@ -97,6 +102,9 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
     } else if (!state.isRunning && _monitorRunning) {
       _monitorRunning = false;
       _idleMonitor.stop();
+      if (this.state is IdleFlowAwaitingResolution) {
+        _hideResolutionWindow?.call();
+      }
       if (this.state is IdleFlowAwaitingResolution ||
           this.state is IdleFlowResolved) {
         emit(const IdleFlowIdle());
@@ -116,6 +124,7 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
         idleSeconds: event.idleSeconds,
         taskId: active?.taskId,
         projectId: active?.projectId,
+        entryId: active?.id,
       ));
     } else if (event is UserReturnedFromIdle) {
       final s = state;
@@ -145,10 +154,14 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
     final projectId = s.projectId;
     final idleStart = s.idleStartTime;
 
-    final active = await _repository.getActive();
-    if (active == null) return;
+    final currentActive = await _repository.getActive();
+    if (currentActive == null ||
+        (s.entryId != null && currentActive.id != s.entryId)) {
+      emit(const IdleFlowResolved());
+      return;
+    }
 
-    await _repository.update(active.copyWith(
+    await _repository.update(currentActive.copyWith(
       endAt: idleStart,
       status: TimeEntryStatus.stopped,
     ));
@@ -177,10 +190,14 @@ class IdleFlowCubit extends Cubit<IdleFlowState> {
     final idleStart = s.idleStartTime;
     final idleEnd = DateTime.now();
 
-    final active = await _repository.getActive();
-    if (active == null) return;
+    final currentActive = await _repository.getActive();
+    if (currentActive == null ||
+        (s.entryId != null && currentActive.id != s.entryId)) {
+      emit(const IdleFlowResolved());
+      return;
+    }
 
-    await _repository.update(active.copyWith(
+    await _repository.update(currentActive.copyWith(
       endAt: idleStart,
       status: TimeEntryStatus.stopped,
     ));

@@ -54,6 +54,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   HotkeyService? _hotkeyService;
   ReminderService? _reminderService;
   IdleFlowCubit? _idleFlowCubit;
+  IdleResolutionWindow? _idleResolutionWindow;
 
   /// Prevents concurrent executions of [acceptCurrentComment].
   bool _acceptInFlight = false;
@@ -159,13 +160,14 @@ class WindowsDesktopService implements IDesktopPlatformService {
       SettingsKeys.idleThresholdMinutes,
     );
     final thresholdSeconds = (int.tryParse(rawThreshold ?? '') ?? 10) * 60;
-    final idleResolutionWindow = IdleResolutionWindow();
+    _idleResolutionWindow = IdleResolutionWindow();
     _idleFlowCubit = IdleFlowCubit(
       idleMonitor: getIt<IdleMonitor>(),
       bloc: bloc,
       repository: getIt<TimeEntryRepository>(),
       reloadReminderInterval: _reminderService!.reloadInterval,
-      showResolutionWindow: idleResolutionWindow.show,
+      showResolutionWindow: _idleResolutionWindow!.show,
+      hideResolutionWindow: _idleResolutionWindow!.hide,
       thresholdSeconds: thresholdSeconds,
     );
     if (GetIt.I.isRegistered<IdleFlowCubit>()) {
@@ -342,6 +344,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     if (GetIt.I.isRegistered<IdleFlowCubit>()) {
       GetIt.I.unregister<IdleFlowCubit>();
     }
+    _idleResolutionWindow?.dispose();
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();

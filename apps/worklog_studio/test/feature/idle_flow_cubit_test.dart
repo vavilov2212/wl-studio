@@ -58,6 +58,7 @@ void main() {
       repository: repo,
       reloadReminderInterval: reminderService.reloadInterval,
       showResolutionWindow: resolutionWindow.show,
+      hideResolutionWindow: resolutionWindow.hide,
       thresholdSeconds: 600,
     );
   });
@@ -186,6 +187,41 @@ void main() {
       final active = await repo.getActive();
       expect(active?.taskId, 't1');
       expect(reminderService.reloadCalls, 1);
+    });
+
+    test('discard is a no-op if the active entry changed since threshold', () async {
+      repo.seed(TimeEntry(
+        id: 'e1', taskId: 't1', projectId: 'p1',
+        startAt: clock.now(), status: TimeEntryStatus.running,
+      ));
+      bloc.add(const TimeTrackerLoaded());
+      await pumpEventQueue();
+
+      idleMonitor.emitThreshold(idleSeconds: 610);
+      await Future.microtask(() {});
+      idleMonitor.emitUserReturned();
+      await Future.microtask(() {});
+
+      // Simulate task switch: stop e1, start e2 (different entry)
+      await repo.update(
+        repo.all.first.copyWith(
+          status: TimeEntryStatus.stopped,
+          endAt: clock.now(),
+        ),
+      );
+      repo.seed(TimeEntry(
+        id: 'e2', taskId: 't2', projectId: 'p2',
+        startAt: clock.now(), status: TimeEntryStatus.running,
+      ));
+
+      resolutionWindow.lastOnDiscard!();
+      await pumpEventQueue();
+
+      // Discard was a no-op: e2 is untouched and still the active entry
+      final active = await repo.getActive();
+      expect(active?.id, 'e2');
+      expect(active?.status, TimeEntryStatus.running);
+      expect(cubit.state, isA<IdleFlowResolved>());
     });
   });
 }

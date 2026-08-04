@@ -38,6 +38,7 @@ class WindowsStartupService implements StartupService {
   }
 
   void _writeRunValue(String exePath) {
+    final quotedPath = '"$exePath"'; // wrap in double-quotes for paths with spaces
     final hKey = calloc<win32.HKEY>();
     final keyPath = _kRunKey.toNativeUtf16();
     try {
@@ -50,7 +51,7 @@ class WindowsStartupService implements StartupService {
       );
       if (res != win32.ERROR_SUCCESS) return;
       final name = _kValueName.toNativeUtf16();
-      final value = exePath.toNativeUtf16();
+      final value = quotedPath.toNativeUtf16();
       try {
         win32.RegSetValueEx(
           hKey.value,
@@ -58,7 +59,7 @@ class WindowsStartupService implements StartupService {
           0,
           win32.REG_SZ,
           value.cast(),
-          (exePath.length + 1) * 2,
+          (quotedPath.length + 1) * 2,
         );
       } finally {
         calloc.free(name);

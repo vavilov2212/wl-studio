@@ -54,8 +54,6 @@ class IdleResolutionWindow {
     _onLogToTask = onLogToTask;
     _expanded = false;
 
-    _coordinator.idleResolutionWillShow();
-
     if (_hwnd == null) {
       _registerClassIfNeeded();
       _createWindows(idleMinutes);
@@ -64,8 +62,9 @@ class IdleResolutionWindow {
       _setExpanded(false);
     }
 
-    if (_hwnd == null) return;
+    if (_hwnd == null) return; // window creation failed - do NOT call coordinator
 
+    _coordinator.idleResolutionWillShow(); // only after window is valid
     _positionNearTray();
     win32.ShowWindow(_hwnd!, win32.SW_SHOWNA);
     win32.SetForegroundWindow(_hwnd!);
@@ -302,7 +301,17 @@ class IdleResolutionWindow {
   void _poll() {
     final h = _hwnd;
     if (h == null || !isVisible) { _pollTimer?.cancel(); return; }
-    if (win32.IsWindow(h) == win32.FALSE) { hide(); return; }
+    if (win32.IsWindow(h) == win32.FALSE) {
+      hide();
+      _hwnd = null;
+      _keepBtnHwnd = null;
+      _discardBtnHwnd = null;
+      _logBtnHwnd = null;
+      _editHwnd = null;
+      _confirmBtnHwnd = null;
+      _headerHwnd = null;
+      return;
+    }
 
     // ESC = keep tracking (safe default)
     if (win32.GetAsyncKeyState(win32.VK_ESCAPE) & 0x0001 != 0) {
