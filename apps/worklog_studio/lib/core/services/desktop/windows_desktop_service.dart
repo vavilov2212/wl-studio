@@ -150,8 +150,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
     // Wire the NativeWindowCoordinator so idle dialog can dismiss the activity window.
     NativeWindowCoordinator.instance.setActivityWindowHider(() {
-      _nativeActivityWindow.hide();
       NativeWindowCoordinator.instance.setActivityWindowVisible(false);
+      _nativeActivityWindow.hide();
     });
 
     // Create and start IdleFlowCubit.
@@ -291,6 +291,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   // Called by [NativeActivityWindow.onAccept] after the window is hidden.
   void _onActivityAccept(String comment) {
+    NativeWindowCoordinator.instance.setActivityWindowVisible(false);
     _acceptInFlight = false;
     _reminderService?.cancelAutoDismiss();
     final currentEntry = _leaderBloc?.state.activeEntryOrNull;
