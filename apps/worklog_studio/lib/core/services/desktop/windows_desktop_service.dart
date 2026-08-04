@@ -168,6 +168,10 @@ class WindowsDesktopService implements IDesktopPlatformService {
       showResolutionWindow: idleResolutionWindow.show,
       thresholdSeconds: thresholdSeconds,
     );
+    if (GetIt.I.isRegistered<IdleFlowCubit>()) {
+      GetIt.I.unregister<IdleFlowCubit>();
+    }
+    GetIt.I.registerSingleton<IdleFlowCubit>(_idleFlowCubit!);
   }
 
   /// No-op on Windows - there is no secondary Flutter engine.
@@ -335,6 +339,9 @@ class WindowsDesktopService implements IDesktopPlatformService {
   @override
   void dispose() {
     _idleFlowCubit?.close();
+    if (GetIt.I.isRegistered<IdleFlowCubit>()) {
+      GetIt.I.unregister<IdleFlowCubit>();
+    }
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();
