@@ -1,11 +1,19 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:worklog_studio/core/services/backup_service.dart';
 import 'package:worklog_studio/core/services/desktop/reveal_in_file_manager.dart';
+import 'package:worklog_studio/core/services/settings_keys.dart';
+import 'package:worklog_studio/core/services/startup/startup_service.dart';
 import 'package:worklog_studio/core/sparkle/sparkle_bridge.dart';
+import 'package:worklog_studio/data/settings_repository.dart';
 import 'package:worklog_studio/data/sqlite/database_provider.dart';
 import 'package:worklog_studio/domain/backup.dart';
+import 'package:worklog_studio/feature/time_tracker/cubit/idle_flow_cubit.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
@@ -20,12 +28,28 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   String? _dbDirPath;
   String? _backupsDirPath;
   String? _version;
+  final _idleThresholdController = TextEditingController();
+  final _idleThresholdFocus = FocusNode();
+  bool? _launchAtStartup;
 
   @override
   void initState() {
     super.initState();
     _loadDirPaths();
     _loadVersion();
+    _loadBehaviorSettings();
+    _idleThresholdFocus.addListener(() {
+      if (!_idleThresholdFocus.hasFocus) {
+        _saveIdleThreshold(_idleThresholdController.text);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _idleThresholdController.dispose();
+    _idleThresholdFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _loadVersion() async {
@@ -42,6 +66,47 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       _dbDirPath = dbFile.parent.path;
       _backupsDirPath = backupsDir.path;
     });
+  }
+
+  Future<void> _loadBehaviorSettings() async {
+    final repo = GetIt.I<SettingsRepository>();
+    final raw = await repo.getString(SettingsKeys.idleThresholdMinutes);
+    final minutes = int.tryParse(raw ?? '') ?? 10;
+    if (!mounted) return;
+    _idleThresholdController.text = minutes.toString();
+
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        final enabled = await GetIt.I<StartupService>().isEnabled();
+        if (!mounted) return;
+        setState(() => _launchAtStartup = enabled);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveIdleThreshold(String value) async {
+    final minutes = int.tryParse(value);
+    if (minutes == null || minutes < 1 || minutes > 120) return;
+    final repo = GetIt.I<SettingsRepository>();
+    await repo.setString(SettingsKeys.idleThresholdMinutes, minutes.toString());
+    try {
+      GetIt.I<IdleFlowCubit>().updateThreshold(minutes * 60);
+    } catch (_) {}
+  }
+
+  Future<void> _setLaunchAtStartup(bool enabled) async {
+    try {
+      final svc = GetIt.I<StartupService>();
+      if (enabled) {
+        await svc.enable();
+      } else {
+        await svc.disable();
+      }
+      final repo = GetIt.I<SettingsRepository>();
+      await repo.setString(SettingsKeys.launchAtStartup, enabled.toString());
+      if (!mounted) return;
+      setState(() => _launchAtStartup = enabled);
+    } catch (_) {}
   }
 
   BackupService? get _backupService {
@@ -183,6 +248,50 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
               ),
             ],
           ),
+          SizedBox(height: theme.spacings.x2l),
+          Text('Behavior', style: theme.commonTextStyles.title), // TODO: l10n
+          SizedBox(height: theme.spacings.md),
+          Row(
+            children: [
+              Text(
+                'Mark as idle after', // TODO: l10n
+                style: theme.commonTextStyles.body,
+              ),
+              SizedBox(width: theme.spacings.md),
+              SizedBox(
+                width: 56,
+                child: TextField(
+                  controller: _idleThresholdController,
+                  focusNode: _idleThresholdFocus,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onSubmitted: _saveIdleThreshold,
+                  style: theme.commonTextStyles.body,
+                ),
+              ),
+              SizedBox(width: theme.spacings.xs),
+              Text(
+                'minutes', // TODO: l10n
+                style: theme.commonTextStyles.body,
+              ),
+            ],
+          ),
+          if (!kIsWeb && Platform.isWindows) ...[
+            SizedBox(height: theme.spacings.md),
+            Row(
+              children: [
+                Text(
+                  'Launch at startup', // TODO: l10n
+                  style: theme.commonTextStyles.body,
+                ),
+                SizedBox(width: theme.spacings.md),
+                Switch(
+                  value: _launchAtStartup ?? false,
+                  onChanged: _setLaunchAtStartup,
+                ),
+              ],
+            ),
+          ],
           SizedBox(height: theme.spacings.x2l),
           Text('Backup', style: theme.commonTextStyles.title), // TODO: l10n
           SizedBox(height: theme.spacings.md),

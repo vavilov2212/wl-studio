@@ -31,7 +31,6 @@ void main() {
     taskRepo = FakeTaskRepository();
     bloc = TimeTrackerBloc(
       service: TimeTrackerService(repository: timeRepo, clock: clock),
-      idleMonitor: null,
     );
     state = ProjectTaskState(
       projectRepository: projectRepo,

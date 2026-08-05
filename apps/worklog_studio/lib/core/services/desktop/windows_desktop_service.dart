@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/material.dart' show showDialog;
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
@@ -10,16 +12,24 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_registrar.dart';
 import 'package:worklog_studio/core/services/desktop/hotkey_service.dart';
 import 'package:worklog_studio/core/services/desktop/i_desktop_platform_service.dart';
+import 'package:worklog_studio/core/services/desktop/idle_resolution_window.dart';
 import 'package:worklog_studio/core/services/desktop/native_activity_window.dart';
 import 'package:worklog_studio/core/services/desktop/native_mini_panel.dart';
+import 'package:worklog_studio/core/services/desktop/native_window_coordinator.dart';
 import 'package:worklog_studio/core/services/desktop/windows_tray_service.dart';
+import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/core/services/reminder_service.dart';
+import 'package:worklog_studio/core/services/settings_keys.dart';
 import 'package:worklog_studio/data/settings_repository.dart';
+import 'package:worklog_studio/domain/time_tracker.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/app/app.dart' show rootNavigatorKey;
+import 'package:worklog_studio/feature/time_tracker/cubit/idle_flow_cubit.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/idle_task_selection_dialog.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 
@@ -47,6 +57,8 @@ class WindowsDesktopService implements IDesktopPlatformService {
   SettingsRepository get _settingsRepository => getIt<SettingsRepository>();
   HotkeyService? _hotkeyService;
   ReminderService? _reminderService;
+  IdleFlowCubit? _idleFlowCubit;
+  IdleResolutionWindow? _idleResolutionWindow;
 
   /// Prevents concurrent executions of [acceptCurrentComment].
   bool _acceptInFlight = false;
@@ -140,6 +152,33 @@ class WindowsDesktopService implements IDesktopPlatformService {
       GetIt.I.unregister<ReminderService>();
     }
     GetIt.I.registerSingleton<ReminderService>(_reminderService!);
+
+    // Wire the NativeWindowCoordinator so idle dialog can dismiss the activity window.
+    NativeWindowCoordinator.instance.setActivityWindowHider(() {
+      NativeWindowCoordinator.instance.setActivityWindowVisible(false);
+      _nativeActivityWindow.hide();
+    });
+
+    // Create and start IdleFlowCubit.
+    final rawThreshold = await _settingsRepository.getString(
+      SettingsKeys.idleThresholdMinutes,
+    );
+    final thresholdSeconds = (int.tryParse(rawThreshold ?? '') ?? 10) * 60;
+    _idleResolutionWindow = IdleResolutionWindow();
+    _idleFlowCubit = IdleFlowCubit(
+      idleMonitor: getIt<IdleMonitor>(),
+      bloc: bloc,
+      repository: getIt<TimeEntryRepository>(),
+      reloadReminderInterval: _reminderService!.reloadInterval,
+      showResolutionWindow: _idleResolutionWindow!.show,
+      hideResolutionWindow: _idleResolutionWindow!.hide,
+      showTaskSelectionDialog: _showIdleTaskSelectionDialog,
+      thresholdSeconds: thresholdSeconds,
+    );
+    if (GetIt.I.isRegistered<IdleFlowCubit>()) {
+      GetIt.I.unregister<IdleFlowCubit>();
+    }
+    GetIt.I.registerSingleton<IdleFlowCubit>(_idleFlowCubit!);
   }
 
   /// No-op on Windows - there is no secondary Flutter engine.
@@ -170,6 +209,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   Future<void> showActivityPrompt({
     ActivityPromptSource source = ActivityPromptSource.manual,
   }) async {
+    if (!NativeWindowCoordinator.instance.canActivityWindowShow()) return;
     if (_leaderBloc?.state.isRunning != true) return;
     final currentEntry = _leaderBloc?.state.activeEntryOrNull;
     final currentComment = currentEntry?.comment ?? '';
@@ -183,6 +223,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       activate: false,
       autoDismissAt: autoDismissAt,
     );
+    NativeWindowCoordinator.instance.setActivityWindowVisible(true);
   }
 
   /// Toggle hotkey target - three states:
@@ -201,6 +242,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       _nativeActivityWindow.cancelCountdown();
     } else {
       _reminderService?.cancelAutoDismiss();
+      NativeWindowCoordinator.instance.setActivityWindowVisible(false);
       _nativeActivityWindow.hide();
     }
   }
@@ -215,6 +257,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       final currentEntry = _leaderBloc?.state.activeEntryOrNull;
       final currentComment = currentEntry?.comment ?? '';
       final newComment = _nativeActivityWindow.getText();
+      NativeWindowCoordinator.instance.setActivityWindowVisible(false);
       _nativeActivityWindow.hide();
       if (newComment != currentComment) {
         _handleFollowerAction(
@@ -234,6 +277,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   /// Hides the activity prompt, discarding any unsaved edit.
   Future<void> dismissCurrentComment() async {
     _reminderService?.cancelAutoDismiss();
+    NativeWindowCoordinator.instance.setActivityWindowVisible(false);
     _nativeActivityWindow.hide();
   }
 
@@ -242,6 +286,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
     final currentEntry = _leaderBloc?.state.activeEntryOrNull;
     final currentComment = currentEntry?.comment ?? '';
     final newComment = _nativeActivityWindow.getText();
+    NativeWindowCoordinator.instance.setActivityWindowVisible(false);
     _nativeActivityWindow.hide();
     if (newComment != currentComment) {
       _handleFollowerAction(
@@ -257,6 +302,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   // Called by [NativeActivityWindow.onAccept] after the window is hidden.
   void _onActivityAccept(String comment) {
+    NativeWindowCoordinator.instance.setActivityWindowVisible(false);
     _acceptInFlight = false;
     _reminderService?.cancelAutoDismiss();
     final currentEntry = _leaderBloc?.state.activeEntryOrNull;
@@ -274,6 +320,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
   }
 
   void _onActivityDismiss() {
+    NativeWindowCoordinator.instance.setActivityWindowVisible(false);
     _reminderService?.cancelAutoDismiss();
   }
 
@@ -298,6 +345,11 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   @override
   void dispose() {
+    _idleFlowCubit?.close();
+    if (GetIt.I.isRegistered<IdleFlowCubit>()) {
+      GetIt.I.unregister<IdleFlowCubit>();
+    }
+    _idleResolutionWindow?.dispose();
     _hotkeyService?.dispose();
     _reminderService?.dispose();
     _blocSubscription?.cancel();
@@ -472,6 +524,15 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   Rect _fixedTrayAnchor(Size screenSize) =>
       Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
+
+  Future<IdleTaskSelection?> _showIdleTaskSelectionDialog() async {
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return null;
+    return showDialog<IdleTaskSelection>(
+      context: context,
+      builder: (_) => const IdleTaskSelectionDialog(),
+    );
+  }
 
   Future<Rect> _computeActivityPromptFrame() async {
     final screenSize = await _screenSize();

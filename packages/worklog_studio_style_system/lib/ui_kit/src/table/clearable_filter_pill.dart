@@ -13,6 +13,12 @@ class ClearableFilterPill extends StatelessWidget {
     required this.onClear,
   });
 
+  /// Space always reserved above and to the right of [child] for the clear
+  /// button overlay. Public so sibling rows without a pill can pad
+  /// themselves by the same amount and stay aligned with pill-wrapped
+  /// controls.
+  static const double overlap = 10.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
@@ -32,7 +38,6 @@ class ClearableFilterPill extends StatelessWidget {
     // only affects painting), so the box itself must be grown by the overlap
     // amount via padding on the non-positioned child — otherwise the part of
     // the button poking outside the original box is visible but unclickable.
-    const overlap = 10.0;
     return Stack(
       clipBehavior: Clip.none,
       children: [

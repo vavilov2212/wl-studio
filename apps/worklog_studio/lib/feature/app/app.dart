@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/core/services/service_locator/service_locator.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -18,6 +17,7 @@ import 'package:worklog_studio/feature/desktop/presentation/mini_panel.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_panel_command_bus.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/history/bloc/history_bloc.dart';
+import 'package:worklog_studio/feature/reports/bloc/reports_bloc.dart';
 import 'package:worklog_studio/feature/projects/bloc/projects_bloc.dart';
 import 'package:worklog_studio/feature/tasks/bloc/tasks_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
@@ -85,6 +85,7 @@ class MainApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => DrawerHostController()),
         BlocProvider<HistoryBloc>(create: (_) => HistoryBloc()),
+        BlocProvider<ReportsBloc>(create: (_) => ReportsBloc()),
         BlocProvider<TasksBloc>(create: (_) => TasksBloc()),
         BlocProvider<ProjectsBloc>(create: (_) => ProjectsBloc()),
         BlocProvider<TimeTrackerBloc>(
@@ -94,11 +95,8 @@ class MainApp extends StatelessWidget {
               clock: SystemClock(),
             );
 
-            final IdleMonitor idleMonitor = getIt<IdleMonitor>();
-
             final bloc = TimeTrackerBloc(
               service: service,
-              idleMonitor: idleMonitor,
             )..add(TimeTrackerLoaded());
             return bloc;
           },

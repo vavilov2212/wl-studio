@@ -9,58 +9,78 @@ class HistorySortBar extends StatelessWidget {
   final ValueChanged<HistorySortField> onFieldChanged;
   final ValueChanged<SortDirection> onDirectionChanged;
 
+  /// Renders just the controls row (no alignment wrapper, no top padding)
+  /// so the bar can be embedded in a combined toolbar row.
+  final bool inline;
+
   const HistorySortBar({
     super.key,
     required this.field,
     required this.direction,
     required this.onFieldChanged,
     required this.onDirectionChanged,
+    this.inline = false,
   });
 
   static const _fieldOptions = [
     SelectOption(value: HistorySortField.date, label: 'Date'),
     SelectOption(value: HistorySortField.duration, label: 'Duration'),
-    SelectOption(value: HistorySortField.taskProjectName, label: 'Task & Project'),
+    SelectOption(
+      value: HistorySortField.taskProjectName,
+      label: 'Task & Project',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
 
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 160,
+          child: Select<HistorySortField>(
+            value: field,
+            onChanged: (value) {
+              if (value != null) onFieldChanged(value);
+            },
+            options: _fieldOptions,
+            placeholder: 'Sort by',
+            size: ControlSize.xs,
+          ),
+        ),
+        SizedBox(width: theme.spacings.sm),
+        PrimaryButton(
+          type: ButtonType.ghost,
+          size: ButtonSize.xs,
+          leftIconWidget: Icon(
+            direction == SortDirection.asc
+                ? Icons.arrow_upward
+                : Icons.arrow_downward,
+          ),
+          onTap: () => onDirectionChanged(
+            direction == SortDirection.asc
+                ? SortDirection.desc
+                : SortDirection.asc,
+          ),
+        ),
+      ],
+    );
+
+    if (inline) return row;
+
     return Align(
       alignment: Alignment.centerRight,
       child: Padding(
-        padding: EdgeInsets.only(top: theme.spacings.sm),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 160,
-              child: Select<HistorySortField>(
-                value: field,
-                onChanged: (value) {
-                  if (value != null) onFieldChanged(value);
-                },
-                options: _fieldOptions,
-                placeholder: 'Sort by',
-                size: ControlSize.xs,
-              ),
-            ),
-            SizedBox(width: theme.spacings.sm),
-            PrimaryButton(
-              type: ButtonType.ghost,
-              size: ButtonSize.xs,
-              leftIconWidget: Icon(
-                direction == SortDirection.asc
-                    ? Icons.arrow_upward
-                    : Icons.arrow_downward,
-              ),
-              onTap: () => onDirectionChanged(
-                direction == SortDirection.asc ? SortDirection.desc : SortDirection.asc,
-              ),
-            ),
-          ],
+        // The filter bar's controls sit ClearableFilterPill.overlap in from
+        // the right edge (space reserved for the clear badge); inset this
+        // row by the same amount so the stacked rows share a right edge.
+        padding: EdgeInsets.only(
+          top: theme.spacings.sm,
+          right: ClearableFilterPill.overlap,
         ),
+        child: row,
       ),
     );
   }

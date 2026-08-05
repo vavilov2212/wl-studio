@@ -7,10 +7,7 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 class TimeEntryActionsCell extends StatelessWidget {
   final ResolvedTimeEntry resolvedEntry;
 
-  const TimeEntryActionsCell({
-    super.key,
-    required this.resolvedEntry,
-  });
+  const TimeEntryActionsCell({super.key, required this.resolvedEntry});
 
   @override
   Widget build(BuildContext context) {

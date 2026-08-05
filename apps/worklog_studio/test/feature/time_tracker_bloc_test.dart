@@ -27,31 +27,14 @@
 ///                               transition, entry fields, no-op guard).
 ///   5. TimeTrackerStopped     – stop-timer contract (transition, no-op guard,
 ///                               endAt, active-null, duration).
-///   6. IdleMonitor integration – verifies the subscription that auto-stops the
-///                                timer on inactivity.
-///   7. Error handling         – verifies that a service-level throw is caught
+///   6. Error handling         – verifies that a service-level throw is caught
 ///                               and surfaced as the error state variant.
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_event.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 
 import '../helpers/test_fakes.dart';
-
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-
-/// Mocktail mock for [IdleMonitor].
-/// We use a mock (not a fake) because [IdleMonitor] is a pure event source with
-/// no meaningful state: all tests only need to control the stream it exposes and
-/// verify that start()/stop() are called at the right times.
-class MockIdleMonitor extends Mock implements IdleMonitor {}
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -123,11 +106,8 @@ void main() {
     service = TimeTrackerService(repository: repo, clock: clock);
   });
 
-  /// Factory that creates a fresh [TimeTrackerBloc] wired to the test-scoped
-  /// [service].  Accepts an optional [idleMonitor] so tests that exercise the
-  /// idle-auto-stop path can inject a mock without affecting other tests.
-  TimeTrackerBloc makeBloc({IdleMonitor? idleMonitor}) =>
-      TimeTrackerBloc(service: service, idleMonitor: idleMonitor);
+  /// Factory that creates a fresh [TimeTrackerBloc] wired to the test-scoped [service].
+  TimeTrackerBloc makeBloc() => TimeTrackerBloc(service: service);
 
   // ── 1. Initial state ──────────────────────────────────────────────────────
 
@@ -458,75 +438,7 @@ void main() {
     });
   });
 
-  // ── 6. IdleMonitor integration ─────────────────────────────────────────────
-
-  group('IdleMonitor integration', () {
-    /// Verifies the idle-auto-stop feature: when the [IdleMonitor] emits an
-    /// [IdleThresholdReached] event while a timer is running, the bloc must
-    /// automatically dispatch a stop and transition to a non-running state.
-    ///
-    /// Setup:
-    ///   • A [StreamController<IdleEvent>] acts as the fake idle source.
-    ///   • The mock [IdleMonitor] exposes that controller's stream.
-    ///   • start() and stop() on the monitor are stubbed to succeed silently.
-    ///
-    /// The test confirms that pushing a single [IdleThresholdReached] into
-    /// the stream — without any explicit stop event from the user — causes
-    /// the bloc to stop the timer on its own.
-    test('auto-stops when IdleThresholdReached fires while running', () async {
-      final idleController = StreamController<IdleEvent>.broadcast();
-      final mockIdle = MockIdleMonitor();
-
-      when(() => mockIdle.onIdleEvent).thenAnswer((_) => idleController.stream);
-      when(() => mockIdle.start(thresholdSeconds: any(named: 'thresholdSeconds')))
-          .thenAnswer((_) async {});
-      when(() => mockIdle.stop()).thenAnswer((_) async {});
-
-      final bloc = makeBloc(idleMonitor: mockIdle);
-      addTearDown(bloc.close);
-
-      await pump(bloc, const TimeTrackerEvent.started());
-      expect(bloc.state.isRunning, isTrue);
-
-      idleController.add(IdleThresholdReached(
-        idleSeconds: 600,
-        timestamp: clock.now(),
-      ));
-      await Future<void>.delayed(Duration.zero);
-
-      expect(bloc.state.isRunning, isFalse);
-      await idleController.close();
-    });
-
-    /// Verifies that [IdleThresholdReached] events are silently discarded when
-    /// no timer is running.  The bloc's idle subscription checks [state.isRunning]
-    /// before dispatching a stop event; this test confirms that check works and
-    /// that idle noise while idle does not cause spurious state changes or errors.
-    test('idle events are ignored when timer is not running', () async {
-      final idleController = StreamController<IdleEvent>.broadcast();
-      final mockIdle = MockIdleMonitor();
-
-      when(() => mockIdle.onIdleEvent).thenAnswer((_) => idleController.stream);
-
-      final bloc = makeBloc(idleMonitor: mockIdle);
-      addTearDown(bloc.close);
-
-      final emitted = <TimeTrackerBlocState>[];
-      final sub = bloc.stream.listen(emitted.add);
-      addTearDown(sub.cancel);
-
-      idleController.add(IdleThresholdReached(
-        idleSeconds: 600,
-        timestamp: clock.now(),
-      ));
-      await Future<void>.delayed(Duration.zero);
-
-      expect(emitted, isEmpty); // idle = not running → no state change
-      await idleController.close();
-    });
-  });
-
-  // ── 7. Error handling ──────────────────────────────────────────────────────
+  // ── 6. Error handling ──────────────────────────────────────────────────────
 
   group('Error handling', () {
     /// Verifies that a [StateError] thrown by [TimeTrackerService.stop()] is

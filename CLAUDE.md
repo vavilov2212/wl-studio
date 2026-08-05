@@ -1,4 +1,4 @@
-👉 ВАЖНО: При написании любого нового кода, добавлении фич или рефакторинге ТЫ ОБЯЗАН сначала прочитать файл POST_MORTEM_REFACTOR.md и строго соблюдать зафиксированные там архитектурные правила и Production Guardrails.
+👉 IMPORTANT: Before writing any new code, adding features, or refactoring, you MUST first read POST_MORTEM.md and strictly follow the architectural rules and Production Guardrails recorded there.
 
 # Worklog Studio Monorepo Configuration & Guidelines
 

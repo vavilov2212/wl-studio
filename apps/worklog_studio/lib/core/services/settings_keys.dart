@@ -7,4 +7,6 @@ abstract final class SettingsKeys {
   static const acceptHotkey = 'accept_hotkey';
   static const dismissHotkey = 'dismiss_hotkey';
   static const reminderIntervalMinutes = 'reminder_interval_minutes';
+  static const idleThresholdMinutes = 'idleThresholdMinutes';
+  static const launchAtStartup = 'launchAtStartup';
 }

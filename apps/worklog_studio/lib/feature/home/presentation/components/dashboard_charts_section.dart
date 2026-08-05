@@ -3,15 +3,22 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:worklog_studio/core/services/app_navigation_controller.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/feature/common/presentation/components/stacked_bar_chart.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/home/bloc/dashboard_charts_bloc.dart';
 import 'package:worklog_studio/feature/home/dashboard_chart_aggregator.dart';
+import 'package:worklog_studio/feature/reports/bloc/reports_bloc.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 const double _chartsWideBreakpoint = 900;
+
+// Legend rows shown next to a donut before the rest collapses into a
+// "+N more" tooltip row.
+const int _maxLegendRows = 6;
 
 class DashboardChartsSection extends StatelessWidget {
   const DashboardChartsSection({super.key});
@@ -60,7 +67,7 @@ class _DashboardChartsSectionBody extends StatelessWidget {
                   else if (chartsState.view == DashboardChartView.donut)
                     _DonutPair(data: data)
                   else
-                    _BarChart(data: data),
+                    StackedBarChart(bars: data.bars),
                 ],
               ),
             );
@@ -141,9 +148,11 @@ class _ChartsHeader extends StatelessWidget {
           ],
         );
 
-        final viewToggle = state.period == DashboardPeriod.custom
-            ? const SizedBox.shrink()
-            : SegmentedToggle<DashboardChartView>(
+        final rightControls = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state.period != DashboardPeriod.custom) ...[
+              SegmentedToggle<DashboardChartView>(
                 value: state.view,
                 options: const [
                   SegmentedToggleOption(
@@ -156,12 +165,17 @@ class _ChartsHeader extends StatelessWidget {
                   ),
                 ],
                 onChanged: (value) => bloc.add(DashboardChartsEvent.viewChanged(value)),
-              );
+              ),
+              SizedBox(width: theme.spacings.sm),
+            ],
+            _OpenInReportsButton(state: state, rangeLabel: rangeLabel),
+          ],
+        );
 
         if (isWide) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [periodControls, viewToggle],
+            children: [periodControls, rightControls],
           );
         }
 
@@ -169,7 +183,7 @@ class _ChartsHeader extends StatelessWidget {
           spacing: theme.spacings.sm,
           runSpacing: theme.spacings.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [periodControls, viewToggle],
+          children: [periodControls, rightControls],
         );
       },
     );
@@ -266,6 +280,59 @@ class _CustomRangeLabel extends StatelessWidget {
               SizedBox(width: theme.spacings.xxs),
               Icon(Icons.edit_calendar_rounded, size: 14, color: palette.text.muted),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Jumps to the Reports page mirroring the current charts setup; the tooltip
+/// spells out exactly which period, range and chart view will carry over.
+class _OpenInReportsButton extends StatelessWidget {
+  final DashboardChartsState state;
+  final String rangeLabel;
+
+  const _OpenInReportsButton({required this.state, required this.rangeLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+    // Reports renders custom ranges donut-only, so demonstrate the view that
+    // will actually appear after the jump.
+    final effectiveView = state.period == DashboardPeriod.custom
+        ? DashboardChartView.donut
+        : state.view;
+    final viewLabel = effectiveView == DashboardChartView.bar
+        ? 'bar chart'
+        : 'donut charts'; // TODO: l10n
+
+    return Tooltip(
+      message: 'Open in Reports: $rangeLabel, $viewLabel', // TODO: l10n
+      waitDuration: const Duration(milliseconds: 300),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: theme.radiuses.sm.circular,
+        child: InkWell(
+          onTap: () {
+            context.read<ReportsBloc>().add(ReportsSyncedFromDashboard(
+                  period: state.period,
+                  anchorDate: state.anchorDate,
+                  view: state.view,
+                  customRangeStart: state.customRangeStart,
+                  customRangeEnd: state.customRangeEnd,
+                ));
+            context.read<AppNavigationController>().openReports();
+          },
+          borderRadius: theme.radiuses.sm.circular,
+          child: Padding(
+            padding: EdgeInsets.all(theme.spacings.xxs),
+            child: Icon(
+              Icons.open_in_new_rounded,
+              size: 18,
+              color: palette.text.secondary,
+            ),
           ),
         ),
       ),
@@ -397,47 +464,67 @@ class _Donut extends StatelessWidget {
                 ),
               ),
               SizedBox(width: theme.spacings.lg),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: slices.map((slice) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _colorFor(slice, palette),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: theme.spacings.sm),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 140),
-                          child: Text(
-                            slice.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.commonTextStyles.caption.copyWith(
-                              color: palette.text.primary,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...slices.take(_maxLegendRows).map((slice) {
+                      return Padding(
+                        padding:
+                            EdgeInsets.symmetric(vertical: theme.spacings.xxs),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _colorFor(slice, palette),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
+                            SizedBox(width: theme.spacings.sm),
+                            Flexible(
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 140),
+                                child: Text(
+                                  slice.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      theme.commonTextStyles.caption.copyWith(
+                                    color: palette.text.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: theme.spacings.sm),
+                            Text(
+                              '${_formatHours(slice.duration)} '
+                              '(${(slice.percentOfTotal * 100).round()}%)',
+                              style: theme.commonTextStyles.caption.copyWith(
+                                color: palette.text.muted,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: theme.spacings.sm),
-                        Text(
-                          '${_formatHours(slice.duration)} '
-                          '(${(slice.percentOfTotal * 100).round()}%)',
-                          style: theme.commonTextStyles.caption.copyWith(
-                            color: palette.text.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }),
+                    if (slices.length > _maxLegendRows)
+                      _LegendMoreRow(
+                        hidden: slices
+                            .skip(_maxLegendRows)
+                            .map((s) => (
+                                  label: s.label,
+                                  duration: s.duration,
+                                  percentOfTotal: s.percentOfTotal,
+                                ))
+                            .toList(),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -456,187 +543,49 @@ class _Donut extends StatelessWidget {
   }
 }
 
-// Width reserved for left Y-axis labels — must match SideTitles.reservedSize.
-const double _kLeftReservedSize = 36.0;
+/// Collapsed tail of a donut legend: an accented "+N more" row that reveals
+/// the remaining slices in a tooltip on hover.
+class _LegendMoreRow extends StatelessWidget {
+  final List<({String label, Duration duration, double percentOfTotal})>
+      hidden;
 
-// Returns interval and chartMaxY as a clean pair.
-// chartMaxY is always (numSteps+1)*interval so the top gridline is a round
-// number one step above the tallest bar - no floating 7.2h or 0.6h labels.
-({double interval, double maxY}) _chartScale(double maxHours) {
-  const steps = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0];
-  if (maxHours <= 0) return (interval: 1.0, maxY: 4.0);
-  final raw = maxHours / 4;
-  final interval = steps.firstWhere((v) => v >= raw, orElse: () => (raw / 5).ceil() * 5.0);
-  final numSteps = (maxHours / interval).ceil() + 1;
-  return (interval: interval, maxY: interval * numSteps);
-}
-
-class _BarChart extends StatefulWidget {
-  final DashboardChartData data;
-
-  const _BarChart({required this.data});
-
-  @override
-  State<_BarChart> createState() => _BarChartState();
-}
-
-class _BarChartState extends State<_BarChart> {
-  int? _hoveredIndex;
+  const _LegendMoreRow({required this.hidden});
 
   @override
   Widget build(BuildContext context) {
-    final maxHours = widget.data.bars
-        .map((b) => b.duration.inMinutes / 60)
-        .fold<double>(0, (max, v) => v > max ? v : max);
-    final scale = _chartScale(maxHours);
-    final interval = scale.interval;
-    final chartMaxY = scale.maxY;
-
-    final n = widget.data.bars.length;
-
-    return SizedBox(
-      height: 220,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final chartAreaWidth = constraints.maxWidth - _kLeftReservedSize;
-          return MouseRegion(
-            onExit: (_) {
-              if (mounted) setState(() => _hoveredIndex = null);
-            },
-            onHover: (event) {
-              if (n == 0 || chartAreaWidth <= 0) return;
-              final zoneWidth = chartAreaWidth / n;
-              final x = event.localPosition.dx - _kLeftReservedSize;
-              final i = (x / zoneWidth).floor().clamp(0, n - 1);
-              if (i != _hoveredIndex) setState(() => _hoveredIndex = i);
-            },
-            child: BarChart(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              _buildBarChartData(chartMaxY: chartMaxY, interval: interval),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  BarChartData _buildBarChartData({
-    required double chartMaxY,
-    required double interval,
-  }) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final message = hidden
+        .map((s) => '${s.label}  ${_formatHoursTop(s.duration)} '
+            '(${(s.percentOfTotal * 100).round()}%)')
+        .join('\n');
 
-    return BarChartData(
-      maxY: chartMaxY,
-      alignment: BarChartAlignment.spaceAround,
-      barTouchData: BarTouchData(
-        enabled: false,
-        touchTooltipData: BarTouchTooltipData(
-          tooltipRoundedRadius: 20,
-          tooltipPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          getTooltipColor: (_) => palette.accent.primary,
-          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final h = rod.toY;
-            if (h == 0) return null;
-            final label = h % 1 == 0
-                ? '${h.toInt()}h'
-                : '${h.toStringAsFixed(1)}h';
-            return BarTooltipItem(
-              label,
-              theme.commonTextStyles.captionBold.copyWith(
-                color: Colors.white,
-              ),
-            );
-          },
-        ),
-      ),
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: false,
-        horizontalInterval: interval,
-        getDrawingHorizontalLine: (_) => FlLine(
-          color: palette.border.primary.withValues(alpha: 0.5),
-          strokeWidth: 1,
-        ),
-      ),
-      borderData: FlBorderData(show: false),
-      titlesData: FlTitlesData(
-        topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 36,
-            interval: interval,
-            getTitlesWidget: (value, meta) {
-              if (value == meta.max) return const SizedBox.shrink();
-              final label = value % 1 == 0
-                  ? '${value.toInt()}h'
-                  : '${value.toStringAsFixed(1)}h';
-              return Text(
-                label,
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.text.muted,
-                ),
-              );
-            },
-          ),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index < 0 || index >= widget.data.bars.length) {
-                return const SizedBox.shrink();
-              }
-              final isActive = index == _hoveredIndex;
-              return Padding(
-                padding: EdgeInsets.only(top: theme.spacings.xs),
-                child: Text(
-                  widget.data.bars[index].label,
-                  style: isActive
-                      ? theme.commonTextStyles.captionBold.copyWith(
-                          color: palette.accent.primary,
-                        )
-                      : theme.commonTextStyles.caption.copyWith(
-                          color: palette.text.muted,
-                        ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      barGroups: widget.data.bars.asMap().entries.map((entry) {
-        final index = entry.key;
-        final hours = entry.value.duration.inMinutes / 60;
-        final isHovered = index == _hoveredIndex;
-        return BarChartGroupData(
-          x: index,
-          showingTooltipIndicators: isHovered ? [0] : [],
-          barRods: [
-            BarChartRodData(
-              toY: hours,
-              color: palette.accent.primary,
-              width: 32,
-              borderRadius: BorderRadius.circular(4),
-              backDrawRodData: BackgroundBarChartRodData(
-                show: isHovered,
-                toY: chartMaxY,
-                color: palette.accent.primary.withValues(alpha: 0.08),
+    return Tooltip(
+      message: message,
+      waitDuration: const Duration(milliseconds: 200),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: theme.spacings.xxs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Aligns with the color dots above (dot width + gap).
+            SizedBox(width: 8 + theme.spacings.sm),
+            Text(
+              '+${hidden.length} more', // TODO: l10n
+              style: theme.commonTextStyles.caption.copyWith(
+                color: palette.accent.primary,
               ),
             ),
           ],
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
+}
+
+String _formatHoursTop(Duration duration) {
+  final hours = duration.inMinutes / 60;
+  return '${hours.toStringAsFixed(1)}h';
 }
 
 class _EmptyChartsState extends StatelessWidget {

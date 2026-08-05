@@ -137,25 +137,25 @@ void main() {
   });
 
   group('HotkeyService.defaultHotKeyFor', () {
-    test('toggleHotkey defaults to Alt+Shift+M', () {
+    test('toggleHotkey defaults to Ctrl+Alt+M', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.toggleHotkey);
 
       expect(hotKey.key, PhysicalKeyboardKey.keyM);
-      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
+      expect(hotKey.modifiers, [HotKeyModifier.control, HotKeyModifier.alt]);
     });
 
-    test('acceptHotkey defaults to Alt+Shift+A', () {
+    test('acceptHotkey defaults to Ctrl+Alt+A', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.acceptHotkey);
 
       expect(hotKey.key, PhysicalKeyboardKey.keyA);
-      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
+      expect(hotKey.modifiers, [HotKeyModifier.control, HotKeyModifier.alt]);
     });
 
-    test('dismissHotkey defaults to Alt+Shift+X', () {
+    test('dismissHotkey defaults to Ctrl+Alt+X', () {
       final hotKey = HotkeyService.defaultHotKeyFor(SettingsKeys.dismissHotkey);
 
       expect(hotKey.key, PhysicalKeyboardKey.keyX);
-      expect(hotKey.modifiers, [HotKeyModifier.alt, HotKeyModifier.shift]);
+      expect(hotKey.modifiers, [HotKeyModifier.control, HotKeyModifier.alt]);
     });
 
     test('throws for an unknown setting key', () {

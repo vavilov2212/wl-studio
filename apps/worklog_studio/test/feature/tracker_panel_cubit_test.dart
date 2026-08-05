@@ -18,7 +18,7 @@ void main() {
     clock = FakeClock(kNow);
     timeRepo = FakeTimeEntryRepository();
     final service = TimeTrackerService(repository: timeRepo, clock: clock);
-    trackerBloc = TimeTrackerBloc(service: service, idleMonitor: null);
+    trackerBloc = TimeTrackerBloc(service: service);
     projectTaskState = ProjectTaskState(
       projectRepository: FakeProjectRepository(),
       taskRepository: FakeTaskRepository(),

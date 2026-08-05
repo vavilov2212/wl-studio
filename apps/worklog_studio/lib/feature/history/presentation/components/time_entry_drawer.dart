@@ -44,7 +44,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   final InlineFieldController _projectFieldController = InlineFieldController();
   final InlineFieldController _taskFieldController = InlineFieldController();
   final InlineFieldController _commentFieldController = InlineFieldController();
-  final InlineFieldController _startTimeFieldController = InlineFieldController();
+  final InlineFieldController _startTimeFieldController =
+      InlineFieldController();
   final InlineFieldController _endTimeFieldController = InlineFieldController();
 
   @override
@@ -84,7 +85,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     if (!_commentFieldController.isEditing) {
       if (_formCubit.state.draft.entry.comment != _commentController.text) {
         _updateDraft(
-          _formCubit.state.draft.entry.copyWith(comment: _commentController.text),
+          _formCubit.state.draft.entry.copyWith(
+            comment: _commentController.text,
+          ),
         );
       }
     }
@@ -103,13 +106,17 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     final resolvedTask = updatedEntry.taskId != null
         ? resolver.getResolvedTask(updatedEntry.taskId!)?.task
         : null;
-    _formCubit.updateDraft(_formCubit.state.draft.copyWith(
-      entry: updatedEntry,
-      project: resolvedProject,
-      task: resolvedTask,
-    ));
+    _formCubit.updateDraft(
+      _formCubit.state.draft.copyWith(
+        entry: updatedEntry,
+        project: resolvedProject,
+        task: resolvedTask,
+      ),
+    );
     if (!_isNew) {
-      context.read<TimeTrackerBloc>().add(TimeTrackerEntryUpdated(updatedEntry));
+      context.read<TimeTrackerBloc>().add(
+        TimeTrackerEntryUpdated(updatedEntry),
+      );
     }
   }
 
@@ -165,8 +172,10 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DrawerFormCubit<ResolvedTimeEntry>,
-        DrawerFormState<ResolvedTimeEntry>>(
+    return BlocBuilder<
+      DrawerFormCubit<ResolvedTimeEntry>,
+      DrawerFormState<ResolvedTimeEntry>
+    >(
       bloc: _formCubit,
       builder: (context, formState) {
         final theme = context.theme;
@@ -198,9 +207,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                 onConfirm: () {
                   if (widget.resolvedEntry != null) {
                     context.read<TimeTrackerBloc>().add(
-                      TimeTrackerEntryDeleted(
-                        widget.resolvedEntry!.entry.id,
-                      ),
+                      TimeTrackerEntryDeleted(widget.resolvedEntry!.entry.id),
                     );
                     widget.onClose();
                   }
@@ -389,14 +396,16 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                               durationBuilder: (now) =>
                                                   now.difference(draft.startAt),
                                               style: theme
-                                                  .commonTextStyles.subtitle,
+                                                  .commonTextStyles
+                                                  .subtitle,
                                             )
                                           : Text(
                                               DateFormatter.formatDurationHms(
                                                 draft.duration(DateTime.now()),
                                               ),
                                               style: theme
-                                                  .commonTextStyles.subtitle,
+                                                  .commonTextStyles
+                                                  .subtitle,
                                             ),
                                     ),
                                   ),
@@ -424,8 +433,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       ? SizedBox(
                           width: double.infinity,
                           child: PrimaryButton(
-                            onTap: () =>
-                                context.read<TimeTrackerBloc>().add(
+                            onTap: () => context.read<TimeTrackerBloc>().add(
                               const TimeTrackerStopped(),
                             ),
                             title: 'Stop Timer',
@@ -446,11 +454,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   }
 
   Widget _selectChevron(ColorsPalette palette) {
-    return Icon(
-      Icons.keyboard_arrow_down,
-      size: 18,
-      color: palette.text.muted,
-    );
+    return Icon(Icons.keyboard_arrow_down, size: 18, color: palette.text.muted);
   }
 
   String getStatusText(TimeEntryStatus status) {

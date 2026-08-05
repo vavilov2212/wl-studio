@@ -18,6 +18,26 @@ void main() {
       expect(() => controller.openHistoryEntry('e1'), returnsNormally);
     });
 
+    test('openReports is a no-op before handlers are registered', () {
+      final controller = AppNavigationController();
+      expect(() => controller.openReports(), returnsNormally);
+    });
+
+    test('openReports calls the registered handler', () {
+      final controller = AppNavigationController();
+      var called = false;
+      controller.registerHandlers(
+        openTask: (_) {},
+        openProject: (_) {},
+        openHistoryEntry: (_) {},
+        openReports: () => called = true,
+      );
+
+      controller.openReports();
+
+      expect(called, isTrue);
+    });
+
     test('openTask calls the registered handler with the given id', () {
       final controller = AppNavigationController();
       String? receivedId;
@@ -25,6 +45,7 @@ void main() {
         openTask: (id) => receivedId = id,
         openProject: (_) {},
         openHistoryEntry: (_) {},
+        openReports: () {},
       );
 
       controller.openTask('t1');
@@ -39,6 +60,7 @@ void main() {
         openTask: (_) {},
         openProject: (id) => receivedId = id,
         openHistoryEntry: (_) {},
+        openReports: () {},
       );
 
       controller.openProject('p1');
@@ -53,6 +75,7 @@ void main() {
         openTask: (_) {},
         openProject: (_) {},
         openHistoryEntry: (id) => receivedId = id,
+        openReports: () {},
       );
 
       controller.openHistoryEntry('e1');
@@ -69,11 +92,13 @@ void main() {
         openTask: (_) => firstCalled = true,
         openProject: (_) {},
         openHistoryEntry: (_) {},
+        openReports: () {},
       );
       controller.registerHandlers(
         openTask: (_) => secondCalled = true,
         openProject: (_) {},
         openHistoryEntry: (_) {},
+        openReports: () {},
       );
 
       controller.openTask('t1');

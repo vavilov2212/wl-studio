@@ -14,8 +14,9 @@ sealed class TimeTrackerEvent with _$TimeTrackerEvent {
     String? comment,
   }) = TimeTrackerStarted;
 
-  /// Stops the currently active time entry.
-  const factory TimeTrackerEvent.stopped() = TimeTrackerStopped;
+  /// Stops the currently active time entry. If [at] is provided the entry
+  /// ends at that timestamp; otherwise the service uses [Clock.now()].
+  const factory TimeTrackerEvent.stopped({DateTime? at}) = TimeTrackerStopped;
 
   /// Updates the project, task, or comment on the currently running entry.
   const factory TimeTrackerEvent.activeEntryUpdated({

@@ -254,6 +254,35 @@ void main() {
     });
   });
 
+  group('TimeTrackerService.stop(endAt:)', () {
+    test('uses provided endAt instead of clock.now()', () async {
+      final clock = FakeClock(DateTime(2025, 1, 1, 9));
+      final repo = FakeTimeEntryRepository();
+      final service = TimeTrackerService(repository: repo, clock: clock);
+      repo.seed(TimeEntry(
+        id: 'e1',
+        startAt: clock.now(),
+        status: TimeEntryStatus.running,
+      ));
+      final explicitEnd = DateTime(2025, 1, 1, 8, 55); // 5 min before clock.now()
+      await service.stop(endAt: explicitEnd);
+      expect(repo.all.single.endAt, explicitEnd);
+    });
+
+    test('falls back to clock.now() when endAt is null', () async {
+      final clock = FakeClock(DateTime(2025, 1, 1, 9));
+      final repo = FakeTimeEntryRepository();
+      final service = TimeTrackerService(repository: repo, clock: clock);
+      repo.seed(TimeEntry(
+        id: 'e1',
+        startAt: DateTime(2025, 1, 1, 8),
+        status: TimeEntryStatus.running,
+      ));
+      await service.stop();
+      expect(repo.all.single.endAt, clock.now());
+    });
+  });
+
   // ── 4. Elapsed duration lifecycle ─────────────────────────────────────────
 
   group('Elapsed duration lifecycle', () {

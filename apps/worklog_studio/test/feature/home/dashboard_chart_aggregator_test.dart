@@ -83,7 +83,7 @@ void main() {
       expect(data.rangeEnd, DateTime(2024, 1, 18));
       expect(data.rangeLabel, 'Jan 17');
       expect(data.bars.map((b) => b.label).toList(), ['9 AM', '10 AM', '11 AM']);
-      expect(data.bars.map((b) => b.duration).toList(), [
+      expect(data.bars.map((b) => b.total).toList(), [
         const Duration(hours: 1),
         Duration.zero,
         const Duration(hours: 1),
@@ -167,7 +167,7 @@ void main() {
         'Sat 20',
         'Sun 21',
       ]);
-      expect(data.bars.map((b) => b.duration).toList(), [
+      expect(data.bars.map((b) => b.total).toList(), [
         const Duration(hours: 1),
         Duration.zero,
         const Duration(hours: 2),
@@ -229,7 +229,7 @@ void main() {
       expect(data.rangeLabel, 'Jan 2024');
       expect(data.bars.map((b) => b.label).toList(),
           ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5']);
-      expect(data.bars.map((b) => b.duration).toList(), [
+      expect(data.bars.map((b) => b.total).toList(), [
         const Duration(hours: 1),
         const Duration(hours: 1),
         Duration.zero,

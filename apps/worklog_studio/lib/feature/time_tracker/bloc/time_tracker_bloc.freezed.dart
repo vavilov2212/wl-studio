@@ -307,26 +307,25 @@ as String?,
 
 
 class TimeTrackerStopped extends TimeTrackerEvent {
-  const TimeTrackerStopped(): super._();
-  
+  const TimeTrackerStopped({this.at}): super._();
 
 
-
+ final  DateTime? at;
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TimeTrackerStopped);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TimeTrackerStopped&&(identical(other.at, at) || other.at == at));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode => Object.hash(runtimeType,at);
 
 @override
 String toString() {
-  return 'TimeTrackerEvent.stopped()';
+  return 'TimeTrackerEvent.stopped(at: $at)';
 }
 
 

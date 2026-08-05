@@ -1,10 +1,7 @@
-import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_event.dart';
-import 'package:worklog_studio/core/services/idle_monitor/idle_monitor.dart';
 
 part 'time_tracker_bloc.freezed.dart';
 part 'time_tracker_event.dart';
@@ -12,15 +9,10 @@ part 'time_tracker_state.dart';
 
 class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
   final TimeTrackerService _service;
-  final IdleMonitor? _idleMonitor;
-  StreamSubscription<IdleEvent>? _idleSubscription;
 
-  TimeTrackerBloc({
-    required TimeTrackerService service,
-    IdleMonitor? idleMonitor,
-  }) : _service = service,
-       _idleMonitor = idleMonitor,
-       super(const TimeTrackerBlocState.idle()) {
+  TimeTrackerBloc({required TimeTrackerService service})
+      : _service = service,
+        super(const TimeTrackerBlocState.idle()) {
     on<TimeTrackerLoaded>(_onLoaded);
     on<TimeTrackerStarted>(_onStarted);
     on<TimeTrackerStopped>(_onStopped);
@@ -28,18 +20,6 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     on<TimeTrackerEntryDeleted>(_onEntryDeleted);
     on<TimeTrackerEntryCreated>(_onEntryCreated);
     on<TimeTrackerEntryUpdated>(_onEntryUpdated);
-
-    _idleSubscription = _idleMonitor?.onIdleEvent.listen((event) {
-      if (event is IdleThresholdReached && state.isRunning) {
-        add(TimeTrackerStopped());
-      }
-    });
-  }
-
-  @override
-  Future<void> close() {
-    _idleSubscription?.cancel();
-    return super.close();
   }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -58,16 +38,12 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
   ) async {
     final wasRunning = state.isRunning;
     await _reloadAndEmit(emit, () async {
-      if (wasRunning) {
-        await _service.stop();
-        _idleMonitor?.stop();
-      }
+      if (wasRunning) await _service.stop();
       await _service.start(
         projectId: event.projectId,
         taskId: event.taskId,
         comment: event.comment,
       );
-      _idleMonitor?.start(thresholdSeconds: 600);
     });
   }
 
@@ -76,10 +52,7 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     Emitter<TimeTrackerBlocState> emit,
   ) async {
     if (!state.isRunning) return;
-    await _reloadAndEmit(emit, () async {
-      await _service.stop();
-      _idleMonitor?.stop();
-    });
+    await _reloadAndEmit(emit, () => _service.stop(endAt: event.at));
   }
 
   Future<void> _onActiveEntryUpdated(

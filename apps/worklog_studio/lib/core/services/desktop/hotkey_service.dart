@@ -32,14 +32,14 @@ class HotkeyService {
         _onAccept = onAccept,
         _onDismiss = onDismiss;
 
-  // Control+Shift is Windows' own built-in "switch input language" gesture
-  // whenever 2+ keyboard languages are installed - it can swallow the
-  // modifier chord before a third key ever completes the combo, so an
-  // app-registered Control+Shift+<key> hotkey can silently never fire.
-  // Alt+Shift avoids that collision entirely.
+  // Control+Shift and Alt+Shift are both Windows' built-in "switch input
+  // language / layout" gestures whenever 2+ keyboard languages are
+  // installed - they can swallow the modifier chord before a third key
+  // ever completes the combo, so an app-registered hotkey on either pair
+  // can silently never fire. Control+Alt avoids that collision.
   static HotKey _defaultHotKey(KeyboardKey key) => HotKey(
         key: key,
-        modifiers: [HotKeyModifier.alt, HotKeyModifier.shift],
+        modifiers: [HotKeyModifier.control, HotKeyModifier.alt],
       );
 
   /// The documented default hotkey for [settingKey], used both as the
