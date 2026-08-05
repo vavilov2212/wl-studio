@@ -12,11 +12,11 @@
 > and pitfall entries (tagged with the session date); the four top-level sections
 > (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> State at last update (2026-07-15, [feature] Reports charts block + chart sync
-> follow-up): **318/318 tests green**, `flutter analyze` clean on
-> `lib\feature\reports\`, `lib\feature\home\`, `lib\feature\common\`, and the
-> navigation files, confirmed against commit `a366250` (shared stacked bar chart
-> on both pages, thicker report progress bars, dashboard-to-reports jump).
+> State at last update (2026-08-05, [debug] Idle detection bug fixes):
+> **341/341 tests green**, `flutter analyze` clean on
+> `lib\feature\settings\`, `lib\feature\time_tracker\`, `lib\core\services\desktop\`
+> (5 files changed; see 1.12). Previous state: 318/318 tests,
+> commit `a366250` (2026-07-15 reports/charts work).
 
 ---
 
@@ -291,6 +291,81 @@ commits `deff358..500459c`.
   (`@override@JsonKey() final DashboardChartView view;`) need unique edits. Copied
   from `dashboard_charts_bloc.freezed.dart`, confirmed in `reports_bloc.freezed.dart`.
 
+### 1.12 Idle detection bug fixes (session 2026-08-05, [debug])
+
+Three bugs fixed in the idle time detection feature introduced in the prior session.
+All 341 tests pass; `flutter analyze` clean. Files changed:
+`feature\settings\presentation\general_settings_screen.dart`,
+`feature\time_tracker\cubit\idle_flow_cubit.dart`,
+`core\services\desktop\idle_resolution_window.dart` (simplified),
+`feature\time_tracker\presentation\idle_task_selection_dialog.dart` (new),
+`core\services\desktop\windows_desktop_service.dart`.
+
+#### Bug 1: Settings TextField save-on-blur
+
+The "Mark as idle after X minutes" field only saved on Enter (`onSubmitted`). Navigating
+away with the mouse discarded the change silently.
+
+**Fix:** add a `FocusNode` in `_GeneralSettingsScreenState`, register a listener that
+calls `_saveIdleThreshold(_idleThresholdController.text)` whenever `hasFocus` becomes
+false, and dispose it. This is the canonical Flutter pattern for any numeric/text field
+that must persist on navigation-away.
+
+#### Bug 2: Native popup showed threshold minutes instead of actual elapsed idle time
+
+`IdleFlowAwaitingResolution` stored `idleStartTime` (timestamp - thresholdDuration)
+but `_showResolutionWindow(idleMinutes: s.idleSeconds ~/ 60)` passed the static
+threshold value, not the real wall-clock elapsed time.
+
+**Fix:** at the moment `UserReturnedFromIdle` fires, compute:
+```dart
+final actualIdleMinutes = _now().difference(s.idleStartTime).inMinutes;
+_showResolutionWindow(
+  idleMinutes: actualIdleMinutes < 1 ? 1 : actualIdleMinutes,
+  ...
+);
+```
+The user could have been away much longer than the threshold before the popup appeared;
+using `_now()` at return-time captures the full span. The `< 1` guard prevents showing
+"0 minutes" when the event fires in the same minute. `_now` is an injected
+`DateTime Function()` (see guardrail 2.9).
+
+#### Bug 3: "Log to another task" - task selector + Enter key
+
+The native Win32 expansion panel (EDIT control) had no task/project selector and its
+Enter key binding was a polling hack. **Both problems were solved by replacing the Win32
+expansion panel entirely with a Flutter dialog.**
+
+- `IdleResolutionWindow` was simplified from an expandable 5-control layout to a flat
+  3-button layout (`_kH = 160`). Removed: `_editHwnd`, `_confirmBtnHwnd`, `_expanded`,
+  `_setExpanded`, `_showExpansionControls`. Callback changed from
+  `onLogToTask: void Function(String comment)` to `onRequestLogToTask: void Function()`.
+- `IdleTaskSelectionDialog` (new `StatefulWidget`) shows via `showDialog` from
+  `WindowsDesktopService._showIdleTaskSelectionDialog()`, which uses
+  `rootNavigatorKey.currentContext` to obtain the widget tree context (and therefore all
+  providers above `MaterialApp`). Returns `IdleTaskSelection?` on pop.
+- `IdleTaskSelection` data class (in `idle_flow_cubit.dart`) carries `taskId`,
+  `projectId`, and `comment` from the dialog back to the cubit.
+- The dialog uses `ProjectSelector` + `TaskSelector` (shared components from
+  `feature\common`), each backed by its own `InlineFieldController`. Task resets when
+  project changes (`_taskController.resetValue()`). Comment field is a `PrimaryInput`
+  with `onSubmitted: (_) => _confirm()` - Enter key works naturally.
+- `IdleFlowCubit._onRequestLogToTask()` is async: shows the dialog, and if selection
+  is null (dismissed) falls back to `_onKeep()`. If confirmed, calls
+  `_logIdleTimeToSelection()` which writes three repository operations in sequence:
+  stops original entry at idle start, inserts idle entry linked to selected task,
+  inserts new running entry for original task.
+
+#### Critical fix: `_onBlocState` must NOT reset on `IdleFlowResolved`
+
+See pitfall 3.25 for the full failure mode. Short version: the old `_onBlocState` reset
+to `IdleFlowIdle` whenever the bloc emitted non-running state AND cubit state was
+`IdleFlowResolved`. The `_logIdleTimeToSelection` path calls
+`bloc.add(TimeTrackerEvent.loaded())` AFTER emitting `IdleFlowResolved`, and the bloc's
+reload transiently emits `TimeTrackerLoading` (non-running) - which matched the old
+condition and reset the cubit. Fix: check `this.state is IdleFlowAwaitingResolution`
+only - never `IdleFlowResolved`.
+
 ### 1.11 Chart sync follow-up (session 2026-07-15, [feature], commits `f78b9b5..a366250`)
 
 Same-session follow-up: dashboard/reports bar-chart unification, thicker report
@@ -353,6 +428,12 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
   a ternary, or let Dart infer the local variable's type) rather than reaching around the
   barrel (pitfall 3.18).
 - After any `git mv` of a Dart file, grep BOTH `lib/` and `test/` for the old import path.
+- **`showDialog` (and `showGeneralDialog`, etc.) are top-level functions in
+  `package:flutter/material.dart`. They are NOT automatically in scope in non-widget
+  service/cubit classes even when other Flutter types are imported.** When calling
+  `showDialog` from a service class, add:
+  `import 'package:flutter/material.dart' show showDialog;`
+  See pitfall 3.26.
 
 ### 2.2 State management
 
@@ -366,6 +447,16 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
   `emit()` is safe to call directly from user-action callbacks.
 - New feature screens with filter/sort/view-mode state get their own BLoC provided at
   `MainApp` level (see 1.3 - pages are recreated on tab change).
+- **Any cubit that reads wall-clock time (elapsed durations, timestamps) must accept
+  `DateTime Function()? now` (defaulting to `DateTime.now`) and store it as `_now`.
+  Tests provide a controllable `fakeNow` variable, giving frozen-time assertions
+  without sleeping or timing hacks.** Confirmed necessary for `IdleFlowCubit`'s
+  elapsed idle duration calculation (2026-08-05).
+- **A `_onBlocState` listener that resets cubit state when the bloc becomes non-running
+  must guard on the cubit's OWN state being `AwaitingXxx`, never on it being `Resolved`.
+  Resolved state means the cubit already finished its work; transient non-running bloc
+  states during post-resolution reloads (`bloc.add(Event.loaded())`) MUST NOT undo that.**
+  See pitfall 3.25.
 - The `_sentinel = Object()` copyWith pattern is the house style for state classes that
   need "explicitly set this nullable field to null" semantics
   (e.g. `filterExpandedOverride: null`).
@@ -491,6 +582,37 @@ Each rule has its reason recorded - if the reason ever stops being true, revisit
   not report a task as fully verified when `fvm flutter analyze`/`fvm flutter test`
   could not actually be run (pitfall 3.23). Read-only tools (Read/Grep/Glob) are
   unaffected and remain reliable evidence for a manual review.
+
+### 2.9 Service-to-Flutter dialog bridge pattern
+
+When a non-widget service (e.g. `WindowsDesktopService`) needs to show a Flutter
+`Dialog`, use `rootNavigatorKey.currentContext` as the context:
+
+```dart
+Future<T?> _showMyDialog<T>() async {
+  final context = rootNavigatorKey.currentContext;
+  if (context == null) return null;
+  return showDialog<T>(
+    context: context,
+    builder: (_) => const MyDialog(),
+  );
+}
+```
+
+Rules:
+1. **`rootNavigatorKey` must be provided at `MaterialApp(navigatorKey:)` level.**
+   This key is already wired in `app.dart`; do not move it to a sub-navigator.
+2. **`MultiProvider` wrapping `MaterialApp` makes all providers available in the
+   dialog's subtree** - `ProjectTaskState`, `EntityResolver`, BLoCs etc. are all
+   accessible from `Context.read/watch` inside the dialog.
+3. **Return `null` on context miss.** A null context means the engine is not ready
+   or the window is closed; callers must handle null and fall back gracefully (e.g.
+   `IdleFlowCubit._onRequestLogToTask` falls back to `_onKeep()`).
+4. **Native windows fire a plain `void` callback to signal intent; the cubit
+   orchestrates the async dialog flow that follows.** Never pass async dialog
+   futures into Win32 callback slots.
+5. **`InlineFieldController` for `ProjectSelector`/`TaskSelector` must be instantiated
+   and disposed in the `StatefulWidget` that shows the dialog, not in the service.**
 
 ### 2.8 Windows native windows and global hotkeys
 
@@ -741,6 +863,71 @@ only reviewed by eye. Encountered 2026-07-12 while wrapping up the Reports page
 post-completion fixes; commit `1d59469` landed before analyze/test could be run, but both
 were confirmed clean shortly after in the same session once Bash recovered.
 
+### 3.25 Bloc reload transiently emitting non-running state resets a resolved cubit
+
+**Symptom (2026-08-05):** the "logToTask dialog confirmed" test emitted `IdleFlowIdle`
+instead of `IdleFlowResolved` after `resolutionWindow.lastOnRequestLogToTask!()`. All
+repository writes were correct (3 entries created), but the cubit was back in `Idle`.
+
+**Cause chain:**
+1. `_logIdleTimeToSelection` ends with `emit(IdleFlowResolved())` then
+   `bloc.add(TimeTrackerEvent.loaded())`.
+2. `TimeTrackerBloc` handles `loaded` by emitting `TimeTrackerLoading` (non-running)
+   before it finishes re-fetching data and emitting `TimeTrackerRunning`.
+3. `_onBlocState` saw `!state.isRunning && _monitorRunning` - TRUE (just stopped
+   monitoring) - and then checked `this.state is IdleFlowResolved` - ALSO TRUE - and
+   called `_hideResolutionWindow?.call(); emit(IdleFlowIdle())`. The cubit undid its
+   own resolution.
+
+**Fix:** `_onBlocState` must only reset to `IdleFlowIdle` when
+`this.state is IdleFlowAwaitingResolution`. `IdleFlowResolved` is terminal from the
+cubit's perspective - the bloc is free to reload and emit transient states afterwards.
+The corrected guard:
+```dart
+if (this.state is IdleFlowAwaitingResolution) {
+  _hideResolutionWindow?.call();
+  emit(const IdleFlowIdle());
+}
+```
+
+**General rule:** whenever a cubit calls `bloc.add(SomeEvent)` after emitting a
+resolved/terminal state, ensure the cubit's bloc-state listener does NOT key off that
+terminal state for further transitions. Terminal is terminal.
+
+### 3.26 `showDialog` is undefined in a non-widget service class
+
+**Symptom:** `The function 'showDialog' isn't defined.` in `windows_desktop_service.dart`
+even though other Flutter types compiled fine.
+
+**Cause:** `showDialog` is a top-level function in `package:flutter/material.dart`.
+Service classes typically import `flutter_bloc`, `get_it`, domain types, etc. - none
+of which transitively export `showDialog`. It is NOT part of `dart:ui` or the widget
+base; it only becomes available when `material.dart` is in scope.
+
+**Fix:**
+```dart
+import 'package:flutter/material.dart' show showDialog;
+```
+Using a `show` clause keeps the import surgical and avoids pulling the entire material
+namespace into a non-widget file.
+
+### 3.27 `flutter analyze` "path does not exist" when CWD is already inside the app directory
+
+**Symptom:** `fvm flutter analyze apps/worklog_studio/lib/feature/...` run from a
+terminal whose CWD is `apps\worklog_studio\` fails with
+`error: The path "apps/worklog_studio/lib/feature/..." doesn't exist.`
+
+**Cause:** the path is resolved relative to CWD - prepending `apps/worklog_studio/`
+when CWD is already that directory creates a non-existent double-prefix path.
+
+**Fix:** when CWD is already `apps\worklog_studio\`, omit that prefix:
+```
+fvm flutter analyze lib/feature/settings/... lib/feature/time_tracker/...
+```
+Alternatively, run from the monorepo root and use the full `apps/worklog_studio/lib/...`
+prefix. The analyze command that succeeded in this session was invoked from the
+monorepo root via the Bash tool's default CWD.
+
 ### 3.24 `await bloc.close()` inside a testWidgets body hangs the test forever
 **Symptom:** a widget test passes every pump/expect, then times out at the
 10-minute default; marker prints show the last `await bloc.close()` never
@@ -855,6 +1042,27 @@ Added in session 2026-07-12 (Reports page, [feature]):
   expanded-by-default - if that need never materializes, consider whether the parameter
   is still pulling its weight, or whether "always collapsed" should become the hardcoded
   behavior instead of a configurable default.
+
+Added in session 2026-08-05 (Idle detection fixes, [debug]):
+
+- **`IdleTaskSelectionDialog` has zero automated tests.** The widget itself
+  (`ProjectSelector` + `TaskSelector` + `PrimaryInput` + confirm/cancel buttons)
+  is exercised only by the cubit-level tests (which mock the dialog as a callback).
+  No `testWidgets` exercise project-resets-task, enter-confirms, cancel-returns-null.
+  Harness pattern in 2.6 applies (provide `ProjectTaskState`, `TimeTrackerBloc`, etc.).
+- **`IdleResolutionWindow` still has zero automated tests.** Now simplified to 3
+  buttons (keep/discard/log) with no state. The native Win32 drawing and
+  `_kH`/`_kW` geometry are verified only behaviorally.
+- **`PrimaryInput` requires a `label` parameter** - it is not optional. Every new
+  call site must pass `label:` or the widget will throw at runtime. This is not a
+  compile error (the parameter might be named but required), so it only surfaces
+  when the dialog is actually shown.
+- **The 3-entry sequence in `_logIdleTimeToSelection` has no rollback.** If the
+  first `_repository.update` succeeds but the second or third `_repository.insert`
+  throws, the original entry is already stopped with no new running entry. Production
+  `SqliteTimeEntryRepository` uses transactions, but the `FakeTimeEntryRepository`
+  in tests has no transaction semantics. Consider wrapping in a try/catch that at
+  minimum re-emits `IdleFlowIdle` on partial failure.
 
 Added in session 2026-07-15 (Reports charts block, [feature]):
 

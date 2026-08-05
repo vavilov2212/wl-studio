@@ -10,7 +10,7 @@ import '../helpers/test_fakes.dart';
 class FakeIdleResolutionWindow {
   void Function()? lastOnKeep;
   void Function()? lastOnDiscard;
-  void Function(String)? lastOnLogToTask;
+  void Function()? lastOnRequestLogToTask;
   int? lastIdleMinutes;
   int showCalls = 0;
   int hideCalls = 0;
@@ -19,13 +19,13 @@ class FakeIdleResolutionWindow {
     required int idleMinutes,
     required void Function() onKeep,
     required void Function() onDiscard,
-    required void Function(String taskName) onLogToTask,
+    required void Function() onRequestLogToTask,
   }) {
     showCalls++;
     lastIdleMinutes = idleMinutes;
     lastOnKeep = onKeep;
     lastOnDiscard = onDiscard;
-    lastOnLogToTask = onLogToTask;
+    lastOnRequestLogToTask = onRequestLogToTask;
   }
 
   void hide() => hideCalls++;
@@ -43,7 +43,25 @@ void main() {
   late FakeIdleMonitor idleMonitor;
   late FakeIdleResolutionWindow resolutionWindow;
   late FakeReminderService reminderService;
-  late IdleFlowCubit cubit;
+
+  // Controllable "now" for the cubit so tests are deterministic.
+  late DateTime fakeNow;
+
+  IdleFlowCubit buildCubit({
+    Future<IdleTaskSelection?> Function()? showTaskSelectionDialog,
+  }) {
+    return IdleFlowCubit(
+      idleMonitor: idleMonitor,
+      bloc: bloc,
+      repository: repo,
+      reloadReminderInterval: reminderService.reloadInterval,
+      showResolutionWindow: resolutionWindow.show,
+      hideResolutionWindow: resolutionWindow.hide,
+      showTaskSelectionDialog: showTaskSelectionDialog,
+      thresholdSeconds: 600,
+      now: () => fakeNow,
+    );
+  }
 
   setUp(() {
     clock = FakeClock(DateTime(2025, 1, 1, 9));
@@ -52,24 +70,20 @@ void main() {
     idleMonitor = FakeIdleMonitor();
     resolutionWindow = FakeIdleResolutionWindow();
     reminderService = FakeReminderService();
-    cubit = IdleFlowCubit(
-      idleMonitor: idleMonitor,
-      bloc: bloc,
-      repository: repo,
-      reloadReminderInterval: reminderService.reloadInterval,
-      showResolutionWindow: resolutionWindow.show,
-      hideResolutionWindow: resolutionWindow.hide,
-      thresholdSeconds: 600,
-    );
+    fakeNow = DateTime(2025, 1, 1, 9, 10); // default: 9:10
   });
 
   tearDown(() async {
-    await cubit.close();
     await idleMonitor.close();
     await bloc.close();
   });
 
   group('IdleFlowCubit', () {
+    late IdleFlowCubit cubit;
+
+    setUp(() => cubit = buildCubit());
+    tearDown(() => cubit.close());
+
     test('starts in idle state', () {
       expect(cubit.state, isA<IdleFlowIdle>());
     });
@@ -96,7 +110,7 @@ void main() {
       expect(s.projectId, 'p1');
     });
 
-    test('shows resolution window on UserReturnedFromIdle', () async {
+    test('shows resolution window with actual elapsed minutes on UserReturnedFromIdle', () async {
       repo.seed(TimeEntry(
         id: 'e1', taskId: 't1', projectId: 'p1',
         startAt: clock.now(), status: TimeEntryStatus.running,
@@ -104,14 +118,19 @@ void main() {
       bloc.add(const TimeTrackerLoaded());
       await pumpEventQueue();
 
-      idleMonitor.emitThreshold(idleSeconds: 610);
+      // Threshold fires at 9:10 with 600s idle - idle started at 9:00.
+      final thresholdTime = DateTime(2025, 1, 1, 9, 10);
+      idleMonitor.emitThreshold(idleSeconds: 600, timestamp: thresholdTime);
       await Future.microtask(() {});
 
+      // User returns at 9:35 - fakeNow represents the cubit's current time.
+      fakeNow = DateTime(2025, 1, 1, 9, 35);
       idleMonitor.emitUserReturned();
       await Future.microtask(() {});
 
       expect(resolutionWindow.showCalls, 1);
-      expect(resolutionWindow.lastIdleMinutes, 10);
+      // Actual elapsed: 9:35 - 9:00 = 35 min (not just the 10-min threshold).
+      expect(resolutionWindow.lastIdleMinutes, 35);
     });
 
     test('keep choice: emits resolved, reloads reminder, no bloc changes', () async {
@@ -131,7 +150,6 @@ void main() {
 
       expect(cubit.state, isA<IdleFlowResolved>());
       expect(reminderService.reloadCalls, 1);
-      // Timer still running
       expect(bloc.state.isRunning, isTrue);
     });
 
@@ -162,7 +180,7 @@ void main() {
       expect(active!.taskId, 't1');
     });
 
-    test('logToTask choice: creates idle entry, restarts original task', () async {
+    test('logToTask with no dialog callback falls back to keep', () async {
       repo.seed(TimeEntry(
         id: 'e1', taskId: 't1', projectId: 'p1',
         startAt: clock.now(), status: TimeEntryStatus.running,
@@ -174,19 +192,13 @@ void main() {
       idleMonitor.emitUserReturned();
       await Future.microtask(() {});
 
-      resolutionWindow.lastOnLogToTask!('Break');
+      resolutionWindow.lastOnRequestLogToTask!();
       await pumpEventQueue();
 
-      final all = repo.all;
-      // Stopped original, created idle entry, started new entry for t1
-      final idleEntry = all.firstWhere(
-        (e) => e.comment == 'Break' && e.status == TimeEntryStatus.stopped,
-        orElse: () => throw StateError('Idle entry not found'),
-      );
-      expect(idleEntry.comment, 'Break');
-      final active = await repo.getActive();
-      expect(active?.taskId, 't1');
+      expect(cubit.state, isA<IdleFlowResolved>());
       expect(reminderService.reloadCalls, 1);
+      // Timer still running - keep was the fallback.
+      expect(bloc.state.isRunning, isTrue);
     });
 
     test('discard is a no-op if the active entry changed since threshold', () async {
@@ -202,7 +214,7 @@ void main() {
       idleMonitor.emitUserReturned();
       await Future.microtask(() {});
 
-      // Simulate task switch: stop e1, start e2 (different entry)
+      // Simulate task switch: stop e1, start e2 (different entry).
       await repo.update(
         repo.all.first.copyWith(
           status: TimeEntryStatus.stopped,
@@ -217,11 +229,82 @@ void main() {
       resolutionWindow.lastOnDiscard!();
       await pumpEventQueue();
 
-      // Discard was a no-op: e2 is untouched and still the active entry
+      // Discard was a no-op: e2 is untouched and still the active entry.
       final active = await repo.getActive();
       expect(active?.id, 'e2');
       expect(active?.status, TimeEntryStatus.running);
       expect(cubit.state, isA<IdleFlowResolved>());
+    });
+  });
+
+  group('IdleFlowCubit - logToTask with dialog', () {
+    test('dialog confirmed: creates idle entry linked to selected task and restarts original', () async {
+      final cubit = buildCubit(
+        showTaskSelectionDialog: () async => const IdleTaskSelection(
+          taskId: 'other-task',
+          projectId: 'other-project',
+          comment: 'Coffee break',
+        ),
+      );
+      addTearDown(cubit.close);
+
+      repo.seed(TimeEntry(
+        id: 'e1', taskId: 't1', projectId: 'p1',
+        startAt: clock.now(), status: TimeEntryStatus.running,
+      ));
+      bloc.add(const TimeTrackerLoaded());
+      await pumpEventQueue();
+
+      final thresholdTime = DateTime(2025, 1, 1, 9, 10);
+      idleMonitor.emitThreshold(idleSeconds: 600, timestamp: thresholdTime);
+      await Future.microtask(() {});
+      fakeNow = DateTime(2025, 1, 1, 9, 35);
+      idleMonitor.emitUserReturned();
+      await Future.microtask(() {});
+
+      resolutionWindow.lastOnRequestLogToTask!();
+      await pumpEventQueue();
+
+      final all = repo.all;
+      // Original entry stopped at idle start, idle entry created, new running entry.
+      final idleEntry = all.firstWhere(
+        (e) => e.taskId == 'other-task' && e.status == TimeEntryStatus.stopped,
+        orElse: () => throw StateError('Idle entry not found'),
+      );
+      expect(idleEntry.projectId, 'other-project');
+      expect(idleEntry.comment, 'Coffee break');
+
+      final active = await repo.getActive();
+      expect(active?.taskId, 't1');
+      expect(cubit.state, isA<IdleFlowResolved>());
+      expect(reminderService.reloadCalls, 1);
+    });
+
+    test('dialog dismissed: falls back to keep tracking', () async {
+      final cubit = buildCubit(
+        showTaskSelectionDialog: () async => null,
+      );
+      addTearDown(cubit.close);
+
+      repo.seed(TimeEntry(
+        id: 'e1', taskId: 't1', projectId: 'p1',
+        startAt: clock.now(), status: TimeEntryStatus.running,
+      ));
+      bloc.add(const TimeTrackerLoaded());
+      await pumpEventQueue();
+
+      idleMonitor.emitThreshold(idleSeconds: 610);
+      await Future.microtask(() {});
+      idleMonitor.emitUserReturned();
+      await Future.microtask(() {});
+
+      resolutionWindow.lastOnRequestLogToTask!();
+      await pumpEventQueue();
+
+      expect(cubit.state, isA<IdleFlowResolved>());
+      // Only one active entry: the original t1 is still running.
+      final active = await repo.getActive();
+      expect(active?.taskId, 't1');
     });
   });
 }

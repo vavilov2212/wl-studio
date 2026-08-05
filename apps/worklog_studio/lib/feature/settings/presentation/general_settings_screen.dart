@@ -29,6 +29,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   String? _backupsDirPath;
   String? _version;
   final _idleThresholdController = TextEditingController();
+  final _idleThresholdFocus = FocusNode();
   bool? _launchAtStartup;
 
   @override
@@ -37,11 +38,17 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     _loadDirPaths();
     _loadVersion();
     _loadBehaviorSettings();
+    _idleThresholdFocus.addListener(() {
+      if (!_idleThresholdFocus.hasFocus) {
+        _saveIdleThreshold(_idleThresholdController.text);
+      }
+    });
   }
 
   @override
   void dispose() {
     _idleThresholdController.dispose();
+    _idleThresholdFocus.dispose();
     super.dispose();
   }
 
@@ -255,6 +262,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                 width: 56,
                 child: TextField(
                   controller: _idleThresholdController,
+                  focusNode: _idleThresholdFocus,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onSubmitted: _saveIdleThreshold,

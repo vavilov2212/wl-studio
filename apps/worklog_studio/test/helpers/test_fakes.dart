@@ -303,10 +303,10 @@ class FakeIdleMonitor implements IdleMonitor {
   @override
   Future<void> stop() async => stopped = true;
 
-  void emitThreshold({required int idleSeconds}) {
+  void emitThreshold({required int idleSeconds, DateTime? timestamp}) {
     _controller.add(IdleThresholdReached(
       idleSeconds: idleSeconds,
-      timestamp: DateTime.now(),
+      timestamp: timestamp ?? DateTime.now(),
     ));
   }
 

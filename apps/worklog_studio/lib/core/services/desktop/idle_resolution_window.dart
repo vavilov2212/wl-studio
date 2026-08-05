@@ -23,23 +23,19 @@ class IdleResolutionWindow {
   int? _keepBtnHwnd;
   int? _discardBtnHwnd;
   int? _logBtnHwnd;
-  int? _editHwnd;
-  int? _confirmBtnHwnd;
   int? _headerHwnd;
   int? _hFont;
 
-  bool _expanded = false;
   bool isVisible = false;
 
   void Function()? _onKeep;
   void Function()? _onDiscard;
-  void Function(String)? _onLogToTask;
+  void Function()? _onRequestLogToTask;
 
   Timer? _pollTimer;
 
   static const _kW = 320;
   static const _kH = 160;
-  static const _kHExpanded = 210;
   static const _kBtnH = 32;
   static const _kPad = 12;
 
@@ -47,19 +43,17 @@ class IdleResolutionWindow {
     required int idleMinutes,
     required void Function() onKeep,
     required void Function() onDiscard,
-    required void Function(String taskName) onLogToTask,
+    required void Function() onRequestLogToTask,
   }) {
     _onKeep = onKeep;
     _onDiscard = onDiscard;
-    _onLogToTask = onLogToTask;
-    _expanded = false;
+    _onRequestLogToTask = onRequestLogToTask;
 
     if (_hwnd == null) {
       _registerClassIfNeeded();
       _createWindows(idleMinutes);
     } else {
       _updateHeader(idleMinutes);
-      _setExpanded(false);
     }
 
     if (_hwnd == null) return; // window creation failed - do NOT call coordinator
@@ -138,12 +132,9 @@ class IdleResolutionWindow {
     _keepBtnHwnd = _createButton('Keep tracking', _hwnd!);
     _discardBtnHwnd = _createButton('Discard idle time', _hwnd!);
     _logBtnHwnd = _createButton('Log to another task...', _hwnd!);
-    _editHwnd = _createEdit(_hwnd!);
-    _confirmBtnHwnd = _createButton('Confirm', _hwnd!);
 
     _applyFont();
-    _layoutChildren(false);
-    _showExpansionControls(false);
+    _layoutChildren();
   }
 
   int _createStatic(String text, int parent) {
@@ -182,24 +173,6 @@ class IdleResolutionWindow {
     }
   }
 
-  int _createEdit(int parent) {
-    final cls = 'EDIT'.toNativeUtf16();
-    final empty = ''.toNativeUtf16();
-    try {
-      final h = win32.CreateWindowEx(
-        win32.WS_EX_CLIENTEDGE, cls, empty,
-        win32.WS_CHILD | win32.ES_LEFT | win32.ES_AUTOHSCROLL,
-        0, 0, 1, 1,
-        parent, win32.NULL,
-        win32.GetModuleHandle(nullptr), nullptr,
-      );
-      return h;
-    } finally {
-      calloc.free(cls);
-      calloc.free(empty);
-    }
-  }
-
   int _createFont() {
     final lf = calloc<win32.LOGFONT>();
     try {
@@ -215,15 +188,14 @@ class IdleResolutionWindow {
   }
 
   void _applyFont() {
-    for (final h in [_headerHwnd, _keepBtnHwnd, _discardBtnHwnd, _logBtnHwnd,
-                      _editHwnd, _confirmBtnHwnd]) {
+    for (final h in [_headerHwnd, _keepBtnHwnd, _discardBtnHwnd, _logBtnHwnd]) {
       if (h != null && _hFont != null) {
         win32.SendMessage(h, win32.WM_SETFONT, _hFont!, win32.TRUE);
       }
     }
   }
 
-  void _layoutChildren(bool expanded) {
+  void _layoutChildren() {
     final h = _hwnd;
     if (h == null) return;
     final w = _kW - _kPad * 2;
@@ -239,32 +211,12 @@ class IdleResolutionWindow {
         y += _kBtnH + 4;
       }
     }
-    if (expanded) {
-      if (_editHwnd != null) {
-        win32.MoveWindow(_editHwnd!, _kPad, y, w - 70, 26, win32.TRUE);
-      }
-      if (_confirmBtnHwnd != null) {
-        win32.MoveWindow(_confirmBtnHwnd!, _kW - _kPad - 64, y, 64, 26, win32.TRUE);
-      }
-    }
     win32.SetWindowPos(
       h, win32.HWND_TOPMOST,
-      0, 0, _kW, expanded ? _kHExpanded : _kH,
+      0, 0, _kW, _kH,
       win32.SWP_NOMOVE | win32.SWP_NOZORDER,
     );
     win32.InvalidateRect(h, nullptr, win32.TRUE);
-  }
-
-  void _showExpansionControls(bool show) {
-    final cmd = show ? win32.SW_SHOW : win32.SW_HIDE;
-    if (_editHwnd != null) win32.ShowWindow(_editHwnd!, cmd);
-    if (_confirmBtnHwnd != null) win32.ShowWindow(_confirmBtnHwnd!, cmd);
-  }
-
-  void _setExpanded(bool expanded) {
-    _expanded = expanded;
-    _showExpansionControls(expanded);
-    _layoutChildren(expanded);
   }
 
   void _updateHeader(int idleMinutes) {
@@ -283,12 +235,11 @@ class IdleResolutionWindow {
     if (h == null) return;
     final screenW = win32.GetSystemMetrics(win32.SM_CXSCREEN);
     final screenH = win32.GetSystemMetrics(win32.SM_CYSCREEN);
-    final windowH = _expanded ? _kHExpanded : _kH;
     win32.SetWindowPos(
       h, win32.HWND_TOPMOST,
       screenW - _kW - 16,
-      screenH - windowH - 48,
-      _kW, windowH,
+      screenH - _kH - 48,
+      _kW, _kH,
       win32.SWP_NOSIZE | win32.SWP_NOZORDER,
     );
   }
@@ -307,8 +258,6 @@ class IdleResolutionWindow {
       _keepBtnHwnd = null;
       _discardBtnHwnd = null;
       _logBtnHwnd = null;
-      _editHwnd = null;
-      _confirmBtnHwnd = null;
       _headerHwnd = null;
       return;
     }
@@ -342,16 +291,10 @@ class IdleResolutionWindow {
       hide();
       _onDiscard?.call();
     } else if (_hitTest(_logBtnHwnd, x, y)) {
-      if (!_expanded) {
-        _setExpanded(true);
-        _positionNearTray();
-      }
-    } else if (_expanded && _hitTest(_confirmBtnHwnd, x, y)) {
-      final taskName = _getEditText();
-      if (taskName.isNotEmpty) {
-        hide();
-        _onLogToTask?.call(taskName);
-      }
+      // Hide the Win32 window and let the cubit open a Flutter dialog for
+      // proper task/project selection instead of the old inline EDIT expansion.
+      hide();
+      _onRequestLogToTask?.call();
     }
   }
 
@@ -379,18 +322,6 @@ class IdleResolutionWindow {
       }
     } finally {
       calloc.free(r);
-    }
-  }
-
-  String _getEditText() {
-    final h = _editHwnd;
-    if (h == null) return '';
-    final buf = win32.wsalloc(512);
-    try {
-      win32.GetWindowText(h, buf, 512);
-      return buf.toDartString();
-    } finally {
-      calloc.free(buf);
     }
   }
 }

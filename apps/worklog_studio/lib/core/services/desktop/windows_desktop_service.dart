@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/material.dart' show showDialog;
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
@@ -25,7 +27,9 @@ import 'package:worklog_studio/feature/desktop/data/ipc_models.dart';
 import 'package:worklog_studio/feature/desktop/popover_positioning.dart';
 import 'package:worklog_studio/feature/desktop/bloc/mini_tracker_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/app/app.dart' show rootNavigatorKey;
 import 'package:worklog_studio/feature/time_tracker/cubit/idle_flow_cubit.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/idle_task_selection_dialog.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 
@@ -168,6 +172,7 @@ class WindowsDesktopService implements IDesktopPlatformService {
       reloadReminderInterval: _reminderService!.reloadInterval,
       showResolutionWindow: _idleResolutionWindow!.show,
       hideResolutionWindow: _idleResolutionWindow!.hide,
+      showTaskSelectionDialog: _showIdleTaskSelectionDialog,
       thresholdSeconds: thresholdSeconds,
     );
     if (GetIt.I.isRegistered<IdleFlowCubit>()) {
@@ -519,6 +524,15 @@ class WindowsDesktopService implements IDesktopPlatformService {
 
   Rect _fixedTrayAnchor(Size screenSize) =>
       Rect.fromLTWH(screenSize.width - 32, screenSize.height - 32, 32, 32);
+
+  Future<IdleTaskSelection?> _showIdleTaskSelectionDialog() async {
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return null;
+    return showDialog<IdleTaskSelection>(
+      context: context,
+      builder: (_) => const IdleTaskSelectionDialog(),
+    );
+  }
 
   Future<Rect> _computeActivityPromptFrame() async {
     final screenSize = await _screenSize();
