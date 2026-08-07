@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/core/utils/date_formatter.dart';
@@ -12,7 +11,9 @@ import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/history/presentation/components/history_filter_bar.dart';
 import 'package:worklog_studio/feature/history/presentation/components/history_sort_bar.dart';
 import 'package:worklog_studio/feature/history/presentation/components/time_entry_card.dart';
-import 'package:worklog_studio/feature/history/presentation/components/time_entry_table.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_stack_card.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_stack_grouper.dart';
+import 'package:worklog_studio/feature/history/presentation/components/time_entry_stack_table.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
@@ -258,33 +259,40 @@ class TimeEntryList extends StatelessWidget {
                         if (viewMode == HistoryViewMode.cards)
                           Column(
                             spacing: theme.spacings.md,
-                            children: dailyEntries.map((resolvedEntry) {
-                              final entry = resolvedEntry.entry;
-                              final isSelected = selectedEntry?.id == entry.id;
-
-                              return TimeEntryCard(
-                                key: isSelected ? selectedRowKey : null,
-                                resolvedEntry: resolvedEntry,
-                                isSelected: isSelected,
-                                onTap: () => onEntrySelected(entry),
+                            children: groupConsecutiveEntries(dailyEntries)
+                                .map((stack) {
+                              if (stack.isSingle) {
+                                final entry = stack.representative.entry;
+                                final isSelected =
+                                    selectedEntry?.id == entry.id;
+                                return TimeEntryCard(
+                                  key: isSelected
+                                      ? selectedRowKey
+                                      : ValueKey(entry.id),
+                                  resolvedEntry: stack.representative,
+                                  isSelected: isSelected,
+                                  onTap: () => onEntrySelected(entry),
+                                );
+                              }
+                              final containsSelected = selectedEntry != null &&
+                                  stack.entries
+                                      .any((e) => e.id == selectedEntry!.id);
+                              return TimeEntryStackCard(
+                                key: containsSelected
+                                    ? selectedRowKey
+                                    : ValueKey(stack.id),
+                                stack: stack,
+                                selectedEntry: selectedEntry,
+                                onEntrySelected: onEntrySelected,
                               );
                             }).toList(),
                           )
                         else
-                          WsTable<ResolvedTimeEntry>(
-                            showHeader: true,
-                            data: dailyEntries,
-                            selectedItem: dailyEntries.firstWhereOrNull(
-                              (e) => e.entry.id == selectedEntry?.id,
-                            ),
-                            rowKeyBuilder: (item) =>
-                                item.entry.id == selectedEntry?.id
-                                ? selectedRowKey
-                                : null,
-                            onRowTap: (item) => onEntrySelected(item.entry),
-                            isSelected: (item, selected) =>
-                                item.entry.id == selected?.entry.id,
-                            columns: getHistoryTableColumns(theme),
+                          HistoryStackTable(
+                            stacks: groupConsecutiveEntries(dailyEntries),
+                            selectedEntry: selectedEntry,
+                            selectedRowKey: selectedRowKey,
+                            onRowTap: onEntrySelected,
                           ),
                         SizedBox(height: theme.spacings.xl),
                       ],
@@ -293,31 +301,39 @@ class TimeEntryList extends StatelessWidget {
                 else if (viewMode == HistoryViewMode.cards)
                   Column(
                     spacing: theme.spacings.md,
-                    children: sortedEntries.map((resolvedEntry) {
-                      final entry = resolvedEntry.entry;
-                      final isSelected = selectedEntry?.id == entry.id;
-                      return TimeEntryCard(
-                        key: isSelected ? selectedRowKey : null,
-                        resolvedEntry: resolvedEntry,
-                        isSelected: isSelected,
-                        onTap: () => onEntrySelected(entry),
+                    children: groupConsecutiveEntries(sortedEntries)
+                        .map((stack) {
+                      if (stack.isSingle) {
+                        final entry = stack.representative.entry;
+                        final isSelected = selectedEntry?.id == entry.id;
+                        return TimeEntryCard(
+                          key: isSelected
+                              ? selectedRowKey
+                              : ValueKey(entry.id),
+                          resolvedEntry: stack.representative,
+                          isSelected: isSelected,
+                          onTap: () => onEntrySelected(entry),
+                        );
+                      }
+                      final containsSelected = selectedEntry != null &&
+                          stack.entries
+                              .any((e) => e.id == selectedEntry!.id);
+                      return TimeEntryStackCard(
+                        key: containsSelected
+                            ? selectedRowKey
+                            : ValueKey(stack.id),
+                        stack: stack,
+                        selectedEntry: selectedEntry,
+                        onEntrySelected: onEntrySelected,
                       );
                     }).toList(),
                   )
                 else
-                  WsTable<ResolvedTimeEntry>(
-                    showHeader: true,
-                    data: sortedEntries,
-                    selectedItem: sortedEntries.firstWhereOrNull(
-                      (e) => e.entry.id == selectedEntry?.id,
-                    ),
-                    rowKeyBuilder: (item) => item.entry.id == selectedEntry?.id
-                        ? selectedRowKey
-                        : null,
-                    onRowTap: (item) => onEntrySelected(item.entry),
-                    isSelected: (item, selected) =>
-                        item.entry.id == selected?.entry.id,
-                    columns: getHistoryTableColumns(theme),
+                  HistoryStackTable(
+                    stacks: groupConsecutiveEntries(sortedEntries),
+                    selectedEntry: selectedEntry,
+                    selectedRowKey: selectedRowKey,
+                    onRowTap: onEntrySelected,
                   ),
                 // Footer
                 if (entries.isNotEmpty)

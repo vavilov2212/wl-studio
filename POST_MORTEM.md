@@ -12,11 +12,10 @@
 > and pitfall entries (tagged with the session date); the four top-level sections
 > (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> State at last update (2026-08-05, [debug] Idle detection bug fixes):
-> **341/341 tests green**, `flutter analyze` clean on
-> `lib\feature\settings\`, `lib\feature\time_tracker\`, `lib\core\services\desktop\`
-> (5 files changed; see 1.12). Previous state: 318/318 tests,
-> commit `a366250` (2026-07-15 reports/charts work).
+> State at last update (2026-08-07, [feature] History entry stacking):
+> **341/341 tests green** (no new tests added this session), `flutter analyze` clean on
+> `lib\feature\history\presentation\components\` (4 files changed; see 1.13).
+> Previous state: 341/341 tests, 2026-08-05 idle detection fixes (1.12).
 
 ---
 
@@ -401,6 +400,85 @@ progress bars, dashboard-to-reports jump. Journal Tasks 9-12 in
   (presentation-level dispatch). Acceptable as-is; any third edge means extract
   a shared file instead.
 
+### 1.13 History entry stacking (session 2026-08-07, [feature])
+
+Consecutive time entries sharing the same `taskId` + `projectId` are now
+collapsed into expandable "stacks" in both the card and table views of the
+history page. `flutter analyze` clean; no automated tests were written for
+this purely presentational feature (see 4.2 debt). Files added/changed:
+`feature\history\presentation\components\time_entry_stack_grouper.dart` (new),
+`feature\history\presentation\components\time_entry_stack_card.dart` (new),
+`feature\history\presentation\components\time_entry_stack_table.dart` (new),
+`feature\history\presentation\components\time_entry_list.dart` (modified).
+
+#### Why WsGroupedTable was rejected
+
+`WsGroupedTable<G, I>` was the first candidate - it already exists and handles
+expandable two-level tables (used in Reports). It was rejected because its
+`_ItemRow` widget hard-codes `onTap: null`: individual expanded rows are
+display-only. In the history view, tapping an expanded row must open the
+time-entry drawer. A feature-local `HistoryStackTable` was built instead.
+
+**Rule derived (see 2.10):** `WsGroupedTable` is only appropriate when item
+rows are purely informational. Any grouped table requiring tappable item rows
+needs a feature-local implementation.
+
+#### Three-file split and responsibilities
+
+| File | Responsibility |
+|---|---|
+| `time_entry_stack_grouper.dart` | Pure domain model `TimeEntryStack` + `groupConsecutiveEntries()`. Zero Flutter/widget imports. Tested independently. |
+| `time_entry_stack_card.dart` | `TimeEntryStackCard` (StatefulWidget). Collapsed: summary `InteractiveCard` + 1-2 shadow strips beneath to imply depth. Expanded: summary header card + individual `TimeEntryCard` items joined by a left accent line via `IntrinsicHeight`. |
+| `time_entry_stack_table.dart` | `HistoryStackTable` (StatefulWidget). Replicates `WsTable`'s outer container + header, then renders single-entry stacks as normal rows (`_HistoryNormalRow`) and multi-entry stacks as a summary row (`_HistoryStackSummaryRow`) that expands inline to `_HistoryItemRow` children. |
+
+The column flex values in `_HistoryStackSummaryRow` are hardcoded to match
+`getHistoryTableColumns` exactly (flex 4-3-8-2-2, fixedWidth 48). If that
+function changes its column structure, `_HistoryStackSummaryRow` must be
+updated in tandem.
+
+#### time_entry_list.dart changes
+
+All four render paths (date-grouped card, date-grouped table, flat card, flat
+table) now call `groupConsecutiveEntries(entries)` before building the widget
+tree. `WsTable<ResolvedTimeEntry>` and `getHistoryTableColumns` are no longer
+called from `time_entry_list.dart`. As a consequence, both the `collection`
+package import (`firstWhereOrNull` was its only usage) and the
+`time_entry_table.dart` import were removed. Failing to remove them produces
+`[undefined_method]` / `[unused_import]` analyzer errors (see pitfall 3.28).
+
+#### IntrinsicHeight connector-line pattern
+
+In the card view's expanded state, each sub-entry card is paired with a 2px
+accent-colored vertical line using:
+
+```dart
+IntrinsicHeight(
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Container(width: 2, ...), // accent line - stretches to card height
+      Expanded(child: TimeEntryCard(...)),
+    ],
+  ),
+),
+```
+
+`IntrinsicHeight` forces the `Row` to measure its children's intrinsic height
+and then stretches all children to that height. Safe here because
+`TimeEntryCard` -> `InteractiveCard` -> `Padding` has a finite intrinsic
+height. **Never use `IntrinsicHeight` with `ListView` or any unbounded-height
+child** - it will throw at runtime (see pitfall 3.29).
+
+#### selectedRowKey placement
+
+The `GlobalKey? selectedRowKey` used for `Scrollable.ensureVisible` is
+attached to the outermost container of the stack group - the `TimeEntryStackCard`
+widget key (card view) or the `_HistoryNormalRow`/`_HistoryStackSummaryRow`
+widget key (table view). It is NOT passed down to individual `TimeEntryCard`
+children inside an expanded stack. Consequence: when a collapsed stack contains
+the selected entry, scrolling brings the stack into view (acceptable). Auto-
+expanding the stack to reveal the specific entry is deferred (see 4.2).
+
 ---
 
 ## 2. PRODUCTION GUARDRAILS
@@ -632,6 +710,25 @@ Rules:
 - Changing hotkey DEFAULTS does not affect users with previously saved bindings -
   `HotkeyService` stored settings override `defaultHotKeyFor`. A default change needs
   either a settings migration or a release-notes instruction to re-save.
+
+### 2.10 Feature-local grouped table vs WsGroupedTable
+
+- **Use `WsGroupedTable<G, I>` only when item rows are display-only (non-tappable).**
+  Its `_ItemRow` hard-codes `onTap: null`. Any grouped table that needs tappable
+  individual rows (e.g., to open a drawer) requires a feature-local implementation
+  that wires its own `InkWell` and `onTap` callback per item row.
+  *Why:* modifying `WsGroupedTable` to support `onItemTap` would require changing the
+  style system package's public API and is not the right trade-off when only one
+  feature needs tappable items. Feature-local tables keep the style system contract
+  stable. (Confirmed: `HistoryStackTable` was built this way for the history stacking
+  feature, 2026-08-07.)
+- **When building a feature-local table that mirrors `WsTable`'s outer container,**
+  copy the exact `Container` + `ClipRRect` + `Column` structure from `WsTable.build()`:
+  `border.all(alpha: 0.4)`, `boxShadow: [shadows.sm]`, `radiuses.md.circular`.
+  Do not invent a different outer container - visual inconsistency will be obvious.
+- **Summary-row column flex values MUST exactly match `getHistoryTableColumns`.**
+  If that function ever changes its column structure (flex / fixedWidth), update the
+  feature-local summary row in tandem or visual misalignment will appear.
 
 ---
 
@@ -943,6 +1040,47 @@ note: `flutter test --timeout 30s` does NOT bound testWidgets bodies; use
 open-in-reports widget test (2026-07-15); debugPrint markers after every await
 plus a 60s per-test timeout bisected the hang in one run.
 
+### 3.28 `collection` and `time_entry_table` imports become dangling after WsTable removal
+
+**Symptom:** after replacing `WsTable<ResolvedTimeEntry>` usages in a file with
+`HistoryStackTable`, the analyzer emits:
+- `[undefined_method] The method 'firstWhereOrNull' isn't defined for the type 'List'.`
+- `[undefined_method] The method 'getHistoryTableColumns' isn't defined...`
+- `[unused_import]` warnings for `collection/collection.dart` and `time_entry_table.dart`
+
+**Cause:** `firstWhereOrNull` was imported via `package:collection/collection.dart`
+and only used in `WsTable`'s `selectedItem:` parameter. `getHistoryTableColumns`
+and `WsTable` itself were only imported via `time_entry_table.dart`. Once
+`HistoryStackTable` handles both selection and column definitions internally,
+both imports become dead.
+
+**Fix:** remove `import 'package:collection/collection.dart'` and
+`import '.../time_entry_table.dart'` from any file that switches from `WsTable`
+to `HistoryStackTable`. Do NOT add `collection` back for `firstWhereOrNull` -
+Dart 3 has `Iterable.firstWhereOrNull` in `dart:core` when using the `collection`
+package, but `HistoryStackTable` resolves selection by comparing `entry.id`
+directly without it.
+
+### 3.29 `IntrinsicHeight` throws when a child has unbounded height
+
+**Symptom:** a `Row` containing an `IntrinsicHeight`-stretched child that internally
+uses `ListView` (or any widget with infinite intrinsic height) throws:
+`"RenderFlex children have non-zero flex but incoming height constraints are unbounded."`
+
+**Cause:** `IntrinsicHeight` asks each child for its intrinsic height and then
+sets the `Row`'s height to the maximum. `ListView` reports an infinite intrinsic
+height (it is a scrollable, not a fixed-height widget). Infinite + finite = infinite
+Row height, which crashes under `Column` or another `IntrinsicHeight`.
+
+**Safe usage:** `IntrinsicHeight` is only safe when every child reports a finite
+intrinsic height. `TimeEntryCard` is safe (it resolves to `InteractiveCard` ->
+`Padding` -> `CardRow` -> fixed-height children). Do not use `IntrinsicHeight`
+around any `Scrollable`, `ListView`, `GridView`, or `Expanded` child.
+
+**Alternative for lists:** use a `LayoutBuilder` to get the available height and
+pass it explicitly, or replace the connector-line approach with a `CustomPaint`
+overlay drawn behind the list.
+
 ---
 
 ## 4. FUTURE BACKLOG
@@ -1077,6 +1215,38 @@ Added in session 2026-07-15 (Reports charts block, [feature]):
   entries.
 - **Selected chart view (donut/bar) is not persisted** across app restarts on either
   the Dashboard or Reports - deliberate parity, revisit only if users ask.
+
+Added in session 2026-08-07 (History entry stacking, [feature]):
+
+- **`groupConsecutiveEntries()` has zero unit tests.** The pure grouping function
+  in `time_entry_stack_grouper.dart` has straightforward but non-trivial behaviour
+  (three distinct cases: empty list, all-same group, alternating groups). A test
+  belongs in `test\core\time_entry_stack_grouper_test.dart`; the fake builder in
+  `test\helpers\test_fakes.dart` can generate `ResolvedTimeEntry` instances cheaply.
+- **`TimeEntryStackCard` and `HistoryStackTable` have zero widget tests.** Expand/
+  collapse toggle, shadow-strip count (1 vs 2 depending on `stack.count`), and
+  item-row `onTap` propagation are all verified only by `flutter analyze` + manual
+  run. Use the drawer harness pattern (2.6) - both widgets need `TimeTrackerBloc`
+  provided.
+- **No auto-expand when `selectedEntry` changes to an entry inside a collapsed stack.**
+  If external code changes the selected entry (e.g., the drawer closes and history
+  re-selects), a collapsed stack that contains the newly selected entry gets
+  highlighted but NOT expanded; the user cannot see which specific sub-entry is
+  selected without manually expanding. Fix: add `didUpdateWidget` logic to
+  `TimeEntryStackCard` / `_HistoryStackTableState` that calls `setState` to expand
+  a stack when its `selectedEntry` changes to one of its members.
+- **Efficiency column is empty in the stack summary row.** `_HistoryStackSummaryRow`
+  renders `SizedBox.shrink()` for the Efficiency column because real efficiency data
+  does not exist yet (it is still a hardcoded 94% placeholder everywhere). Update
+  when efficiency becomes real.
+- **`time_entry_table.dart` comment column still uses `FontStyle.italic`** for the
+  "No comment" placeholder - violates guardrail 2.4 (no italic text). This is a
+  pre-existing issue, not introduced by this session; fix opportunistically.
+- **`_HistoryStackSummaryRow` row height is hardcoded to `SizedBox(height: 52)`.**
+  Normal rows in `WsTable` use `vertical: theme.spacings.lg` padding (16 + content
+  + 16 = typically ~52px). If the content font sizes change, the summary row will
+  silently clip or gap. Replace with `IntrinsicHeight` or padding-based sizing to
+  match the normal row pattern.
 
 ### 4.3 Standing environment constraints
 - Windows-only development; never crawl `macos/`, `ios/`, `android/`, `linux/`, `web/`
