@@ -12,10 +12,10 @@
 > and pitfall entries (tagged with the session date); the four top-level sections
 > (Architecture, Guardrails, Pitfalls, Backlog) are the standing, cross-session index.
 >
-> State at last update (2026-08-07, [feature] History entry stacking):
-> **341/341 tests green** (no new tests added this session), `flutter analyze` clean on
-> `lib\feature\history\presentation\components\` (4 files changed; see 1.13).
-> Previous state: 341/341 tests, 2026-08-05 idle detection fixes (1.12).
+> State at last update (2026-08-10, [redesign] Column layout standardization):
+> **341/341 tests green** (no new tests; UI-only change), `flutter analyze` clean on all
+> changed files (5 files changed; see 1.14).
+> Previous state: 341/341 tests, 2026-08-07 history entry stacking (1.13).
 
 ---
 
@@ -479,6 +479,59 @@ children inside an expanded stack. Consequence: when a collapsed stack contains
 the selected entry, scrolling brings the stack into view (acceptable). Auto-
 expanding the stack to reveal the specific entry is deferred (see 4.2).
 
+### 1.14 Column layout standardization (session 2026-08-10, [redesign])
+
+Ad-hoc UI polish: column order standardized and the Efficiency placeholder column
+removed across the history and dashboard tables. Commit `41d896a`. Files changed:
+`feature\history\presentation\components\time_entry_table.dart`,
+`feature\history\presentation\components\time_entry_stack_table.dart`,
+`feature\history\presentation\components\time_entry_card.dart`,
+`feature\history\presentation\components\time_entry_stack_card.dart`,
+`feature\home\presentation\home_page.dart`.
+
+#### Column order: Comment before Duration
+
+Previous order: Task & Project | Duration | Comment | Efficiency | Status | Actions
+Current order:  Task & Project | Comment | Duration | Status | Actions
+
+Rationale: reading left-to-right, users scan for WHAT first (task name, then comment)
+before HOW LONG (duration). Duration as the last data column before the action button
+also creates a natural terminal anchor. Applied symmetrically to all five surfaces so
+the horizontal rhythm is identical in every view mode.
+
+#### Efficiency column removed entirely
+
+The Efficiency column was a hardcoded `94%` + `LinearProgressIndicator` placeholder with
+no real data behind it. It lived in three independent locations:
+
+1. `getHistoryTableColumns()` - a full `WsTableColumn` builder (history table)
+2. `_HistoryStackSummaryRow` - a `SizedBox.shrink()` flex-slot placeholder
+3. `home_page._fullColumns()` - a separate `_efficiencyColumn()` private method
+
+All three were deleted in one commit. The `_efficiencyColumn` method in
+`home_page.dart` was the only call site for its own definition, so removing the
+`_efficiencyColumn(theme)` call from `_fullColumns` was immediately followed by
+deleting the method body (the analyzer flagged "unused declaration" on the next save).
+
+Updated hardcoded flex comment in `_HistoryStackSummaryRow` from:
+  `//   flex 4 | flex 3 | flex 8 | flex 2 | flex 2 | fixedWidth 48`
+to:
+  `//   flex 4 | flex 8 | flex 3 | flex 2 | fixedWidth 48`
+
+#### Card view reorder note
+
+`TimeEntryStackCard` summary has no "Comment" column - it shows the "N sessions" count
+as its content area. After the reorder, "N sessions" occupies the same horizontal zone
+as "Comment" does in the regular card and table, and "Duration" sits in the matching
+position. The spatial rhythm is consistent across card and table views even though the
+content differs for stack summaries.
+
+#### Key coupling reminder
+
+Column structure now lives in three places that must change together (see pitfall 3.30
+and guardrail 2.10): `getHistoryTableColumns`, `_HistoryStackSummaryRow`,
+`home_page._fullColumns`. Single-file column changes will silently misalign the others.
+
 ---
 
 ## 2. PRODUCTION GUARDRAILS
@@ -726,9 +779,17 @@ Rules:
   copy the exact `Container` + `ClipRRect` + `Column` structure from `WsTable.build()`:
   `border.all(alpha: 0.4)`, `boxShadow: [shadows.sm]`, `radiuses.md.circular`.
   Do not invent a different outer container - visual inconsistency will be obvious.
-- **Summary-row column flex values MUST exactly match `getHistoryTableColumns`.**
-  If that function ever changes its column structure (flex / fixedWidth), update the
-  feature-local summary row in tandem or visual misalignment will appear.
+- **History table column structure lives in THREE locations that must all change
+  in the same commit.** Any column add / remove / reorder / flex adjustment must be
+  applied to all three simultaneously or visual misalignment results:
+  1. `getHistoryTableColumns()` in `time_entry_table.dart` - canonical source of truth
+  2. `_HistoryStackSummaryRow` in `time_entry_stack_table.dart` - hardcoded
+     `Expanded(flex:)` sequence; the comment at the top of the class lists the
+     current values and IS the sync checkpoint - update it with every change
+  3. `_fullColumns()` in `home_page.dart` - independent column list for the dashboard
+     recent-activity table (see pitfall 3.30)
+  Current state (2026-08-10): `flex 4 | flex 8 | flex 3 | flex 2 | fixedWidth 48`
+  (Task & Project | Comment | Duration | Status | Actions).
 
 ---
 
@@ -1061,6 +1122,38 @@ Dart 3 has `Iterable.firstWhereOrNull` in `dart:core` when using the `collection
 package, but `HistoryStackTable` resolves selection by comparing `entry.id`
 directly without it.
 
+### 3.30 History table column changes silently misalign if not applied to all three locations
+
+**Symptom:** the stack summary row's cells no longer line up with the header / normal
+rows after a column change - or the dashboard "Recent Activity" table still shows a
+column (or is missing one) that was added/removed from the history table.
+
+**Cause:** column structure is maintained independently in three files that have no
+compile-time link to each other:
+1. `getHistoryTableColumns()` in `time_entry_table.dart` - returns a typed list the
+   framework renders dynamically, so changing it only affects widgets that call this
+   function.
+2. `_HistoryStackSummaryRow` in `time_entry_stack_table.dart` - hardcoded
+   `Expanded(flex:)` children. No `getHistoryTableColumns` call. Misaligns silently.
+3. `_fullColumns()` in `home_page.dart` - completely separate column list for the
+   dashboard. Has its own builder methods (`_durationColumn`, `_commentColumn`, etc.)
+   that are manually mirrored from the history table.
+
+Removing the Efficiency column in 2026-08-10 required deleting code from all three
+locations in one commit. Missing any one of them would have produced visible misalignment
+(flex sum changed) or a dangling `_efficiencyColumn` call (unused-declaration warning).
+
+**Prevention checklist for any future column change:**
+- [ ] `getHistoryTableColumns()` updated
+- [ ] `_HistoryStackSummaryRow` `Expanded(flex:)` sequence updated + the flex comment
+      at the top of the class updated to match
+- [ ] `home_page._fullColumns()` updated (add/remove/reorder builder method calls)
+- [ ] If a builder method in `home_page.dart` becomes unreferenced, DELETE the method
+      body - the analyzer flags it as "unused declaration" immediately on save, so never
+      leave dead private methods behind
+
+See guardrail 2.10 for the standing rule.
+
 ### 3.29 `IntrinsicHeight` throws when a child has unbounded height
 
 **Symptom:** a `Row` containing an `IntrinsicHeight`-stretched child that internally
@@ -1235,10 +1328,11 @@ Added in session 2026-08-07 (History entry stacking, [feature]):
   selected without manually expanding. Fix: add `didUpdateWidget` logic to
   `TimeEntryStackCard` / `_HistoryStackTableState` that calls `setState` to expand
   a stack when its `selectedEntry` changes to one of its members.
-- **Efficiency column is empty in the stack summary row.** `_HistoryStackSummaryRow`
-  renders `SizedBox.shrink()` for the Efficiency column because real efficiency data
-  does not exist yet (it is still a hardcoded 94% placeholder everywhere). Update
-  when efficiency becomes real.
+- ~~**Efficiency column is empty in the stack summary row.**~~ **Resolved 2026-08-10:**
+  the entire Efficiency column was removed from all three table locations. When real
+  efficiency data exists, re-add it as a proper data column simultaneously in
+  `getHistoryTableColumns`, `_HistoryStackSummaryRow`, and `home_page._fullColumns`
+  (guardrail 2.10 / pitfall 3.30).
 - **`time_entry_table.dart` comment column still uses `FontStyle.italic`** for the
   "No comment" placeholder - violates guardrail 2.4 (no italic text). This is a
   pre-existing issue, not introduced by this session; fix opportunistically.
@@ -1247,6 +1341,25 @@ Added in session 2026-08-07 (History entry stacking, [feature]):
   + 16 = typically ~52px). If the content font sizes change, the summary row will
   silently clip or gap. Replace with `IntrinsicHeight` or padding-based sizing to
   match the normal row pattern.
+
+Added in session 2026-08-10 (Column layout standardization, [redesign]):
+
+- **`time_entry_table.dart` comment column still uses `FontStyle.italic`** for the
+  "No comment" placeholder text - violates guardrail 2.4 (no italic in UI). Pre-existing
+  debt carried forward from 2026-08-07; no other table surface uses italic. Fix: remove
+  `fontStyle: hasComment ? null : FontStyle.italic` from the Comment column builder in
+  `getHistoryTableColumns()` and replace with a color-only distinction (muted vs. secondary).
+- **No Efficiency data means no Efficiency column** - when real per-entry efficiency
+  metrics are added to the domain model (`ResolvedTimeEntry`), the column must be
+  re-introduced in all three locations simultaneously (see pitfall 3.30). The flex
+  position after Duration (before Status) was its historical slot; revisit the order
+  when re-adding.
+- **`home_page._fullColumns` and `getHistoryTableColumns` are manually mirrored with
+  no shared abstraction.** If the history and dashboard tables should always show the
+  same columns, extract a shared `getRecentActivityColumns(AppThemeExtension theme)`
+  utility (in `feature/common/utils/` or `feature/history/`) and call it from both.
+  Today the duplication is two call sites and is manageable; if a third table appears,
+  extract immediately.
 
 ### 4.3 Standing environment constraints
 - Windows-only development; never crawl `macos/`, `ios/`, `android/`, `linux/`, `web/`
