@@ -93,6 +93,17 @@ class _TimeEntryStackCardState extends State<TimeEntryStackCard> {
             ),
           ),
 
+          // Session count label
+          CardColumn(
+            flex: 3,
+            child: Text(
+              '${stack.count} sessions', // TODO: l10n
+              style: theme.commonTextStyles.caption.copyWith(
+                color: palette.text.muted,
+              ),
+            ),
+          ),
+
           // Total duration + time range
           CardColumn(
             flex: 2,
@@ -118,17 +129,6 @@ class _TimeEntryStackCardState extends State<TimeEntryStackCard> {
                   ),
                 ),
               ],
-            ),
-          ),
-
-          // Session count label
-          CardColumn(
-            flex: 3,
-            child: Text(
-              '${stack.count} sessions', // TODO: l10n
-              style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.muted,
-              ),
             ),
           ),
 

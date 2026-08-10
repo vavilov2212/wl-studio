@@ -60,6 +60,24 @@ List<WsTableColumn<ResolvedTimeEntry>> getHistoryTableColumns(
       },
     ),
     WsTableColumn(
+      title: 'Comment',
+      flex: 8,
+      builder: (context, item, isHovered) {
+        final palette = theme.colorsPalette;
+        final hasComment = item.entry.comment?.isNotEmpty == true;
+        return Text(
+          hasComment ? item.entry.comment! : 'No comment',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          softWrap: true,
+          style: theme.commonTextStyles.caption.copyWith(
+            color: hasComment ? palette.text.secondary : palette.text.muted,
+            fontStyle: hasComment ? null : FontStyle.italic,
+          ),
+        );
+      },
+    ),
+    WsTableColumn(
       title: 'Duration',
       flex: 3,
       builder: (context, item, isHovered) {
@@ -95,55 +113,6 @@ List<WsTableColumn<ResolvedTimeEntry>> getHistoryTableColumns(
               overflow: TextOverflow.ellipsis,
               style: theme.commonTextStyles.caption.copyWith(
                 color: palette.text.muted,
-              ),
-            ),
-          ],
-        );
-      },
-    ),
-    WsTableColumn(
-      title: 'Comment',
-      flex: 8,
-      builder: (context, item, isHovered) {
-        final palette = theme.colorsPalette;
-        final hasComment = item.entry.comment?.isNotEmpty == true;
-        return Text(
-          hasComment ? item.entry.comment! : 'No comment',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          softWrap: true,
-          style: theme.commonTextStyles.caption.copyWith(
-            color: hasComment ? palette.text.secondary : palette.text.muted,
-            fontStyle: hasComment ? null : FontStyle.italic,
-          ),
-        );
-      },
-    ),
-    WsTableColumn(
-      title: 'Efficiency',
-      flex: 2,
-      builder: (context, item, isHovered) {
-        final palette = theme.colorsPalette;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '94%',
-              style: theme.commonTextStyles.labelMedium.copyWith(
-                color: palette.accent.success,
-              ),
-            ),
-            SizedBox(height: theme.spacings.xxs),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: 0.94,
-                minHeight: 3,
-                backgroundColor: palette.background.surfaceMuted,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  palette.accent.success,
-                ),
               ),
             ),
           ],

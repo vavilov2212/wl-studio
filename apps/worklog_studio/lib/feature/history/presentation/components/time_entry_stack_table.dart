@@ -254,7 +254,7 @@ class _HistoryNormalRowState extends State<_HistoryNormalRow> {
 // ---------------------------------------------------------------------------
 // Stack summary row - tapping toggles expand/collapse
 // Columns match getHistoryTableColumns flex values exactly:
-//   flex 4 | flex 3 | flex 8 | flex 2 | flex 2 | fixedWidth 48
+//   flex 4 | flex 8 | flex 3 | flex 2 | fixedWidth 48
 // ---------------------------------------------------------------------------
 
 class _HistoryStackSummaryRow extends StatefulWidget {
@@ -362,16 +362,7 @@ class _HistoryStackSummaryRowState extends State<_HistoryStackSummaryRow> {
                     ),
                   ),
 
-                  // Column 1 - Total duration + range (flex 3)
-                  Expanded(
-                    flex: 3,
-                    child: Padding(
-                      padding: EdgeInsets.only(right: theme.spacings.md),
-                      child: _StackDurationCell(stack: stack),
-                    ),
-                  ),
-
-                  // Column 2 - "N sessions" label (flex 8)
+                  // Column 1 - "N sessions" label (flex 8)
                   Expanded(
                     flex: 8,
                     child: Padding(
@@ -385,16 +376,16 @@ class _HistoryStackSummaryRowState extends State<_HistoryStackSummaryRow> {
                     ),
                   ),
 
-                  // Column 3 - Efficiency placeholder (flex 2)
+                  // Column 2 - Total duration + range (flex 3)
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: Padding(
                       padding: EdgeInsets.only(right: theme.spacings.md),
-                      child: const SizedBox.shrink(),
+                      child: _StackDurationCell(stack: stack),
                     ),
                   ),
 
-                  // Column 4 - Count chip (flex 2)
+                  // Column 3 - Count chip (flex 2)
                   Expanded(
                     flex: 2,
                     child: Padding(

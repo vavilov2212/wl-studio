@@ -152,9 +152,8 @@ class _RecentActivitySection extends StatelessWidget {
   ) {
     return [
       _taskColumn(theme),
-      _durationColumn(theme),
       _commentColumn(theme),
-      _efficiencyColumn(theme),
+      _durationColumn(theme),
       _statusColumn(theme),
       _actionsColumn(),
     ];
@@ -285,42 +284,6 @@ class _RecentActivitySection extends StatelessWidget {
             color: hasComment ? palette.text.secondary : palette.text.muted,
             fontStyle: hasComment ? null : FontStyle.italic,
           ),
-        );
-      },
-    );
-  }
-
-  WsTableColumn<ResolvedTimeEntry> _efficiencyColumn(
-    AppThemeExtension theme,
-  ) {
-    return WsTableColumn(
-      title: 'Efficiency',
-      flex: 2,
-      builder: (context, item, isHovered) {
-        final palette = theme.colorsPalette;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '94%',
-              style: theme.commonTextStyles.labelMedium.copyWith(
-                color: palette.accent.success,
-              ),
-            ),
-            SizedBox(height: theme.spacings.xxs),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: 0.94,
-                minHeight: 3,
-                backgroundColor: palette.background.surfaceMuted,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  palette.accent.success,
-                ),
-              ),
-            ),
-          ],
         );
       },
     );

@@ -78,6 +78,24 @@ class TimeEntryCard extends StatelessWidget {
             ),
           ),
           CardColumn(
+            flex: 3,
+            child: Text(
+              (resolvedEntry.entry.comment?.isEmpty == null ||
+                      resolvedEntry.entry.comment?.isEmpty == true)
+                  ? 'No comment'
+                  : resolvedEntry.entry.comment!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.commonTextStyles.caption.copyWith(
+                color:
+                    (resolvedEntry.entry.comment?.isEmpty == null ||
+                        resolvedEntry.entry.comment?.isEmpty == true)
+                    ? palette.text.muted
+                    : palette.text.secondary,
+              ),
+            ),
+          ),
+          CardColumn(
             flex: 2,
             alignment: Alignment.centerRight,
             child: Builder(
@@ -122,24 +140,6 @@ class TimeEntryCard extends StatelessWidget {
                   ],
                 );
               },
-            ),
-          ),
-          CardColumn(
-            flex: 3,
-            child: Text(
-              (resolvedEntry.entry.comment?.isEmpty == null ||
-                      resolvedEntry.entry.comment?.isEmpty == true)
-                  ? 'No comment'
-                  : resolvedEntry.entry.comment!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.commonTextStyles.caption.copyWith(
-                color:
-                    (resolvedEntry.entry.comment?.isEmpty == null ||
-                        resolvedEntry.entry.comment?.isEmpty == true)
-                    ? palette.text.muted
-                    : palette.text.secondary,
-              ),
             ),
           ),
           CardColumn(
