@@ -7,107 +7,23 @@ import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/tracker_panel_cubit.dart';
 import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
-import 'package:worklog_studio/feature/time_tracker/presentation/tracker_command_palette.dart';
-import 'package:worklog_studio/feature/time_tracker/presentation/tracker_panel_form.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
-class TrackerChipBar extends StatefulWidget {
+class TrackerChipBar extends StatelessWidget {
+  final bool isPanelOpen;
+  final VoidCallback onOpenPanel;
   final ValueChanged<String> onOpenProject;
   final ValueChanged<String> onOpenTask;
 
   const TrackerChipBar({
     super.key,
+    required this.isPanelOpen,
+    required this.onOpenPanel,
     required this.onOpenProject,
     required this.onOpenTask,
   });
-
-  @override
-  State<TrackerChipBar> createState() => _TrackerChipBarState();
-}
-
-class _TrackerChipBarState extends State<TrackerChipBar> {
-  OverlayEntry? _paletteEntry;
-
-  void _openPalette() {
-    if (_paletteEntry != null) return;
-    final entry = OverlayEntry(
-      builder: (_) => TrackerCommandPalette(
-        onClose: _closePalette,
-        onOpenProject: widget.onOpenProject,
-        onOpenTask: widget.onOpenTask,
-      ),
-    );
-    _paletteEntry = entry;
-    Overlay.of(context).insert(entry);
-  }
-
-  void _closePalette() {
-    _paletteEntry?.remove();
-    _paletteEntry?.dispose();
-    _paletteEntry = null;
-  }
-
-  void _openBottomSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final theme = sheetContext.theme;
-        final palette = theme.colorsPalette;
-        return Container(
-          decoration: BoxDecoration(
-            color: palette.background.surface,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(theme.radiuses.lg),
-            ),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            theme.spacings.xl,
-            theme.spacings.md,
-            theme.spacings.xl,
-            theme.spacings.xl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: EdgeInsets.only(bottom: theme.spacings.lg),
-                decoration: BoxDecoration(
-                  color: palette.background.surfaceMuted,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              TrackerPanelForm(
-                onOpenProject: widget.onOpenProject,
-                onOpenTask: widget.onOpenTask,
-                onDone: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _handleChipTap() {
-    final width = MediaQuery.sizeOf(context).width;
-    if (width >= 600) {
-      _openPalette();
-    } else {
-      _openBottomSheet();
-    }
-  }
-
-  @override
-  void dispose() {
-    _closePalette();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +36,13 @@ class _TrackerChipBarState extends State<TrackerChipBar> {
       height: isWide ? 36.0 : 40.0,
       decoration: BoxDecoration(
         color: palette.background.surface,
-        border: Border(bottom: BorderSide(color: palette.border.primary)),
+        border: Border(
+          bottom: BorderSide(
+            color: isPanelOpen
+                ? palette.border.hover
+                : palette.border.primary,
+          ),
+        ),
       ),
       child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
         buildWhen: (prev, curr) =>
@@ -143,7 +65,7 @@ class _TrackerChipBarState extends State<TrackerChipBar> {
   ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _handleChipTap,
+      onTap: onOpenPanel,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: theme.spacings.x2l),
         child: Row(
@@ -186,14 +108,13 @@ class _TrackerChipBarState extends State<TrackerChipBar> {
       padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
       child: Text(
         '·',
-        style:
-            theme.commonTextStyles.body.copyWith(color: palette.text.muted),
+        style: theme.commonTextStyles.body.copyWith(color: palette.text.muted),
       ),
     );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _handleChipTap,
+      onTap: onOpenPanel,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: theme.spacings.x2l),
         child: Row(
