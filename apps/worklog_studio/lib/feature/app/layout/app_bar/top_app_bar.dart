@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:worklog_studio/feature/time_tracker/presentation/global_time_tracker_panel.dart';
-import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/tracker_chip_bar.dart';
 
 class TopAppBar extends StatelessWidget {
   final ValueChanged<String> onOpenProject;
@@ -14,19 +13,9 @@ class TopAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final palette = theme.colorsPalette;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        border: Border(bottom: BorderSide(color: palette.border.primary)),
-      ),
-      child: GlobalTimeTrackerPanel(
-        onOpenProject: onOpenProject,
-        onOpenTask: onOpenTask,
-      ),
+    return TrackerChipBar(
+      onOpenProject: onOpenProject,
+      onOpenTask: onOpenTask,
     );
   }
 }
