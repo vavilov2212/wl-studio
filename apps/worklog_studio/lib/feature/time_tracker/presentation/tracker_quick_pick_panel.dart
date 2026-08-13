@@ -35,7 +35,8 @@ String _comboKey(Project project, Task? task) => '${project.id}__${task?.id}';
 
 bool _matchesQuery(_ResultItem item, String q) {
   return item.project.name.toLowerCase().contains(q) ||
-      (item.task?.title.toLowerCase().contains(q) ?? false);
+      (item.task?.title.toLowerCase().contains(q) ?? false) ||
+      (item.comment?.toLowerCase().contains(q) ?? false);
 }
 
 // ---------------------------------------------------------------------------
@@ -156,12 +157,22 @@ class _TrackerQuickPickPanelState extends State<TrackerQuickPickPanel> {
       ];
     }
 
-    final results = _buildAll(projects, tasks)
+    // Search recent items first (they carry comments).
+    final recent = _buildRecent(entries, projects, tasks);
+    final recentMatches = recent.where((r) => _matchesQuery(r, q)).toList();
+    final matchedKeys =
+        recentMatches.map((r) => _comboKey(r.project, r.task)).toSet();
+
+    // Fill in remaining tasks that match by project/task name.
+    final otherMatches = _buildAll(projects, tasks, excludeKeys: matchedKeys)
         .where((r) => _matchesQuery(r, q))
         .toList();
+
     return [
-      if (results.isNotEmpty) _SectionHeader('RESULTS'), // TODO: l10n
-      ...results,
+      if (recentMatches.isNotEmpty || otherMatches.isNotEmpty)
+        _SectionHeader('RESULTS'), // TODO: l10n
+      ...recentMatches,
+      ...otherMatches,
     ];
   }
 
