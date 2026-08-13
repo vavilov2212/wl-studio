@@ -6,20 +6,28 @@
   <description>Latest updates for Worklog Studio (Windows)</description>
   <language>en</language>
   <item>
-    <title>Version 1.0.15-dev.3</title>
+    <title>Version 1.0.15-dev.4</title>
     <sparkle:releaseNotes><![CDATA[<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;padding:12px 16px;color:#1c1e21;background:#fff;margin:0}ul{margin:0;padding-left:18px}li{margin:3px 0;line-height:1.5}</style><ul>
-      <li>release: windows v1.0.15-dev.3</li>
-      <li>docs: distill 2026-08-10 session into POST_MORTEM.md</li>
-      <li>Merge branch 'dev' of github.com:vavilov2212/worklog_studio into dev</li>
-      <li>feat(history): move duration after comment, remove efficiency column</li>
+      <li>release: windows v1.0.15-dev.4</li>
+      <li>docs: add tracker chip command palette implementation plan</li>
+      <li>feat(tracker): include comments in quick-pick search</li>
+      <li>feat(tracker): compact single-line chip bar, pointer cursor, comments in list</li>
+      <li>feat(tracker): show project, task and comment in running chip bar</li>
+      <li>feat(tracker): convert quick-pick panel to floating Overlay</li>
+      <li>feat(tracker): replace modal with VS Code-style quick pick panel</li>
+      <li>feat(tracker): wire up TrackerChipBar, remove GlobalTimeTrackerPanel</li>
+      <li>feat(tracker): add TrackerChipBar - compact chip with overlay management</li>
+      <li>feat(tracker): add TrackerCommandPalette overlay</li>
+      <li>feat(tracker): add TrackerPanelForm - extracted form body</li>
+      <li>docs: add tracker chip + command palette design spec</li>
 </ul>]]></sparkle:releaseNotes>
-    <pubDate>Mon, 10 Aug 2026 15:41:24 GMT</pubDate>
+    <pubDate>Thu, 13 Aug 2026 14:18:24 GMT</pubDate>
     <sparkle:installerArguments>/VERYSILENT /NORESTART</sparkle:installerArguments>
     <enclosure
-      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.15-dev.3/worklog_studio_setup_1.0.15-dev.3.exe"
-      sparkle:version="105"
-      sparkle:shortVersionString="1.0.15-dev.3"
-      length="14609375"
+      url="https://github.com/vavilov2212/wl-studio/releases/download/v1.0.15-dev.4/worklog_studio_setup_1.0.15-dev.4.exe"
+      sparkle:version="106"
+      sparkle:shortVersionString="1.0.15-dev.4"
+      length="14608386"
       type="application/octet-stream"/>
   </item>
 </channel>
