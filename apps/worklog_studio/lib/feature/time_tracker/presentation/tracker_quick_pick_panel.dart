@@ -27,7 +27,8 @@ class _SectionHeader extends _ListItem {
 class _ResultItem extends _ListItem {
   final Project project;
   final Task? task;
-  _ResultItem({required this.project, this.task});
+  final String? comment;
+  _ResultItem({required this.project, this.task, this.comment});
 }
 
 String _comboKey(Project project, Task? task) => '${project.id}__${task?.id}';
@@ -68,6 +69,9 @@ class _TrackerQuickPickPanelState extends State<TrackerQuickPickPanel> {
     super.initState();
     _focusNode = FocusNode(onKeyEvent: _handleKey);
     _searchController.addListener(_onQueryChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -179,7 +183,11 @@ class _TrackerQuickPickPanelState extends State<TrackerQuickPickPanel> {
       final key = _comboKey(project, task);
       if (seen.contains(key)) continue;
       seen.add(key);
-      result.add(_ResultItem(project: project, task: task));
+      result.add(_ResultItem(
+        project: project,
+        task: task,
+        comment: (entry.comment?.isNotEmpty ?? false) ? entry.comment : null,
+      ));
     }
     return result;
   }
@@ -211,6 +219,9 @@ class _TrackerQuickPickPanelState extends State<TrackerQuickPickPanel> {
     cubit.updateProject(item.project.id, isRunning: isRunning);
     if (item.task != null) {
       cubit.updateTask(item.task!.id, isRunning: isRunning);
+    }
+    if (item.comment != null) {
+      cubit.updateComment(item.comment!, isRunning: isRunning);
     }
     cubit.startTimer();
     widget.onClose();
@@ -400,33 +411,50 @@ class _TrackerQuickPickPanelState extends State<TrackerQuickPickPanel> {
                 size: WsInitialBadgeSize.small,
               ),
               SizedBox(width: theme.spacings.sm),
-              Text(
-                result.project.name,
-                style: theme.commonTextStyles.body2.copyWith(
-                  color: palette.text.secondary,
+              Expanded(
+                child: RichText(
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: result.project.name,
+                        style: theme.commonTextStyles.body2.copyWith(
+                          color: palette.text.secondary,
+                        ),
+                      ),
+                      if (result.task != null) ...[
+                        TextSpan(
+                          text: '  /  ',
+                          style: theme.commonTextStyles.body2.copyWith(
+                            color: palette.text.muted,
+                          ),
+                        ),
+                        TextSpan(
+                          text: result.task!.title,
+                          style: theme.commonTextStyles.body2Bold.copyWith(
+                            color: palette.text.primary,
+                          ),
+                        ),
+                      ],
+                      if (result.comment != null) ...[
+                        TextSpan(
+                          text: '   ·   ',
+                          style: theme.commonTextStyles.body2.copyWith(
+                            color: palette.text.muted,
+                          ),
+                        ),
+                        TextSpan(
+                          text: result.comment,
+                          style: theme.commonTextStyles.caption.copyWith(
+                            color: palette.text.muted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              if (result.task != null) ...[
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
-                  child: Text(
-                    '/',
-                    style: theme.commonTextStyles.body2.copyWith(
-                      color: palette.text.muted,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    result.task!.title,
-                    style: theme.commonTextStyles.body2Bold.copyWith(
-                      color: palette.text.primary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ] else
-                const Spacer(),
             ],
           ),
         ),
