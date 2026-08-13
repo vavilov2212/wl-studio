@@ -31,42 +31,36 @@ class TrackerChipBar extends StatelessWidget {
     final palette = theme.colorsPalette;
     final isWide = MediaQuery.sizeOf(context).width >= 600;
 
-    return Container(
-      width: double.infinity,
-      height: isWide ? 36.0 : 40.0,
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isPanelOpen
-                ? palette.border.hover
-                : palette.border.primary,
-          ),
-        ),
-      ),
-      child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
-        buildWhen: (prev, curr) =>
-            prev.isRunning != curr.isRunning ||
-            prev.activeEntryOrNull != curr.activeEntryOrNull,
-        builder: (context, state) {
-          if (state.isRunning) {
-            return _buildRunningChip(context, theme, palette);
-          }
-          return _buildIdleChip(context, theme, palette);
-        },
-      ),
+    return BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
+      buildWhen: (prev, curr) =>
+          prev.isRunning != curr.isRunning ||
+          prev.activeEntryOrNull != curr.activeEntryOrNull,
+      builder: (context, state) {
+        if (state.isRunning) {
+          return _buildRunningChip(context, state, theme, palette, isWide);
+        }
+        return _buildIdleChip(context, theme, palette, isWide);
+      },
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Idle state - compact single row
+  // ---------------------------------------------------------------------------
 
   Widget _buildIdleChip(
     BuildContext context,
     AppThemeExtension theme,
     ColorsPalette palette,
+    bool isWide,
   ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onOpenPanel,
-      child: Padding(
+      child: Container(
+        width: double.infinity,
+        height: isWide ? 36.0 : 40.0,
+        decoration: _decoration(palette),
         padding: EdgeInsets.symmetric(horizontal: theme.spacings.x2l),
         child: Row(
           children: [
@@ -87,38 +81,42 @@ class TrackerChipBar extends StatelessWidget {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Running state - two-row layout: project/task + comment, timer on the right
+  // ---------------------------------------------------------------------------
+
   Widget _buildRunningChip(
     BuildContext context,
+    TimeTrackerBlocState state,
     AppThemeExtension theme,
     ColorsPalette palette,
+    bool isWide,
   ) {
     final projectTaskState = context.read<ProjectTaskState>();
-    final draftProjectId = context.select<ProjectTaskState, String?>(
-      (s) => s.draftProjectId,
-    );
-    final draftTaskId = context.select<ProjectTaskState, String?>(
-      (s) => s.draftTaskId,
-    );
-    final project = projectTaskState.projects
-        .firstWhereOrNull((p) => p.id == draftProjectId);
-    final task =
-        projectTaskState.tasks.firstWhereOrNull((t) => t.id == draftTaskId);
+    final activeEntry = state.activeEntryOrNull;
 
-    final dot = Padding(
-      padding: EdgeInsets.symmetric(horizontal: theme.spacings.sm),
-      child: Text(
-        '·',
-        style: theme.commonTextStyles.body.copyWith(color: palette.text.muted),
-      ),
-    );
+    final project = projectTaskState.projects
+        .firstWhereOrNull((p) => p.id == activeEntry?.projectId);
+    final task = projectTaskState.tasks
+        .firstWhereOrNull((t) => t.id == activeEntry?.taskId);
+    final comment = activeEntry?.comment ?? '';
+    final hasComment = comment.isNotEmpty;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onOpenPanel,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: theme.spacings.x2l),
+      child: Container(
+        width: double.infinity,
+        constraints: BoxConstraints(minHeight: isWide ? 36.0 : 40.0),
+        decoration: _decoration(palette),
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacings.x2l,
+          vertical: theme.spacings.sm,
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Badge anchors the left edge
             if (project != null) ...[
               WsInitialBadge(
                 initials: BadgeUtils.getProjectInitials(project.name),
@@ -127,40 +125,102 @@ class TrackerChipBar extends StatelessWidget {
                 size: WsInitialBadgeSize.small,
               ),
               SizedBox(width: theme.spacings.sm),
-              Text(
-                project.name,
-                style: theme.commonTextStyles.body
-                    .copyWith(color: palette.text.secondary),
-              ),
             ],
-            if (task != null) ...[
-              dot,
-              Text(
-                task.title,
-                style: theme.commonTextStyles.body
-                    .copyWith(color: palette.text.secondary),
-              ),
-            ],
-            dot,
-            ActiveTimerText(
-              style: theme.commonTextStyles.body.copyWith(
-                color: palette.text.primary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+
+            // Info column - takes all remaining space
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: project / task
+                  Row(
+                    children: [
+                      if (project != null)
+                        Flexible(
+                          child: Text(
+                            project.name,
+                            style: theme.commonTextStyles.body2.copyWith(
+                              color: palette.text.secondary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      if (task != null) ...[
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: theme.spacings.xxs,
+                          ),
+                          child: Text(
+                            '/',
+                            style: theme.commonTextStyles.body2.copyWith(
+                              color: palette.text.muted,
+                            ),
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            task.title,
+                            style: theme.commonTextStyles.body2Bold.copyWith(
+                              color: palette.text.primary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  // Row 2: comment (only when present)
+                  if (hasComment) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      comment,
+                      style: theme.commonTextStyles.caption.copyWith(
+                        color: palette.text.muted,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
-            dot,
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => context.read<TrackerPanelCubit>().stopTimer(),
-              child: WorklogStudioAssets.vectors.squareFilled64Svg.vector(
-                width: 14,
-                height: 14,
-                colorFilter: palette.accent.danger.filter,
-              ),
+
+            // Timer + stop pinned to the right
+            SizedBox(width: theme.spacings.md),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ActiveTimerText(
+                  style: theme.commonTextStyles.body.copyWith(
+                    color: palette.text.primary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                SizedBox(width: theme.spacings.sm),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => context.read<TrackerPanelCubit>().stopTimer(),
+                  child: WorklogStudioAssets.vectors.squareFilled64Svg.vector(
+                    width: 14,
+                    height: 14,
+                    colorFilter: palette.accent.danger.filter,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  BoxDecoration _decoration(ColorsPalette palette) => BoxDecoration(
+        color: palette.background.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: isPanelOpen ? palette.border.hover : palette.border.primary,
+          ),
+        ),
+      );
 }
